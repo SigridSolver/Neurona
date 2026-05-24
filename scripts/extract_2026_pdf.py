@@ -26,8 +26,7 @@ if not API_KEY:
     print("ERROR: No se encontró GEMINI_API_KEY en las variables de entorno.")
     sys.exit(1)
 genai.configure(api_key=API_KEY)
-# Usar gemini-1.5-pro o flash, dado que flash es más rápido para muchas páginas
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
 # Rutas
 PDF_DIR = Path(r"D:\Neurona\docs\Cuadernillos Saber 11 2026")
@@ -159,13 +158,13 @@ def extract_questions_with_gemini():
                     inserted_in_page += 1
                     total_extracted += 1
                 
-                print(f"   ✓ {inserted_in_page} preguntas extraídas correctamente.")
+                print(f"   [OK] {inserted_in_page} preguntas extraídas correctamente.")
                 
             except json.JSONDecodeError:
-                print("   ❌ Error: Gemini devolvió un formato no válido.")
+                print("   [ERROR] Gemini devolvió un formato no válido.")
                 log_error(pdf_path.name, page_num + 1, "Gemini devolvió un JSON inválido o texto basura.")
             except Exception as e:
-                print(f"   ❌ Error con la API de Gemini: {str(e)}")
+                print(f"   [ERROR] Error con la API de Gemini: {str(e)}")
                 log_error(pdf_path.name, page_num + 1, f"Error de API: {str(e)}")
                 
     conn.commit()
