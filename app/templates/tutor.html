@@ -305,9 +305,19 @@
             <div class="typing-dot"></div>
         </div>
 
+        <!-- Image Preview Container -->
+        <div id="image-preview-container" style="display:none; padding: 0.5rem 1.5rem; background-color: rgba(15, 23, 42, 0.5); border-top: 1px solid rgba(255, 255, 255, 0.05);">
+            <div style="position: relative; display: inline-block;">
+                <img id="image-preview" src="" alt="Vista previa" style="max-height: 80px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                <button type="button" onclick="clearImage()" style="position: absolute; top: -8px; right: -8px; background: var(--danger); border: none; color: white; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;">✕</button>
+            </div>
+        </div>
+
         <!-- Input Area -->
         <div class="chat-input-area">
             <form id="chat-form" class="chat-input-form" onsubmit="handleChatSubmit(event)">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('image-upload').click()" style="padding: 0 1rem; font-size: 1.2rem; background-color: rgba(30, 41, 59, 0.8);" title="Adjuntar imagen">📎</button>
+                <input type="file" id="image-upload" accept="image/*" style="display:none" onchange="previewImage(event)">
                 <input type="text" id="chat-input" class="chat-input" placeholder="Pregúntame sobre cualquier área evaluada (ej: derivadas, efecto invernadero)..." required autocomplete="off">
                 <button type="submit" class="btn btn-primary">Preguntar</button>
             </form>
@@ -324,6 +334,27 @@
     
     // Almacena el contexto de la conversación
     let chatHistory = [];
+    let currentImageBase64 = null;
+
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentImageBase64 = e.target.result;
+                document.getElementById('image-preview').src = currentImageBase64;
+                document.getElementById('image-preview-container').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function clearImage() {
+        currentImageBase64 = null;
+        document.getElementById('image-upload').value = '';
+        document.getElementById('image-preview-container').style.display = 'none';
+        document.getElementById('image-preview').src = '';
+    }
 
     function appendMessage(text, isUser = false) {
         const messageDiv = document.createElement('div');
@@ -353,8 +384,20 @@
         const message = chatInput.value.trim();
         if (!message) return;
 
+        const reqBody = { 
+            message: message,
+            history: chatHistory
+        };
+        
+        let msgDisplay = message;
+        if (currentImageBase64) {
+            reqBody.image_base64 = currentImageBase64;
+            msgDisplay = "📷 *(Imagen adjunta)*\n" + message;
+            clearImage();
+        }
+
         chatInput.value = '';
-        appendMessage(message, true);
+        appendMessage(msgDisplay, true);
 
         // Show typing indicator
         typingIndicator.style.display = 'flex';
@@ -364,10 +407,7 @@
             const res = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    message: message,
-                    history: chatHistory
-                })
+                body: JSON.stringify(reqBody)
             });
             const data = await res.json();
             

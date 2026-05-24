@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 import os
 import re
+import base64
+import io
+from PIL import Image
 
 # Validation patterns
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -476,6 +479,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: list[ChatMessage] = []
+    image_base64: str | None = None
 
 @app.get("/tutor", response_class=HTMLResponse)
 async def tutor_page(request: Request):
@@ -539,7 +543,17 @@ async def chat_api(request: Request, body: ChatRequest):
                 gemini_history.append({"role": h.role, "parts": h.parts})
                 
             chat = model.start_chat(history=gemini_history)
-            response = chat.send_message(user_msg)
+            
+            user_content = [user_msg]
+            if body.image_base64:
+                b64_str = body.image_base64
+                if "," in b64_str:
+                    b64_str = b64_str.split(",")[1]
+                img_data = base64.b64decode(b64_str)
+                img = Image.open(io.BytesIO(img_data))
+                user_content.append(img)
+                
+            response = chat.send_message(user_content)
             return {"response": response.text, "mode": "ai"}
         except Exception as e:
             print("Gemini API Error:", e)
