@@ -421,8 +421,10 @@ async def get_practice_questions(area: str):
     for r in rows:
         try:
             opts = json.loads(r["options"])
+            random.shuffle(opts)
         except Exception:
             opts = [r["correct_answer"], "Opción B", "Opción C", "Opción D"]
+            random.shuffle(opts)
             
         questions.append({
             "id": r["id"],
@@ -1008,8 +1010,10 @@ async def start_duel(request: Request, body: dict):
     for r in rows:
         try:
             opts = json.loads(r["options"])
+            random.shuffle(opts)
         except Exception:
             opts = [r["correct_answer"], "Opción B", "Opción C", "Opción D"]
+            random.shuffle(opts)
             
         questions.append({
             "id": r["id"],
