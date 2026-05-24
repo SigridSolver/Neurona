@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Tarjetas de Estudio - David Saber 11{% endblock %}
+
+{% block extra_head %}
+<style>
+    .learn-container {
+        max-width: 500px;
+        margin: 2rem auto;
+        text-align: center;
+        perspective: 1000px;
+    }
+
+    .card-deck {
+        position: relative;
+        height: 380px;
+        margin-bottom: 2rem;
+    }
+
+    /* 3D Flip Card Container */
+    .flashcard {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform-style: preserve-3d;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s, left 0.4s;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.95) translateZ(-50px);
+    }
+
+    .flashcard.active {
+        opacity: 1;
+        pointer-events: auto;
+        transform: scale(1) translateZ(0);
+        z-index: 10;
+    }
+
+    .flashcard.flipped {
+        transform: rotateY(180deg);
+    }
+
+    /* Front and Back styling */
+    .card-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-front {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+    }
+
+    .card-back {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85));
+        transform: rotateY(180deg);
+    }
+
+    .card-area {
+        position: absolute;
+        top: 1.5rem;
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .card-title {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        font-weight: 800;
+        color: #fff;
+    }
+
+    .card-text {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        color: #e2e8f0;
+    }
+
+    .card-back .card-text {
+        text-align: left;
+        white-space: pre-line;
+        font-size: 1rem;
+        overflow-y: auto;
+        max-height: 250px;
+        padding-right: 5px;
+    }
+
+    /* Custom scrollbar for card text if needed */
+    .card-back .card-text::-webkit-scrollbar {
+        width: 4px;
+    }
+    .card-back .card-text::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.1);
+        border-radius: 2px;
+    }
+
+    .controls-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .round-btn {
+        width: 55px;
+        height: 55px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(30, 41, 59, 0.6);
+        color: #fff;
+        font-size: 1.25rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .round-btn:hover {
+        background: #fff;
+        color: var(--bg-main);
+        transform: scale(1.1);
+    }
+
+    .btn-flip {
+        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        border: none;
+        width: auto;
+        padding: 0 1.5rem;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+    
+    .btn-flip:hover {
+        background: linear-gradient(135deg, #60a5fa, #a78bfa);
+        color: #fff;
+    }
+
+    /* Swipe animations */
+    .swipe-left {
+        left: -150% !important;
+        opacity: 0 !important;
+        transform: rotate(-15deg) scale(0.9) !important;
+    }
+
+    .swipe-right {
+        left: 150% !important;
+        opacity: 0 !important;
+        transform: rotate(15deg) scale(0.9) !important;
+    }
+
+    .flip-hint {
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="text-center mt-4">
+        <h2>💡 Tarjetas de Microaprendizaje</h2>
+        <p class="text-muted">Desliza o haz clic para voltear las tarjetas y repasar fórmulas, tips y conceptos clave del Saber 11.</p>
+    </div>
+
+    <div class="learn-container">
+        <!-- Deck area -->
+        <div class="card-deck" id="cardDeck">
+            {% for card in flashcards %}
+            <div class="flashcard {% if loop.first %}active{% endif %}" data-index="{{ loop.index0 }}" onclick="flipCard(this)">
+                <!-- Front Side -->
+                <div class="card-face card-front">
+                    <!-- Color areas differently -->
+                    {% set area_color = "#3b82f6" %}
+                    {% if card.area == "Matemáticas" %}{% set area_color = "#60a5fa" %}
+                    {% elif card.area == "Lectura Crítica" %}{% set area_color = "#f472b6" %}
+                    {% elif card.area == "Ciencias Naturales" %}{% set area_color = "#34d399" %}
+                    {% elif card.area == "Sociales y Ciudadanas" %}{% set area_color = "#fbbf24" %}
+                    {% elif card.area == "Inglés" %}{% set area_color = "#a78bfa" %}
+                    {% endif %}
+                    <span class="card-area" style="color: {{ area_color }};">{{ card.area }}</span>
+                    <h3 class="card-title">{{ card.title }}</h3>
+                    <p class="card-text">{{ card.front }}</p>
+                    <div class="flip-hint">Haz clic para ver respuesta 🔄</div>
+                </div>
+                
+                <!-- Back Side -->
+                <div class="card-face card-back">
+                    <span class="card-area" style="color: {{ area_color }};">{{ card.area }} - Respuesta</span>
+                    <h4 style="margin-bottom: 1rem; color: #fff;">Explicación y Tip:</h4>
+                    <p class="card-text">{{ card.back }}</p>
+                    <div class="flip-hint" style="margin-top: auto;">Haz clic para volver al frente 🔄</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-row">
+            <button class="round-btn" onclick="prevCard()" title="Anterior">👈</button>
+            <button class="round-btn btn-flip" onclick="triggerActiveFlip()">🔄 Voltear</button>
+            <button class="round-btn" onclick="nextCard()" title="Siguiente">👉</button>
+        </div>
+        
+        <p class="text-muted mt-4" style="font-size: 0.9rem;">
+            Progreso: <span id="cardProgress">1</span> de {{ flashcards | length }}
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let activeIndex = 0;
+    const cards = document.querySelectorAll('.flashcard');
+    const progressEl = document.getElementById('cardProgress');
+    const totalCards = cards.length;
+
+    function flipCard(cardElement) {
+        cardElement.classList.toggle('flipped');
+    }
+
+    function triggerActiveFlip() {
+        const activeCard = document.querySelector('.flashcard.active');
+        if (activeCard) {
+            flipCard(activeCard);
+        }
+    }
+
+    function updateProgress() {
+        progressEl.innerText = activeIndex + 1;
+    }
+
+    function nextCard() {
+        if (totalCards === 0) return;
+        
+        const currentCard = cards[activeIndex];
+        // Reset flip state on the old card first
+        currentCard.classList.remove('flipped');
+        
+        // Add swipe left animation class
+        currentCard.classList.add('swipe-left');
+        
+        setTimeout(() => {
+            currentCard.classList.remove('active', 'swipe-left');
+            
+            activeIndex = (activeIndex + 1) % totalCards;
+            
+            const nextCardEl = cards[activeIndex];
+            nextCardEl.classList.remove('flipped');
+            nextCardEl.classList.add('active');
+            updateProgress();
+        }, 300);
+    }
+
+    function prevCard() {
+        if (totalCards === 0) return;
+        
+        const currentCard = cards[activeIndex];
+        currentCard.classList.remove('flipped');
+        
+        // Add swipe right animation class
+        currentCard.classList.add('swipe-right');
+        
+        setTimeout(() => {
+            currentCard.classList.remove('active', 'swipe-right');
+            
+            activeIndex = (activeIndex - 1 + totalCards) % totalCards;
+            
+            const prevCardEl = cards[activeIndex];
+            prevCardEl.classList.remove('flipped');
+            prevCardEl.classList.add('active');
+            updateProgress();
+        }, 300);
+    }
+
+    // Support keyboard navigation (left/right arrows, spacebar to flip)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') {
+            nextCard();
+        } else if (e.key === 'ArrowLeft') {
+            prevCard();
+        } else if (e.key === ' ') {
+            e.preventDefault(); // stop page scrolling
+            triggerActiveFlip();
+        }
+    });
+</script>
+{% endblock %}

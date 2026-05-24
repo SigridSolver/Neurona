@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio - David Saber 11{% endblock %}
+
+{% block extra_head %}
+<style>
+    .hero {
+        padding: 8rem 0;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero::before {
+        content: '';
+        position: absolute;
+        top: -20%; left: -10%;
+        width: 500px; height: 500px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+        filter: blur(40px);
+        z-index: -1;
+    }
+
+    .hero::after {
+        content: '';
+        position: absolute;
+        bottom: -20%; right: -10%;
+        width: 600px; height: 600px;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+        filter: blur(40px);
+        z-index: -1;
+    }
+    
+    .hero h1 {
+        font-size: 5rem;
+        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: fadeUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        letter-spacing: -2px;
+    }
+    
+    .hero p {
+        font-size: 1.25rem;
+        color: var(--text-muted);
+        max-width: 650px;
+        margin: 0 auto 3rem;
+        animation: fadeUp 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .hero .actions {
+        animation: fadeUp 1.2s ease-out;
+    }
+    
+    .features {
+        padding: 5rem 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+    
+    .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 1.5rem;
+        display: inline-block;
+        background: rgba(255,255,255,0.05);
+        padding: 1rem;
+        border-radius: 50%;
+        box-shadow: 0 0 20px rgba(255,255,255,0.02);
+    }
+    
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>Domina el Saber 11</h1>
+        <p>Prepárate de forma inteligente con preguntas dinámicas extraídas directamente de los cuadernillos oficiales. Diagnóstico personalizado y estudio guiado.</p>
+        <div class="actions">
+            <a href="/register" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;">Registrarse gratis</a>
+            <a href="/diagnostico" class="btn btn-secondary" style="font-size: 1.1rem; padding: 1rem 2rem; margin-left: 1rem; border-color: var(--accent); color: var(--accent-hover);">Test Diagnóstico (Modo Invitado)</a>
+        </div>
+    </div>
+</section>
+
+<section id="areas" class="container features">
+    <div class="card text-center">
+        <div class="feature-icon">📚</div>
+        <h3>Lectura Crítica</h3>
+        <p class="text-muted mt-2">Desarrolla tus habilidades de análisis y comprensión de textos complejos.</p>
+    </div>
+    <div class="card text-center">
+        <div class="feature-icon">🧮</div>
+        <h3>Matemáticas</h3>
+        <p class="text-muted mt-2">Domina el razonamiento cuantitativo y la resolución de problemas reales.</p>
+    </div>
+    <div class="card text-center">
+        <div class="feature-icon">🧬</div>
+        <h3>Ciencias Naturales</h3>
+        <p class="text-muted mt-2">Biología, física y química explicadas de manera interactiva.</p>
+    </div>
+    <div class="card text-center">
+        <div class="feature-icon">⚖️</div>
+        <h3>Sociales y Ciudadanas</h3>
+        <p class="text-muted mt-2">Entiende el contexto histórico, político y social de nuestro país.</p>
+    </div>
+    <div class="card text-center">
+        <div class="feature-icon">🌐</div>
+        <h3>Inglés</h3>
+        <p class="text-muted mt-2">Mejora tu vocabulario y comprensión lectora en el idioma universal.</p>
+    </div>
+</section>
+{% endblock %}

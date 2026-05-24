@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}Tutor IA - David Saber 11{% endblock %}
+
+{% block extra_head %}
+<style>
+    .tutor-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 2rem;
+        margin: 2rem auto;
+        max-width: 1200px;
+        height: calc(100vh - 180px);
+        min-height: 550px;
+    }
+
+    @media (max-width: 768px) {
+        .tutor-layout {
+            grid-template-columns: 1fr;
+            height: auto;
+        }
+        .tutor-sidebar {
+            display: none;
+        }
+    }
+
+    .tutor-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .info-card {
+        padding: 1.5rem;
+        background-color: var(--bg-card);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--border-radius);
+    }
+
+    .area-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .badge-mat { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-lect { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-nat { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-soc { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-ing { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        background-color: var(--bg-card);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        height: 100%;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    }
+
+    .chat-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background-color: rgba(15, 23, 42, 0.4);
+    }
+
+    .tutor-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        box-shadow: 0 0 15px var(--accent-glow);
+        animation: pulse 3s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 15px var(--accent-glow); }
+        50% { transform: scale(1.05); box-shadow: 0 0 25px rgba(139, 92, 246, 0.7); }
+        100% { transform: scale(1); box-shadow: 0 0 15px var(--accent-glow); }
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 1.5rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        scroll-behavior: smooth;
+    }
+
+    .message {
+        display: flex;
+        flex-direction: column;
+        max-width: 80%;
+        animation: messageFade 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes messageFade {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-user {
+        align-self: flex-end;
+    }
+
+    .message-tutor {
+        align-self: flex-start;
+    }
+
+    .message-content {
+        padding: 1rem 1.25rem;
+        border-radius: var(--border-radius);
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    .message-user .message-content {
+        background: linear-gradient(135deg, var(--accent), #4f46e5);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .message-tutor .message-content {
+        background-color: rgba(30, 41, 59, 0.7);
+        color: var(--text-main);
+        border-bottom-left-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .message-content p {
+        margin-bottom: 0.75rem;
+    }
+    .message-content p:last-child {
+        margin-bottom: 0;
+    }
+    .message-content ul, .message-content ol {
+        margin-left: 1.25rem;
+        margin-bottom: 0.75rem;
+    }
+    .message-content strong {
+        color: #60a5fa;
+    }
+
+    .chat-input-area {
+        padding: 1.25rem 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        background-color: rgba(15, 23, 42, 0.5);
+    }
+
+    .chat-input-form {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .chat-input {
+        flex: 1;
+        background-color: rgba(10, 15, 28, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-main);
+        padding: 0.85rem 1.25rem;
+        border-radius: var(--border-radius);
+        font-family: var(--font-family);
+        transition: var(--transition);
+    }
+
+    .chat-input:focus {
+        border-color: var(--accent);
+        outline: none;
+        box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .typing-indicator {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0.5rem 1rem;
+        background-color: rgba(30, 41, 59, 0.4);
+        border-radius: var(--border-radius);
+        align-self: flex-start;
+        display: none;
+    }
+
+    .typing-dot {
+        width: 6px;
+        height: 6px;
+        background-color: var(--text-muted);
+        border-radius: 50%;
+        animation: typingBounce 1.4s infinite ease-in-out both;
+    }
+
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes typingBounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
+    }
+
+    .suggestion-btn {
+        background-color: rgba(30, 41, 59, 0.5);
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 20px;
+        color: var(--text-muted);
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: var(--transition);
+        text-align: left;
+    }
+
+    .suggestion-btn:hover {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: var(--accent-hover);
+        border-color: var(--accent);
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container tutor-layout">
+    <!-- Sidebar -->
+    <div class="tutor-sidebar">
+        <div class="info-card">
+            <h4 class="mb-2">¿Cómo funciona?</h4>
+            <p class="text-muted" style="font-size: 0.85rem;">David es un Tutor de IA especializado. Puedes preguntarle dudas, pedirle que te explique temas teóricos, o que te formule ejemplos de las siguientes materias:</p>
+            <div style="margin-top: 1.25rem; display:flex; flex-direction:column; gap:0.5rem;">
+                <div><span class="area-badge badge-mat">Matemáticas</span></div>
+                <div><span class="area-badge badge-lect">Lectura Crítica</span></div>
+                <div><span class="area-badge badge-nat">Ciencias Naturales</span></div>
+                <div><span class="area-badge badge-soc">Sociales y Ciudadanas</span></div>
+                <div><span class="area-badge badge-ing">Inglés</span></div>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h4 class="mb-2">Preguntas Sugeridas</h4>
+            <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1rem;">
+                <button class="suggestion-btn" onclick="askSuggestion('Explícame cómo resolver preguntas de Lectura Crítica de textos discontinuos.')">💡 Comprensión de textos discontinuos</button>
+                <button class="suggestion-btn" onclick="askSuggestion('¿Cuál es la diferencia entre ambiente aerobio y anaerobio con un ejemplo?')">🧬 Aerobio vs Anaerobio</button>
+                <button class="suggestion-btn" onclick="askSuggestion('Dame una regla rápida para diferenciar el uso de don\'t y doesn\'t en inglés.')">🌐 Regla simple don't / doesn't</button>
+                <button class="suggestion-btn" onclick="askSuggestion('¿Qué funciones tiene el Congreso de la República de Colombia?')">⚖️ Funciones del Congreso</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="tutor-avatar">🤖</div>
+            <div>
+                <h4 style="margin:0;">Tutor David</h4>
+                <span class="text-muted" style="font-size:0.8rem; display:flex; align-items:center; gap:5px;">
+                    <span style="width:8px; height:8px; background-color:var(--success); border-radius:50%; display:inline-block;"></span>
+                    Especialista en Saber 11
+                </span>
+            </div>
+        </div>
+
+        <div id="chat-messages" class="chat-messages">
+            <!-- Initial Message -->
+            <div class="message message-tutor">
+                <div class="message-content">
+                    <p>¡Hola <strong>{{ user.name }}</strong>! Soy David, tu tutor personal de Inteligencia Artificial para el examen Saber 11.</p>
+                    <p>Estoy entrenado exclusivamente para ayudarte en Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales y Ciudadanas, e Inglés.</p>
+                    <p>¿Qué tema te gustaría repasar o entender hoy?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typing-indicator" class="typing-indicator" style="margin-left: 1.5rem; margin-bottom: 1rem;">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <form id="chat-form" class="chat-input-form" onsubmit="handleChatSubmit(event)">
+                <input type="text" id="chat-input" class="chat-input" placeholder="Pregúntame sobre cualquier área evaluada (ej: derivadas, efecto invernadero)..." required autocomplete="off">
+                <button type="submit" class="btn btn-primary">Preguntar</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const typingIndicator = document.getElementById('typing-indicator');
+
+    function appendMessage(text, isUser = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'message-user' : 'message-tutor'}`;
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        
+        // Simple markdown parsing for rendering responses beautifully
+        let formattedText = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1); padding:2px 4px; border-radius:4px;">$1</code>')
+            .replace(/\n/g, '<br>');
+            
+        contentDiv.innerHTML = formattedText;
+        
+        messageDiv.appendChild(contentDiv);
+        chatMessages.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function handleChatSubmit(event) {
+        event.preventDefault();
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        chatInput.value = '';
+        appendMessage(message, true);
+
+        // Show typing indicator
+        typingIndicator.style.display = 'flex';
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            const data = await res.json();
+            
+            // Hide typing indicator
+            typingIndicator.style.display = 'none';
+            
+            appendMessage(data.response, false);
+        } catch (error) {
+            typingIndicator.style.display = 'none';
+            appendMessage('Lo siento, ocurrió un error al procesar tu pregunta. Intenta de nuevo por favor.', false);
+        }
+    }
+
+    function askSuggestion(question) {
+        chatInput.value = question;
+        document.getElementById('chat-form').dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+</script>
+{% endblock %}

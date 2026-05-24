@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Test Diagnóstico - David Saber 11{% endblock %}
+
+{% block extra_head %}
+<style>
+    .diagnostic-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .question-block {
+        margin-bottom: 2.5rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .question-block:last-of-type {
+        border-bottom: none;
+    }
+    
+    .options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1.25rem;
+    }
+    
+    @media (max-width: 600px) {
+        .options {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .option-label {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: var(--transition);
+        background-color: rgba(15, 23, 42, 0.4);
+        font-size: 0.95rem;
+        user-select: none;
+    }
+    
+    .option-label:hover {
+        border-color: var(--accent);
+        background-color: rgba(59, 130, 246, 0.05);
+        transform: translateY(-2px);
+    }
+    
+    .option-label input {
+        margin-right: 0.75rem;
+        accent-color: var(--accent);
+        transform: scale(1.1);
+    }
+    
+    .subject-title {
+        color: var(--accent-hover);
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin-top: 2rem; margin-bottom: 4rem;">
+    <div class="diagnostic-header">
+        <h2>Prueba Diagnóstica Inicial</h2>
+        <p class="text-muted mt-2" style="font-size: 1.05rem;">Responde esta evaluación rápida de 10 preguntas para identificar tus fortalezas y debilidades. Tus respuestas calibrarán tus puntajes del simulador en el Dashboard.</p>
+    </div>
+    
+    <div class="card">
+        <form action="/diagnostico" method="POST" id="diagnosticForm">
+            
+            <!-- 1. Matemáticas - Pregunta A -->
+            <div class="question-block">
+                <span class="subject-title">📐 1. Matemáticas (Parte A)</span>
+                <p style="margin-top: 0.5rem;">Si el área de un círculo es 16&pi; cm², ¿cuál es su radio?</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="math1" value="0" required> 8 cm</label>
+                    <label class="option-label"><input type="radio" name="math1" value="100"> 4 cm</label>
+                    <label class="option-label"><input type="radio" name="math1" value="0"> 16 cm</label>
+                    <label class="option-label"><input type="radio" name="math1" value="0"> 2 cm</label>
+                </div>
+            </div>
+            
+            <!-- 2. Matemáticas - Pregunta B -->
+            <div class="question-block">
+                <span class="subject-title">📐 2. Matemáticas (Parte B)</span>
+                <p style="margin-top: 0.5rem;">Una sucesión de números está definida por la fórmula a<sub>n</sub> = 3n + 2. ¿Cuál es el valor del quinto término (a<sub>5</sub>)?</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="math2" value="100" required> 17</label>
+                    <label class="option-label"><input type="radio" name="math2" value="0"> 15</label>
+                    <label class="option-label"><input type="radio" name="math2" value="0"> 12</label>
+                    <label class="option-label"><input type="radio" name="math2" value="0"> 20</label>
+                </div>
+            </div>
+            
+            <!-- 3. Lectura Crítica - Pregunta A -->
+            <div class="question-block">
+                <span class="subject-title">📖 3. Lectura Crítica (Parte A)</span>
+                <p style="margin-top: 0.5rem;">El propósito principal de un artículo de opinión es:</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="reading1" value="0" required> Informar objetivamente un hecho</label>
+                    <label class="option-label"><input type="radio" name="reading1" value="100"> Persuadir al lector sobre una postura</label>
+                    <label class="option-label"><input type="radio" name="reading1" value="0"> Narrar una historia ficticia</label>
+                    <label class="option-label"><input type="radio" name="reading1" value="0"> Describir las características de un objeto</label>
+                </div>
+            </div>
+            
+            <!-- 4. Lectura Crítica - Pregunta B -->
+            <div class="question-block">
+                <span class="subject-title">📖 4. Lectura Crítica (Parte B)</span>
+                <p style="margin-top: 0.5rem;">En un texto argumentativo, la función de un contraargumento es:</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="reading2" value="100" required> Refutar o debilitar una tesis opuesta</label>
+                    <label class="option-label"><input type="radio" name="reading2" value="0"> Apoyar la tesis principal sin dar razones</label>
+                    <label class="option-label"><input type="radio" name="reading2" value="0"> Entretener al lector con anécdotas</label>
+                    <label class="option-label"><input type="radio" name="reading2" value="0"> Definir palabras técnicas de difícil comprensión</label>
+                </div>
+            </div>
+            
+            <!-- 5. Ciencias Naturales - Pregunta A -->
+            <div class="question-block">
+                <span class="subject-title">🧪 5. Ciencias Naturales (Parte A)</span>
+                <p style="margin-top: 0.5rem;">¿Cuál es el principal gas responsable del efecto invernadero provocado por la acción humana?</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="science1" value="0" required> Oxígeno (O₂)</label>
+                    <label class="option-label"><input type="radio" name="science1" value="0"> Nitrógeno (N₂)</label>
+                    <label class="option-label"><input type="radio" name="science1" value="100"> Dióxido de Carbono (CO₂)</label>
+                    <label class="option-label"><input type="radio" name="science1" value="0"> Helio (He)</label>
+                </div>
+            </div>
+            
+            <!-- 6. Ciencias Naturales - Pregunta B -->
+            <div class="question-block">
+                <span class="subject-title">🧪 6. Ciencias Naturales (Parte B)</span>
+                <p style="margin-top: 0.5rem;">Si un objeto tiene una masa de 12 kg en la Tierra, ¿cuál será su masa aproximada al ser llevado a la Luna, donde la gravedad es un sexto de la terrestre?</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="science2" value="100" required> 12 kg</label>
+                    <label class="option-label"><input type="radio" name="science2" value="0"> 2 kg</label>
+                    <label class="option-label"><input type="radio" name="science2" value="0"> 72 kg</label>
+                    <label class="option-label"><input type="radio" name="science2" value="0"> 0 kg</label>
+                </div>
+            </div>
+            
+            <!-- 7. Sociales y Ciudadanas - Pregunta A -->
+            <div class="question-block">
+                <span class="subject-title">⚖️ 7. Sociales y Ciudadanas (Parte A)</span>
+                <p style="margin-top: 0.5rem;">La rama legislativa en Colombia está compuesta principalmente por:</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="social1" value="0" required> La Presidencia y los Ministerios</label>
+                    <label class="option-label"><input type="radio" name="social1" value="100"> El Congreso de la República (Senado y Cámara)</label>
+                    <label class="option-label"><input type="radio" name="social1" value="0"> Las Altas Cortes</label>
+                    <label class="option-label"><input type="radio" name="social1" value="0"> La Fiscalía y la Procuraduría</label>
+                </div>
+            </div>
+            
+            <!-- 8. Sociales y Ciudadanas - Pregunta B -->
+            <div class="question-block">
+                <span class="subject-title">⚖️ 8. Sociales y Ciudadanas (Parte B)</span>
+                <p style="margin-top: 0.5rem;">En una democracia, el principio de división de poderes entre las ramas ejecutiva, legislativa y judicial tiene como fin primordial:</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="social2" value="100" required> Evitar la concentración del poder y garantizar los frenos y contrapesos</label>
+                    <label class="option-label"><input type="radio" name="social2" value="0"> Centralizar todas las decisiones públicas en el presidente</label>
+                    <label class="option-label"><input type="radio" name="social2" value="0"> Reducir los costos operativos de las oficinas públicas</label>
+                    <label class="option-label"><input type="radio" name="social2" value="0"> Permitir que las iglesias redacten las leyes del país</label>
+                </div>
+            </div>
+            
+            <!-- 9. Inglés - Pregunta A -->
+            <div class="question-block">
+                <span class="subject-title">🌐 9. Inglés (Parte A)</span>
+                <p style="margin-top: 0.5rem;">Choose the correct sentence:</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="english1" value="0" required> She don't like apples.</label>
+                    <label class="option-label"><input type="radio" name="english1" value="100"> She doesn't like apples.</label>
+                    <label class="option-label"><input type="radio" name="english1" value="0"> She not like apples.</label>
+                    <label class="option-label"><input type="radio" name="english1" value="0"> She isn't like apples.</label>
+                </div>
+            </div>
+            
+            <!-- 10. Inglés - Pregunta B -->
+            <div class="question-block" style="border-bottom: none;">
+                <span class="subject-title">🌐 10. Inglés (Parte B)</span>
+                <p style="margin-top: 0.5rem;">Complete the sentence with the correct option: 'If she __________ hard, she will pass the exam.'</p>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="english2" value="100" required> studies</label>
+                    <label class="option-label"><input type="radio" name="english2" value="0"> study</label>
+                    <label class="option-label"><input type="radio" name="english2" value="0"> studied</label>
+                    <label class="option-label"><input type="radio" name="english2" value="0"> studying</label>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; max-width: 350px;">Ver mis resultados y entrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

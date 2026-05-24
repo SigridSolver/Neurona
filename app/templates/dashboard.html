@@ -1,0 +1,619 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - David Saber 11{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+    
+    @media (max-width: 900px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Score Gauge Component */
+    .score-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        backdrop-filter: blur(12px);
+    }
+
+    @media (max-width: 600px) {
+        .score-banner {
+            flex-direction: column;
+            gap: 1.5rem;
+            text-align: center;
+        }
+    }
+
+    .gauge-container {
+        position: relative;
+        width: 150px;
+        height: 150px;
+    }
+
+    .gauge-svg {
+        transform: rotate(-90deg);
+        width: 150px;
+        height: 150px;
+    }
+
+    .gauge-bg {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.05);
+        stroke-width: 10;
+    }
+
+    .gauge-fill {
+        fill: none;
+        stroke: url(#gauge-grad);
+        stroke-width: 10;
+        stroke-linecap: round;
+        stroke-dasharray: 440;
+        stroke-dashoffset: 440;
+        transition: stroke-dashoffset 2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .gauge-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+    }
+
+    .gauge-number {
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1;
+        background: linear-gradient(135deg, #fff, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .gauge-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 2px;
+    }
+
+    /* Proficiency Stats list */
+    .progress-bar {
+        height: 10px;
+        background-color: rgba(255, 255, 255, 0.03);
+        border-radius: 5px;
+        overflow: hidden;
+        margin-top: 0.75rem;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .progress-fill {
+        height: 100%;
+        transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 5px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0) 100%);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    .stat-item {
+        margin-bottom: 1.75rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .stat-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+    
+    .stat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+    }
+
+    .perf-badge {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .perf-insuficiente { background-color: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .perf-minimo { background-color: rgba(245, 158, 11, 0.15); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .perf-satisfactorio { background-color: rgba(59, 130, 246, 0.15); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .perf-avanzado { background-color: rgba(16, 185, 129, 0.15); color: #86efac; border: 1px solid rgba(16, 185, 129, 0.3); }
+    
+    .weak-area {
+        background-color: rgba(239, 68, 68, 0.08);
+        border-left: 4px solid var(--danger);
+        padding: 1rem;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        margin-bottom: 1rem;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(10, 15, 28, 0.8);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+    
+    .modal-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    
+    .modal-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        width: 100%;
+        max-width: 450px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+    }
+    
+    .modal-overlay.active .modal-card {
+        transform: scale(1);
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 0.75rem;
+    }
+    
+    .color-picker {
+        display: flex;
+        gap: 10px;
+        margin-top: 0.5rem;
+    }
+    
+    .color-dot {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    
+    .color-dot:hover {
+        transform: scale(1.1);
+    }
+    
+    .color-dot.selected {
+        border-color: #fff;
+    }
+    
+    .badge-tag {
+        background: rgba(139, 92, 246, 0.15);
+        color: #c084fc;
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        margin: 0.25rem;
+    }
+
+    .avatar-circle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    .btn-close-modal {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 1.25rem;
+        transition: color 0.2s;
+    }
+    .btn-close-modal:hover {
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <span class="avatar-circle" style="width: 42px; height: 42px; border-radius: 50%; background: {{ user.avatar_color or '#3b82f6' }}; font-size: 1.3rem;">
+                    {{ user.name[0] | upper }}
+                </span>
+                <span>Hola, {{ user.name }}!</span>
+                <button onclick="openEditProfileModal()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 0.25rem; transition: color 0.2s;" title="Editar Perfil">✏️</button>
+                {% if user.streak is not none and user.streak > 0 %}
+                <span style="font-size: 0.9rem; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 0.25rem 0.75rem; border-radius: 20px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 0 10px rgba(245,158,11,0.15);">
+                    🔥 Racha: {{ user.streak }} {% if user.streak == 1 %}día{% else %}días{% endif %}
+                </span>
+                {% endif %}
+            </h2>
+            <p class="text-muted">{% if user.bio %}"{{ user.bio }}"{% else %}Aquí está tu resumen de competencias y preparación.{% endif %}</p>
+        </div>
+        <div style="display:flex; gap:1rem;">
+            <a href="/tutor" class="btn btn-secondary">🤖 Hablar con Tutor IA</a>
+            <a href="/practica" class="btn btn-primary">Iniciar Práctica</a>
+        </div>
+    </div>
+    
+    <!-- Scoreboard / Banner -->
+    {% if diagnostic %}
+    <div class="score-banner mt-4">
+        <div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Puntaje Global Estimado</h3>
+            <p class="text-muted" style="max-width: 500px;">
+                Tu desempeño proyectado actual es de <strong>{{ global_score }}</strong> sobre 500 puntos. 
+                {% if global_score >= 320 %}
+                    ¡Excelente puntaje! Estás muy por encima del promedio nacional (250). Sigue así para asegurar becas y admisión.
+                {% elif global_score >= 250 %}
+                    Buen desempeño. Estás por encima del promedio nacional. Enfócate en las materias con menor puntaje para destacar aún más.
+                {% else %}
+                    Estás por debajo del promedio estimado. Te recomendamos interactuar con el <strong>Tutor IA</strong> y realizar al menos 2 prácticas por semana.
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="gauge-container">
+            <svg class="gauge-svg" viewBox="0 0 150 150">
+                <defs>
+                    <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#3b82f6" />
+                        <stop offset="100%" stop-color="#8b5cf6" />
+                    </linearGradient>
+                </defs>
+                <circle class="gauge-bg" cx="75" cy="75" r="70" />
+                <circle id="gauge-fill-circle" class="gauge-fill" cx="75" cy="75" r="70" />
+            </svg>
+            <div class="gauge-text">
+                <div class="gauge-number" id="gauge-score-val">{{ global_score }}</div>
+                <div class="gauge-label">Saber 11</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="dashboard-grid">
+        <!-- Main Stats Card -->
+        <div class="card">
+            <h3 class="mb-4">Competencias por Área</h3>
+            {% if diagnostic %}
+                {% for name, score in proficiency.items() %}
+                    <div class="stat-item">
+                        <div class="stat-header">
+                            <div>
+                                <strong style="font-size: 1.05rem;">{{ name }}</strong>
+                                <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">
+                                    (Puntaje: {{ score }}/100)
+                                </span>
+                            </div>
+                            
+                            <!-- Determine performance badges based on official Saber 11 categories -->
+                            {% if name == 'Inglés' %}
+                                {% if score < 30 %}
+                                    <span class="perf-badge perf-insuficiente">Nivel A-</span>
+                                {% elif score < 49 %}
+                                    <span class="perf-badge perf-minimo">Nivel A1</span>
+                                {% elif score < 63 %}
+                                    <span class="perf-badge perf-satisfactorio">Nivel A2</span>
+                                {% elif score < 81 %}
+                                    <span class="perf-badge perf-satisfactorio">Nivel B1</span>
+                                {% else %}
+                                    <span class="perf-badge perf-avanzado">Nivel B+</span>
+                                {% endif %}
+                            {% else %}
+                                {% if score < 45 %}
+                                    <span class="perf-badge perf-insuficiente">Insuficiente</span>
+                                {% elif score < 56 %}
+                                    <span class="perf-badge perf-minimo">Mínimo</span>
+                                {% elif score < 71 %}
+                                    <span class="perf-badge perf-satisfactorio">Satisfactorio</span>
+                                {% else %}
+                                    <span class="perf-badge perf-avanzado">Avanzado</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ score }}%; background-color: {% if score < 45 %}var(--danger){% elif score < 56 %}var(--warning){% else %}var(--success){% endif %}"></div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert" style="background: rgba(59,130,246,0.1); border: 1px solid var(--accent); margin-bottom: 0;">
+                    Aún no has tomado el test diagnóstico para calibrar tus puntajes. <a href="/diagnostico" style="font-weight:bold; color: #fff; text-decoration: underline;">Tómalo aquí</a>.
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar Columns -->
+        <div>
+            <!-- Leaderboard / Tabla de Posiciones -->
+            <div class="card mb-4">
+                <h3 class="mb-4" style="display:flex; align-items:center; gap:8px;">🏆 Tabla de Posiciones</h3>
+                {% if leaderboard %}
+                    <ol style="padding-left: 0; list-style: none; margin: 0;">
+                        {% for rank in leaderboard %}
+                        <li onclick="openUserProfileModal({{ rank | tojson | forceescape }})" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; border-radius: var(--border-radius); margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s; {% if rank.name == user.name %}background-color: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent);{% else %}border-bottom: 1px solid rgba(255, 255, 255, 0.03);{% endif %}" class="leaderboard-item">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-weight: 800; font-size: 1.1rem; width: 25px; color: {% if loop.index == 1 %}#f59e0b{% elif loop.index == 2 %}#94a3b8{% elif loop.index == 3 %}#b45309{% else %}var(--text-muted){% endif %};">
+                                    {{ loop.index }}.
+                                </span>
+                                <span class="avatar-circle" style="width: 30px; height: 30px; border-radius: 50%; background: {{ rank.avatar_color }}; font-size: 0.9rem;">
+                                    {{ rank.name[0] | upper }}
+                                </span>
+                                <span style="font-weight: {% if rank.name == user.name %}bold{% else %}normal{% endif %}; font-size: 0.95rem;">
+                                    {{ rank.name }}
+                                </span>
+                            </div>
+                            <span style="font-weight: 800; color: var(--accent-hover); font-size: 0.95rem;">{{ rank.score }} pts</span>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                {% else %}
+                    <p class="text-muted" style="font-size: 0.9rem;">Aún no hay suficientes puntajes para el ranking.</p>
+                {% endif %}
+            </div>
+
+            <!-- Recommendations -->
+            <div class="card mb-4">
+                <h3 class="mb-4">Recomendaciones</h3>
+                {% if diagnostic %}
+                    <p class="text-muted mb-4">Basado en tu modelo de competencia actual:</p>
+                    {% set weak = false %}
+                    {% for name, score in proficiency.items() %}
+                        {% if score < 56 %}
+                            <div class="weak-area">
+                                <strong>Reforzar {{ name }}</strong>
+                                <p style="font-size: 0.82rem; margin-top: 0.25rem; color: var(--text-muted);">
+                                    Tu puntaje está en rango bajo/mínimo. Realiza más test de práctica y consulta al **Tutor IA** sobre temas clave de esta materia.
+                                </p>
+                            </div>
+                            {% set weak = true %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if not weak %}
+                        <div class="alert" style="background: rgba(16,185,129,0.1); border: 1px solid var(--success); color: var(--success); margin: 0;">
+                            🎉 ¡Felicidades! Tienes bases sólidas en todas las materias. Sigue afinando detalles en nivel avanzado.
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted">Realiza tu diagnóstico inicial para desbloquear recomendaciones académicas.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="card">
+                <h3 class="mb-4">Actividad Reciente</h3>
+                {% if history %}
+                    <ul style="list-style: none;">
+                    {% for session in history %}
+                        <li style="padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="display:block; font-size: 0.95rem;">{{ session.area }}</strong>
+                                <span class="text-muted" style="font-size: 0.8rem;">Dificultad: {{ session.difficulty }}</span>
+                            </div>
+                            <div style="font-weight: bold; color: var(--accent); text-align: right;">
+                                <div>{{ session.score }}/{{ session.total_questions }}</div>
+                                <span class="text-muted" style="font-size: 0.75rem; font-weight: normal;">correctas</span>
+                            </div>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted" style="font-size: 0.9rem;">Aún no tienes sesiones de práctica registradas. ¡Haz tu primera práctica!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Perfil -->
+<div class="modal-overlay" id="editProfileModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Editar Perfil</h3>
+            <button class="btn-close-modal" onclick="closeEditProfileModal()">✕</button>
+        </div>
+        <form action="/api/profile/update" method="POST" id="editProfileForm">
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Biografía</label>
+                <textarea name="bio" rows="3" placeholder="Cuéntanos un poco sobre ti..." style="width: 100%; padding: 0.75rem; border-radius: var(--border-radius); background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; resize: none; font-family: inherit;">{{ user.bio or '' }}</textarea>
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Color de Avatar</label>
+                <input type="hidden" name="avatar_color" id="avatarColorInput" value="{{ user.avatar_color or '#3b82f6' }}">
+                <div class="color-picker">
+                    <div class="color-dot" style="background: #3b82f6;" data-color="#3b82f6" onclick="selectColor(this)"></div>
+                    <div class="color-dot" style="background: #10b981;" data-color="#10b981" onclick="selectColor(this)"></div>
+                    <div class="color-dot" style="background: #ec4899;" data-color="#ec4899" onclick="selectColor(this)"></div>
+                    <div class="color-dot" style="background: #f59e0b;" data-color="#f59e0b" onclick="selectColor(this)"></div>
+                    <div class="color-dot" style="background: #8b5cf6;" data-color="#8b5cf6" onclick="selectColor(this)"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeEditProfileModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Tarjeta de Perfil de Usuario -->
+<div class="modal-overlay" id="userProfileModal">
+    <div class="modal-card" style="text-align: center;">
+        <div class="modal-header" style="border:none; margin-bottom: 0.5rem;">
+            <h3>Perfil de Estudiante</h3>
+            <button class="btn-close-modal" onclick="closeUserProfileModal()">✕</button>
+        </div>
+        
+        <div class="avatar-circle" id="userModalAvatar" style="width: 80px; height: 80px; border-radius: 50%; font-size: 2.5rem; margin: 1rem auto; display: flex; box-shadow: 0 8px 16px rgba(0,0,0,0.3);">
+            C
+        </div>
+        
+        <h2 id="userModalName" style="margin-bottom: 0.25rem;">Carlos Gómez</h2>
+        <div id="userModalStreak" style="font-size: 0.9rem; color: #fbbf24; font-weight: 700; margin-bottom: 1rem; display: inline-flex; align-items: center; gap: 5px;">
+            🔥 Racha: 5 días
+        </div>
+        
+        <p id="userModalBio" style="font-style: italic; color: var(--text-muted); margin-bottom: 1.5rem; padding: 0 1rem;">
+            "¡Estudiando duro para Ingeniería!"
+        </p>
+        
+        <div style="text-align: left; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.25rem;">
+            <h4 style="margin-bottom: 0.75rem; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Logros Obtenidos</h4>
+            <div id="userModalBadges" style="margin-bottom: 1.5rem;">
+                <!-- Badges will be inserted dynamically -->
+            </div>
+        </div>
+        
+        <button class="btn btn-secondary" style="width: 100%;" onclick="closeUserProfileModal()">Cerrar</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Edit Profile Modal functions
+    function openEditProfileModal() {
+        const modal = document.getElementById('editProfileModal');
+        modal.classList.add('active');
+        
+        // Highlight active color
+        const currentColor = document.getElementById('avatarColorInput').value;
+        const dots = document.querySelectorAll('.color-dot');
+        dots.forEach(dot => {
+            if (dot.getAttribute('data-color') === currentColor) {
+                dot.classList.add('selected');
+            } else {
+                dot.classList.remove('selected');
+            }
+        });
+    }
+    
+    function closeEditProfileModal() {
+        document.getElementById('editProfileModal').classList.remove('active');
+    }
+    
+    function selectColor(dotElement) {
+        document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('selected'));
+        dotElement.classList.add('selected');
+        document.getElementById('avatarColorInput').value = dotElement.getAttribute('data-color');
+    }
+    
+    // User Profile Modal functions
+    function openUserProfileModal(userData) {
+        document.getElementById('userModalName').innerText = userData.name;
+        
+        const avatar = document.getElementById('userModalAvatar');
+        avatar.style.backgroundColor = userData.avatar_color;
+        avatar.innerText = userData.name.charAt(0).toUpperCase();
+        
+        const streak = document.getElementById('userModalStreak');
+        if (userData.streak > 0) {
+            streak.style.display = 'inline-flex';
+            streak.innerHTML = `🔥 Racha: ${userData.streak} ${userData.streak === 1 ? 'día' : 'días'}`;
+        } else {
+            streak.style.display = 'none';
+        }
+        
+        const bio = document.getElementById('userModalBio');
+        bio.innerText = userData.bio ? `"${userData.bio}"` : "Este estudiante aún no ha escrito una biografía.";
+        
+        const badgesContainer = document.getElementById('userModalBadges');
+        badgesContainer.innerHTML = '';
+        if (userData.badges && userData.badges.length > 0) {
+            userData.badges.forEach(badge => {
+                const tag = document.createElement('span');
+                tag.className = 'badge-tag';
+                tag.innerText = badge;
+                badgesContainer.appendChild(tag);
+            });
+        } else {
+            badgesContainer.innerHTML = '<p class="text-muted" style="font-size:0.85rem; font-style:italic;">Ningún logro desbloqueado todavía.</p>';
+        }
+        
+        document.getElementById('userProfileModal').classList.add('active');
+    }
+    
+    function closeUserProfileModal() {
+        document.getElementById('userProfileModal').classList.remove('active');
+    }
+    
+    // Animate the circular gauge fill
+    document.addEventListener("DOMContentLoaded", () => {
+        const circle = document.getElementById("gauge-fill-circle");
+        if (circle) {
+            const score = parseInt("{{ global_score }}", 10);
+            const total = 500;
+            const percentage = score / total;
+            
+            // Circumference of radius 70 is 2 * pi * 70 = 439.82 -> 440
+            const circumference = 440;
+            const offset = circumference - (percentage * circumference);
+            
+            // Delay slightly for smooth entering animation
+            setTimeout(() => {
+                circle.style.strokeDashoffset = offset;
+            }, 150);
+        }
+    });
+</script>
+{% endblock %}

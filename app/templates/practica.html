@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Práctica - David Saber 11{% endblock %}
+
+{% block extra_head %}
+<style>
+    .practice-container {
+        max-width: 800px;
+        margin: 2rem auto;
+    }
+    
+    .setup-view, .quiz-view, .result-view {
+        display: none;
+    }
+    
+    .active-view {
+        display: block;
+        animation: fadeIn 0.5s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    .option-btn {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        background-color: rgba(30, 41, 59, 0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: var(--border-radius);
+        color: var(--text-main);
+        font-size: 1.05rem;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .option-btn:hover:not(:disabled) {
+        border-color: var(--accent);
+        background-color: rgba(59, 130, 246, 0.1);
+        transform: translateX(5px);
+        box-shadow: -4px 0 0 var(--accent);
+    }
+    
+    .option-btn.correct {
+        background-color: rgba(16, 185, 129, 0.15);
+        border-color: var(--success);
+        color: var(--success);
+        box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.2);
+    }
+    
+    .option-btn.wrong {
+        background-color: rgba(239, 68, 68, 0.15);
+        border-color: var(--danger);
+        color: var(--danger);
+        box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.2);
+    }
+    
+    .explanation-box {
+        margin-top: 1.5rem;
+        padding: 1.5rem;
+        background-color: #1e293b;
+        border-left: 4px solid var(--accent);
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        display: none;
+    }
+    
+    .loader {
+        border: 4px solid rgba(255,255,255,0.1);
+        border-top: 4px solid var(--accent);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 2rem auto;
+    }
+    
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container practice-container">
+    
+    <!-- Setup View -->
+    <div id="setup-view" class="active-view card">
+        <h2 class="mb-4 text-center">Configurar Práctica</h2>
+        <div class="form-group">
+            <label class="form-label">Área de estudio</label>
+            <select id="area-select" class="form-control">
+                <option value="Lectura Crítica">Lectura Crítica</option>
+                <option value="Matemáticas">Matemáticas</option>
+                <option value="Sociales y Ciudadanas">Sociales y Ciudadanas</option>
+                <option value="Ciencias Naturales">Ciencias Naturales</option>
+                <option value="Inglés">Inglés</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Dificultad</label>
+            <select id="difficulty-select" class="form-control">
+                <option value="Básico">Básico</option>
+                <option value="Intermedio" selected>Intermedio</option>
+                <option value="Avanzado">Avanzado</option>
+            </select>
+        </div>
+        
+        <button id="start-btn" class="btn btn-primary mt-4" style="width:100%;">Comenzar Práctica</button>
+    </div>
+    
+    <!-- Loading View -->
+    <div id="loading-view" class="setup-view text-center">
+        <h3 class="mb-4">Generando preguntas desde los cuadernillos...</h3>
+        <div class="loader"></div>
+    </div>
+    
+    <!-- Quiz View -->
+    <div id="quiz-view" class="setup-view card">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 2rem; color: var(--text-muted);">
+            <span id="quiz-area-label" style="font-weight:bold; color:var(--accent);">Matemáticas</span>
+            <span id="quiz-progress">Pregunta 1 de 5</span>
+        </div>
+        
+        <h3 id="question-text" class="mb-4" style="line-height: 1.5;"></h3>
+        
+        <!-- Graphic Container -->
+        <div id="graphic-container" class="mb-4" style="text-align: center; display: none; width: 100%;"></div>
+        
+        <div id="options-container">
+            <!-- Buttons injected via JS -->
+        </div>
+        
+        <div id="explanation-box" class="explanation-box">
+            <strong style="display:block; margin-bottom: 0.5rem;">Explicación:</strong>
+            <p id="explanation-text"></p>
+            <button id="next-btn" class="btn btn-primary mt-4" style="float:right;">Siguiente Pregunta</button>
+            <div style="clear:both;"></div>
+        </div>
+    </div>
+    
+    <!-- Result View -->
+    <div id="result-view" class="setup-view card text-center">
+        <h2>Práctica Completada</h2>
+        <h1 style="font-size: 4rem; margin: 2rem 0; color: var(--accent);" id="final-score"></h1>
+        <p class="text-muted mb-4">¡Buen trabajo! Sigue practicando para mejorar tus habilidades.</p>
+        <div class="actions">
+            <a href="/dashboard" class="btn btn-secondary">Ir al Dashboard</a>
+            <button onclick="location.reload()" class="btn btn-primary">Nueva Práctica</button>
+        </div>
+    </div>
+    
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let questions = [];
+    let currentQIndex = 0;
+    let score = 0;
+    let selectedArea = '';
+    let selectedDifficulty = '';
+
+    const setupView = document.getElementById('setup-view');
+    const loadingView = document.getElementById('loading-view');
+    const quizView = document.getElementById('quiz-view');
+    const resultView = document.getElementById('result-view');
+    
+    document.getElementById('start-btn').addEventListener('click', async () => {
+        selectedArea = document.getElementById('area-select').value;
+        selectedDifficulty = document.getElementById('difficulty-select').value;
+        
+        setupView.classList.remove('active-view');
+        loadingView.classList.add('active-view');
+        
+        try {
+            const res = await fetch(`/api/questions/${encodeURIComponent(selectedArea)}`);
+            const data = await res.json();
+            questions = data.questions;
+            
+            loadingView.classList.remove('active-view');
+            quizView.classList.add('active-view');
+            
+            document.getElementById('quiz-area-label').innerText = selectedArea;
+            renderQuestion();
+        } catch (error) {
+            alert('Error al cargar preguntas.');
+            location.reload();
+        }
+    });
+    
+    function renderQuestion() {
+        const q = questions[currentQIndex];
+        document.getElementById('quiz-progress').innerText = `Pregunta ${currentQIndex + 1} de ${questions.length}`;
+        document.getElementById('question-text').innerText = q.text;
+        
+        const graphicContainer = document.getElementById('graphic-container');
+        if (q.graphic) {
+            graphicContainer.innerHTML = q.graphic;
+            graphicContainer.style.display = 'block';
+        } else {
+            graphicContainer.innerHTML = '';
+            graphicContainer.style.display = 'none';
+        }
+        
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        
+        document.getElementById('explanation-box').style.display = 'none';
+        
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => handleAnswer(btn, opt, q.correct_answer, q.explanation);
+            container.appendChild(btn);
+        });
+    }
+    
+    function handleAnswer(btn, selected, correct, explanation) {
+        // Disable all buttons
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(b => {
+            b.disabled = true;
+            if (b.innerText === correct) {
+                b.classList.add('correct');
+            }
+        });
+        
+        if (selected === correct) {
+            score++;
+        } else {
+            btn.classList.add('wrong');
+        }
+        
+        document.getElementById('explanation-text').innerText = explanation;
+        document.getElementById('explanation-box').style.display = 'block';
+    }
+    
+    document.getElementById('next-btn').addEventListener('click', () => {
+        currentQIndex++;
+        if (currentQIndex < questions.length) {
+            renderQuestion();
+        } else {
+            finishQuiz();
+        }
+    });
+    
+    async function finishQuiz() {
+        quizView.classList.remove('active-view');
+        resultView.classList.add('active-view');
+        
+        document.getElementById('final-score').innerText = `${score} / ${questions.length}`;
+        
+        // Save result
+        await fetch('/api/practice_result', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                area: selectedArea,
+                difficulty: selectedDifficulty,
+                score: score,
+                total: questions.length
+            })
+        });
+    }
+</script>
+{% endblock %}

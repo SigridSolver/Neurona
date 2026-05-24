@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}David Saber 11{% endblock %}</title>
+    <meta name="description" content="Plataforma educativa para la preparación de las pruebas Saber 11">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0a0f1c">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">David Saber 11</a>
+            <div class="navbar-nav">
+                {% if request.cookies.get('user_id') %}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/comunidad">Comunidad</a>
+                    <a href="/duelos">Duelos 1v1</a>
+                    <a href="/aprender">Tarjetas</a>
+                    <a href="/practica">Práctica</a>
+                    <a href="/tutor" style="color: #a78bfa; font-weight: 600;">🤖 Tutor IA</a>
+                    <a href="/logout" class="btn btn-secondary">Cerrar Sesión</a>
+                {% else %}
+                    <a href="/login">Iniciar Sesión</a>
+                    <a href="/register" class="btn btn-primary">Registrarse</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer style="text-align: center; padding: 3rem 0; color: var(--text-muted); border-top: 1px solid #1e293b; margin-top: auto;">
+        <div class="container">
+            <p>&copy; 2026 David Saber 11. Desarrollado para estudiantes colombianos.</p>
+        </div>
+    </footer>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('Service Worker registrado.', reg))
+                    .catch(err => console.log('Error registrando Service Worker.', err));
+            });
+        }
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

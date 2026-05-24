@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}Muro de Dudas - David Saber 11{% endblock %}
+
+{% block extra_head %}
+<style>
+    .community-layout {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    @media (max-width: 900px) {
+        .community-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Sidebar Filters */
+    .filter-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .filter-item a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        color: var(--text-muted);
+        font-weight: 500;
+        transition: var(--transition);
+        margin-bottom: 0.5rem;
+    }
+
+    .filter-item.active a, .filter-item a:hover {
+        background: rgba(59, 130, 246, 0.1);
+        color: #fff;
+        border-left: 4px solid var(--accent);
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        padding-left: 12px;
+    }
+
+    /* Feed Components */
+    .create-post-card {
+        margin-bottom: 2rem;
+    }
+
+    .post-card {
+        margin-bottom: 1.5rem;
+        padding: 1.75rem;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    
+    .post-card:hover {
+        transform: none;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .post-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .post-user {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    .post-info h4 {
+        font-size: 1rem;
+        margin-bottom: 2px;
+    }
+
+    .area-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Area color classes */
+    .badge-matematica { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-lectura { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
+    .badge-ciencias { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-sociales { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-ingles { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-general { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+    .post-content {
+        font-size: 1.05rem;
+        line-height: 1.6;
+        color: #e2e8f0;
+        margin-bottom: 1.25rem;
+        white-space: pre-line;
+    }
+
+    .post-actions {
+        display: flex;
+        gap: 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 0.75rem 0;
+        margin-bottom: 1rem;
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: color 0.2s;
+    }
+
+    .action-btn:hover {
+        color: #fff;
+    }
+
+    .action-btn.liked {
+        color: var(--danger);
+    }
+
+    /* Comment Section */
+    .comments-section {
+        background: rgba(15, 23, 42, 0.4);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .comment-list {
+        margin-bottom: 1rem;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .comment-item {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        align-items: flex-start;
+    }
+
+    .comment-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .comment-bubble {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 0.5rem 0.75rem;
+        flex: 1;
+    }
+
+    .comment-bubble strong {
+        font-size: 0.85rem;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .comment-bubble p {
+        font-size: 0.9rem;
+        color: #cbd5e1;
+    }
+
+    .comment-form {
+        display: flex;
+        gap: 10px;
+    }
+
+    .comment-input {
+        flex: 1;
+        background: rgba(10, 15, 28, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        color: #fff;
+        font-size: 0.9rem;
+    }
+
+    .comment-input:focus {
+        border-color: var(--accent);
+        outline: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if request.query_params.get('error') == 'moderacion' %}
+    <div class="alert alert-error mt-4">
+        ⚠️ Tu publicación o comentario contiene palabras no permitidas. Por favor mantén el respeto y la cortesía académica.
+    </div>
+    {% endif %}
+
+    <div class="community-layout">
+        <!-- Sidebar Filters -->
+        <aside>
+            <div class="card" style="padding: 1.5rem;">
+                <h3 class="mb-3" style="font-size: 1.1rem;">Filtrar por Área</h3>
+                <ul class="filter-list">
+                    <li class="filter-item {% if active_area == 'Todas' %}active{% endif %}">
+                        <a href="/comunidad?area=Todas">🌐 Todas</a>
+                    </li>
+                    <li class="filter-item {% if active_area == 'Matemáticas' %}active{% endif %}">
+                        <a href="/comunidad?area=Matemáticas">📐 Matemáticas</a>
+                    </li>
+                    <li class="filter-item {% if active_area == 'Lectura Crítica' %}active{% endif %}">
+                        <a href="/comunidad?area=Lectura Crítica">📚 Lectura Crítica</a>
+                    </li>
+                    <li class="filter-item {% if active_area == 'Ciencias Naturales' %}active{% endif %}">
+                        <a href="/comunidad?area=Ciencias Naturales">🧪 Ciencias Naturales</a>
+                    </li>
+                    <li class="filter-item {% if active_area == 'Sociales y Ciudadanas' %}active{% endif %}">
+                        <a href="/comunidad?area=Sociales y Ciudadanas">🌎 Sociales</a>
+                    </li>
+                    <li class="filter-item {% if active_area == 'Inglés' %}active{% endif %}">
+                        <a href="/comunidad?area=Inglés">🇬🇧 Inglés</a>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Feed -->
+        <section>
+            <!-- Create Post Card -->
+            <div class="card create-post-card" style="padding: 1.5rem;">
+                <h3 style="font-size: 1.25rem; margin-bottom: 1rem;">¿Tienes alguna duda académica?</h3>
+                <form action="/comunidad" method="POST">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <textarea name="content" class="form-control" rows="3" placeholder="Describe tu duda detalladamente aquí..." required style="resize: none;"></textarea>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="color: var(--text-muted); font-size: 0.9rem;">Área de la duda:</label>
+                            <select name="area" class="form-control" style="width: auto; padding: 0.5rem 1rem;" required>
+                                <option value="Matemáticas">Matemáticas</option>
+                                <option value="Lectura Crítica">Lectura Crítica</option>
+                                <option value="Ciencias Naturales">Ciencias Naturales</option>
+                                <option value="Sociales y Ciudadanas">Sociales y Ciudadanas</option>
+                                <option value="Inglés">Inglés</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.5rem;">Publicar Duda</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Feed Posts -->
+            <div id="postsFeed">
+                {% if posts %}
+                    {% for post in posts %}
+                    <div class="card post-card" id="post-{{ post.id }}">
+                        <div class="post-header">
+                            <div class="post-user">
+                                <div class="avatar-circle" style="background: {{ post.avatar_color }};">
+                                    {{ post.user_name[0] | upper }}
+                                </div>
+                                <div class="post-info">
+                                    <h4>
+                                        {{ post.user_name }}
+                                        {% if post.streak > 0 %}
+                                        <span style="font-size: 0.8rem; color: #fbbf24; margin-left: 5px;">🔥 Racha: {{ post.streak }}</span>
+                                        {% endif %}
+                                    </h4>
+                                    <span class="text-muted" style="font-size: 0.8rem;">hace unos momentos</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Determine Area Class -->
+                            {% set badge_class = "badge-general" %}
+                            {% if post.area == "Matemáticas" %}{% set badge_class = "badge-matematica" %}
+                            {% elif post.area == "Lectura Crítica" %}{% set badge_class = "badge-lectura" %}
+                            {% elif post.area == "Ciencias Naturales" %}{% set badge_class = "badge-ciencias" %}
+                            {% elif post.area == "Sociales y Ciudadanas" %}{% set badge_class = "badge-sociales" %}
+                            {% elif post.area == "Inglés" %}{% set badge_class = "badge-ingles" %}
+                            {% endif %}
+                            <span class="area-badge {{ badge_class }}">{{ post.area }}</span>
+                        </div>
+
+                        <div class="post-content">
+                            {{ post.content }}
+                        </div>
+
+                        <div class="post-actions">
+                            <button onclick="toggleLike({{ post.id }}, this)" class="action-btn {% if post.liked %}liked{% endif %}">
+                                <span class="like-icon">❤️</span> 
+                                <span class="like-count">{{ post.likes }}</span>
+                            </button>
+                            <div class="action-btn">
+                                💬 <span>{{ post.comments | length }} comentarios</span>
+                            </div>
+                        </div>
+
+                        <!-- Comments section -->
+                        <div class="comments-section">
+                            <div class="comment-list" id="comment-list-{{ post.id }}">
+                                {% if post.comments %}
+                                    {% for comment in post.comments %}
+                                    <div class="comment-item">
+                                        <div class="avatar-circle" style="width: 28px; height: 28px; font-size: 0.8rem; background: {{ comment.avatar_color }};">
+                                            {{ comment.user_name[0] | upper }}
+                                        </div>
+                                        <div class="comment-bubble">
+                                            <strong>
+                                                {{ comment.user_name }}
+                                                {% if comment.user_name == "Tutor David AI" %}
+                                                <span style="background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.4); padding: 0.05rem 0.35rem; border-radius: 10px; font-size: 0.7rem; font-weight: 700; margin-left: 5px;">Moderador</span>
+                                                {% endif %}
+                                            </strong>
+                                            <p>{{ comment.content }}</p>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted" style="font-size: 0.85rem; font-style: italic; margin-bottom: 0.5rem; text-align: center;">Sé el primero en responder esta duda...</p>
+                                {% endif %}
+                            </div>
+
+                            <form action="/api/posts/{{ post.id }}/comment" method="POST" class="comment-form">
+                                <input type="text" name="content" placeholder="Escribe tu respuesta..." required class="comment-input">
+                                <button type="submit" class="btn btn-secondary" style="padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.85rem;">Responder</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="card text-center" style="padding: 3rem;">
+                        <p class="text-muted" style="font-size: 1.1rem;">No se encontraron dudas en esta categoría.</p>
+                        <p class="text-muted" style="font-size: 0.9rem; margin-top: 0.5rem;">¡Sé el primero en publicar una!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function toggleLike(postId, btnElement) {
+        try {
+            const response = await fetch(`/api/posts/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Update like button style and count
+                const countSpan = btnElement.querySelector('.like-count');
+                countSpan.innerText = data.likes;
+                
+                if (data.liked) {
+                    btnElement.classList.add('liked');
+                } else {
+                    btnElement.classList.remove('liked');
+                }
+            } else {
+                console.error("Error toggling like status");
+            }
+        } catch (error) {
+            console.error("Network error:", error);
+        }
+    }
+</script>
+{% endblock %}

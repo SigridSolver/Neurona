@@ -1,0 +1,557 @@
+{% extends "base.html" %}
+
+{% block title %}Duelos 1v1 - David Saber 11{% endblock %}
+
+{% block extra_head %}
+<style>
+    .duel-card {
+        max-width: 650px;
+        margin: 2rem auto;
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+    }
+
+    .setup-screen, .matching-screen, .quiz-screen, .result-screen {
+        display: none;
+        width: 100%;
+        height: 100%;
+        animation: fadeIn 0.4s ease;
+    }
+
+    .setup-screen.active, .matching-screen.active, .quiz-screen.active, .result-screen.active {
+        display: flex;
+        flex-direction: column;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .opponent-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    @media (max-width: 500px) {
+        .opponent-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .opponent-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .opponent-item:hover, .opponent-item.selected {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: var(--accent);
+        transform: translateY(-2px);
+    }
+
+    .matching-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2rem;
+        margin: 3rem 0;
+    }
+
+    .matching-avatar {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #fff;
+        position: relative;
+    }
+
+    .vs-badge {
+        background: #ef4444;
+        color: #fff;
+        padding: 0.5rem 1rem;
+        border-radius: 50%;
+        font-weight: 800;
+        font-size: 1.2rem;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+
+    /* Timer bar styles */
+    .timer-container {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+
+    .timer-bar {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, var(--accent), #a78bfa);
+        transition: width 1s linear;
+    }
+
+    .options-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    .option-btn {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--border-radius);
+        padding: 1rem 1.5rem;
+        color: #fff;
+        font-size: 1rem;
+        text-align: left;
+        cursor: pointer;
+        transition: var(--transition);
+        width: 100%;
+    }
+
+    .option-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .option-btn.selected {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: var(--accent);
+    }
+
+    /* Spinner */
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card duel-card">
+        
+        <!-- SCREEN 1: Setup Duelo -->
+        <div class="setup-screen active" id="setupScreen">
+            <h2 class="text-center">⚔️ Duelos Rápidos 1v1</h2>
+            <p class="text-muted text-center mb-4">Elige tu área de estudio y reta a uno de tus compañeros de estudio.</p>
+            
+            <div class="form-group">
+                <label class="form-label">1. Selecciona el Área de Conocimiento</label>
+                <select id="duelAreaSelect" class="form-control">
+                    <option value="Matemáticas">📐 Matemáticas</option>
+                    <option value="Lectura Crítica">📚 Lectura Crítica</option>
+                    <option value="Ciencias Naturales">🧪 Ciencias Naturales</option>
+                    <option value="Sociales y Ciudadanas">🌎 Sociales y Ciudadanas</option>
+                    <option value="Inglés">🇬🇧 Inglés</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label class="form-label">2. Selecciona tu Oponente</label>
+                <div class="opponent-grid">
+                    {% for op in opponents %}
+                    <div class="opponent-item {% if loop.first %}selected{% endif %}" data-name="{{ op.name }}" data-color="{{ op.avatar_color }}" onclick="selectOpponent(this)">
+                        <div class="avatar-circle" style="width: 40px; height: 40px; border-radius: 50%; background: {{ op.avatar_color }};">
+                            {{ op.name[0] | upper }}
+                        </div>
+                        <div>
+                            <strong style="display:block; font-size:0.95rem;">{{ op.name }}</strong>
+                            <span class="text-muted" style="font-size:0.8rem;">🔥 Racha: {{ op.streak }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <button class="btn btn-primary mt-4" onclick="startDuelSetup()" style="width: 100%;">Buscar Partida</button>
+        </div>
+
+        <!-- SCREEN 2: Matching Loader -->
+        <div class="matching-screen" id="matchingScreen">
+            <h2 class="text-center" id="matchingTitle">Buscando Oponente...</h2>
+            <p class="text-muted text-center" id="matchingSubtitle">Conectando con servidores del Saber 11...</p>
+            
+            <div class="matching-display">
+                <div class="matching-avatar" style="background: {{ user.avatar_color or '#3b82f6' }};">
+                    {{ user.name[0] | upper }}
+                </div>
+                <div class="vs-badge">VS</div>
+                <div class="matching-avatar" id="opponentMatchAvatar" style="background: #10b981; animation: pulse 1s infinite alternate;">
+                    ?
+                </div>
+            </div>
+            
+            <div class="spinner"></div>
+        </div>
+
+        <!-- SCREEN 3: Active Quiz -->
+        <div class="quiz-screen" id="quizScreen">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span id="quizAreaLabel" class="area-badge badge-matematica">Matemáticas</span>
+                <span id="questionCounter" style="font-weight:700;">Pregunta 1 de 3</span>
+            </div>
+            
+            <!-- Timer Bar -->
+            <div class="timer-container">
+                <div class="timer-bar" id="timerBar"></div>
+            </div>
+            
+            <h3 id="questionText" style="margin-top: 1rem; font-size: 1.25rem;">Cargando pregunta...</h3>
+            
+            <div class="options-grid" id="optionsGrid">
+                <!-- Buttons will be loaded dynamically -->
+            </div>
+            
+            <button class="btn btn-primary mt-4" id="nextQuestionBtn" onclick="submitAnswer()" disabled style="width: 100%;">Responder</button>
+        </div>
+
+        <!-- SCREEN 4: Duel Results -->
+        <div class="result-screen" id="resultScreen">
+            <h2 class="text-center" id="resultStatus">¡Resultado del Duelo!</h2>
+            <p class="text-muted text-center mb-4" id="resultDesc">Comparación de respuestas correctas.</p>
+            
+            <div class="matching-display" style="margin: 1.5rem 0;">
+                <div style="text-align: center;">
+                    <div class="matching-avatar" style="background: {{ user.avatar_color or '#3b82f6' }};">
+                        {{ user.name[0] | upper }}
+                    </div>
+                    <strong style="display:block; margin-top: 0.5rem; font-size: 1.1rem;">Tú</strong>
+                    <div id="userFinalScore" style="font-size: 2.2rem; font-weight:800; color:var(--accent);">2/3</div>
+                </div>
+                
+                <div class="vs-badge" style="background: #334155; box-shadow: none; animation: none;">VS</div>
+                
+                <div style="text-align: center;">
+                    <div class="matching-avatar" id="opponentFinalAvatar" style="background: #10b981;">
+                        C
+                    </div>
+                    <strong id="opponentFinalName" style="display:block; margin-top: 0.5rem; font-size: 1.1rem;">Carlos</strong>
+                    <div id="opponentFinalScore" style="font-size: 2.2rem; font-weight:800; color:#ef4444;">1/3</div>
+                </div>
+            </div>
+            
+            <!-- Racha Display -->
+            <div id="resultStreakAlert" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--border-radius); padding: 1rem; text-align: center; margin: 1rem 0; display: none;">
+                <span style="font-size: 1.25rem; font-weight:700; color:#fbbf24;">🔥 ¡Tu racha aumentó a <span id="newStreakVal">0</span> días!</span>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <a href="/dashboard" class="btn btn-secondary" style="flex:1;">Ir al Dashboard</a>
+                <button class="btn btn-primary" onclick="restartDuelSetup()" style="flex:1;">Jugar de Nuevo</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedOpponentName = "";
+    let selectedOpponentColor = "";
+    let selectedArea = "";
+    
+    let currentQuestions = [];
+    let currentQuestionIndex = 0;
+    let userAnswers = [];
+    let selectedOptionIndex = null;
+    
+    // Timer variables
+    let timerValue = 15;
+    let timerInterval = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        // Set initial selected opponent from markup
+        const initialSelected = document.querySelector(".opponent-item.selected");
+        if (initialSelected) {
+            selectedOpponentName = initialSelected.getAttribute("data-name");
+            selectedOpponentColor = initialSelected.getAttribute("data-color");
+        }
+    });
+
+    function selectOpponent(element) {
+        document.querySelectorAll(".opponent-item").forEach(item => item.classList.remove("selected"));
+        element.classList.add("selected");
+        selectedOpponentName = element.getAttribute("data-name");
+        selectedOpponentColor = element.getAttribute("data-color");
+    }
+
+    function switchScreen(screenId) {
+        document.querySelectorAll(".setup-screen, .matching-screen, .quiz-screen, .result-screen").forEach(s => {
+            s.classList.remove("active");
+        });
+        document.getElementById(screenId).classList.add("active");
+    }
+
+    function startDuelSetup() {
+        selectedArea = document.getElementById("duelAreaSelect").value;
+        
+        // Update matcher visual data
+        const opponentAvatar = document.getElementById("opponentMatchAvatar");
+        opponentAvatar.innerText = selectedOpponentName.charAt(0).toUpperCase();
+        opponentAvatar.style.backgroundColor = selectedOpponentColor;
+        
+        switchScreen("matchingScreen");
+        
+        // Fetch questions while spinning
+        fetchQuestions();
+        
+        // Fake match delay for intense experience
+        setTimeout(() => {
+            document.getElementById("matchingTitle").innerText = "¡Oponente Encontrado!";
+            document.getElementById("matchingSubtitle").innerText = `Preparando duelo de ${selectedArea} contra ${selectedOpponentName}...`;
+            
+            setTimeout(() => {
+                startQuiz();
+            }, 1500);
+        }, 2000);
+    }
+
+    async function fetchQuestions() {
+        try {
+            const response = await fetch("/api/duelos/start", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    area: selectedArea,
+                    opponent_name: selectedOpponentName
+                })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                currentQuestions = data.questions;
+            } else {
+                console.error("Error starting duel on backend");
+            }
+        } catch (error) {
+            console.error("Network error fetching questions:", error);
+        }
+    }
+
+    function startQuiz() {
+        currentQuestionIndex = 0;
+        userAnswers = [];
+        switchScreen("quizScreen");
+        
+        // Update Area badge style
+        const areaBadge = document.getElementById("quizAreaLabel");
+        areaBadge.innerText = selectedArea;
+        
+        // Style area badge colors
+        areaBadge.className = "area-badge"; // reset
+        if (selectedArea === "Matemáticas") areaBadge.classList.add("badge-matematica");
+        else if (selectedArea === "Lectura Crítica") areaBadge.classList.add("badge-lectura");
+        else if (selectedArea === "Ciencias Naturales") areaBadge.classList.add("badge-ciencias");
+        else if (selectedArea === "Sociales y Ciudadanas") areaBadge.classList.add("badge-sociales");
+        else if (selectedArea === "Inglés") areaBadge.classList.add("badge-ingles");
+        
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        // Reset selections
+        selectedOptionIndex = null;
+        document.getElementById("nextQuestionBtn").disabled = true;
+        
+        const q = currentQuestions[currentQuestionIndex];
+        
+        // Update counter and texts
+        document.getElementById("questionCounter").innerText = `Pregunta ${currentQuestionIndex + 1} de 3`;
+        document.getElementById("questionText").innerText = q.text;
+        
+        // Render options buttons
+        const optionsGrid = document.getElementById("optionsGrid");
+        optionsGrid.innerHTML = "";
+        q.options.forEach((opt, idx) => {
+            const btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.innerText = opt;
+            btn.onclick = () => selectOption(idx, btn);
+            optionsGrid.appendChild(btn);
+        });
+        
+        // Setup 15s timer
+        startTimer();
+    }
+
+    function selectOption(index, btnElement) {
+        document.querySelectorAll(".option-btn").forEach(b => b.classList.remove("selected"));
+        btnElement.classList.add("selected");
+        selectedOptionIndex = index;
+        document.getElementById("nextQuestionBtn").disabled = false;
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timerValue = 15;
+        const bar = document.getElementById("timerBar");
+        bar.style.width = "100%";
+        
+        timerInterval = setInterval(() => {
+            timerValue--;
+            const pct = (timerValue / 15) * 100;
+            bar.style.width = `${pct}%`;
+            
+            if (timerValue <= 0) {
+                clearInterval(timerInterval);
+                // Timer expired: auto submit empty answer
+                submitExpiredAnswer();
+            }
+        }, 1000);
+    }
+
+    function submitExpiredAnswer() {
+        // Save incorrect answer
+        userAnswers.push({
+            correct: false
+        });
+        
+        nextQuestion();
+    }
+
+    function submitAnswer() {
+        clearInterval(timerInterval);
+        
+        const q = currentQuestions[currentQuestionIndex];
+        const answeredText = q.options[selectedOptionIndex];
+        const isCorrect = answeredText === q.correct_answer;
+        
+        userAnswers.push({
+            correct: isCorrect
+        });
+        
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < 3) {
+            loadQuestion();
+        } else {
+            finishDuel();
+        }
+    }
+
+    async function finishDuel() {
+        switchScreen("matchingScreen");
+        document.getElementById("matchingTitle").innerText = "Calculando Resultados...";
+        document.getElementById("matchingSubtitle").innerText = "El jurado está evaluando las respuestas...";
+        
+        // Calculate user correct count
+        const score = userAnswers.filter(a => a.correct).length;
+        
+        try {
+            const response = await fetch("/api/duelos/result", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    score: score,
+                    area: selectedArea,
+                    opponent_name: selectedOpponentName
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Show result screen
+                setTimeout(() => {
+                    showResult(data, score);
+                }, 1500);
+            }
+        } catch (error) {
+            console.error("Error submitting duel score:", error);
+        }
+    }
+
+    function showResult(resultData, userCorrectAnswers) {
+        switchScreen("resultScreen");
+        
+        // Set text classes based on user win/loss
+        const title = document.getElementById("resultStatus");
+        const userScoreVal = document.getElementById("userFinalScore");
+        const botScoreVal = document.getElementById("opponentFinalScore");
+        
+        userScoreVal.innerText = `${userCorrectAnswers}/3`;
+        botScoreVal.innerText = `${resultData.opponent_score}/3`;
+        
+        const opponentAvatar = document.getElementById("opponentFinalAvatar");
+        opponentAvatar.innerText = selectedOpponentName.charAt(0).toUpperCase();
+        opponentAvatar.style.backgroundColor = selectedOpponentColor;
+        document.getElementById("opponentFinalName").innerText = selectedOpponentName;
+        
+        if (resultData.winner === "user") {
+            title.innerText = "🎉 ¡Ganaste el Duelo! 🎉";
+            title.style.color = "#10b981";
+            userScoreVal.style.color = "#10b981";
+            botScoreVal.style.color = "#ef4444";
+        } else if (resultData.winner === "opponent") {
+            title.innerText = "😢 Perdiste el Duelo 😢";
+            title.style.color = "#ef4444";
+            userScoreVal.style.color = "#ef4444";
+            botScoreVal.style.color = "#10b981";
+        } else {
+            title.innerText = "🤝 ¡Empate cerrado! 🤝";
+            title.style.color = "#fbbf24";
+            userScoreVal.style.color = "#fbbf24";
+            botScoreVal.style.color = "#fbbf24";
+        }
+        
+        // Racha Alert
+        const streakAlert = document.getElementById("resultStreakAlert");
+        if (resultData.streak_bonus) {
+            streakAlert.style.display = "block";
+            document.getElementById("newStreakVal").innerText = resultData.streak;
+        } else {
+            streakAlert.style.display = "none";
+        }
+    }
+
+    function restartDuelSetup() {
+        switchScreen("setupScreen");
+    }
+</script>
+{% endblock %}
