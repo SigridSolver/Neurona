@@ -26,7 +26,7 @@ if not API_KEY:
     print("ERROR: No se encontró GEMINI_API_KEY en las variables de entorno.")
     sys.exit(1)
 genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-1.5-pro-latest')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Rutas
 PDF_DIR = Path(r"D:\Neurona\docs\Cuadernillos Saber 11 2026")
