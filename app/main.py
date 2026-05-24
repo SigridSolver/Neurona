@@ -22,7 +22,7 @@ from PIL import Image
 # Validation patterns
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 NAME_REGEX = r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]{3,50}$'
-PASSWORD_REGEX = r'^(%s=.*[a-z])(%s=.*[A-Z])(%s=.*\d)(%s=.*[@$!%*?&.+-])[A-Za-z\d@$!%*?&.+-]{8,}$'
+PASSWORD_REGEX = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.+-])[A-Za-z\d@$!%*?&.+-]{8,}$'
 
 FORBIDDEN_NAMES = {
     "admin", "administrator", "administrador", "root", "moderador", "moderator",
@@ -96,7 +96,7 @@ def get_db():
 # Mock Authentication (For MVP, using simple cookie sessions)
 # In production, use JWT or proper session management.
 def get_current_user(request: Request):
-    user_id = request.cookies.get("user_id")
+    user_id = request.session.get("user_id")
     if not user_id:
         return None
     conn = get_db()
@@ -126,8 +126,9 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     if not user or not pwd_context.verify(password, user["password_hash"]):
         return templates.TemplateResponse(request=request, name="login.html", context={"error": "Credenciales inválidas"})
     
+    
     response = RedirectResponse(url="/dashboard", status_code=303)
-    response.set_cookie(key="user_id", value=str(user["id"]), httponly=True)
+    request.session["user_id"] = user["id"]
     return response
 
 @app.get("/register", response_class=HTMLResponse)
@@ -199,7 +200,7 @@ async def register(request: Request, name: str = Form(...), email: str = Form(..
                 pass
                 
         conn.close()
-        response.set_cookie(key="user_id", value=str(user_id), httponly=True)
+        request.session["user_id"] = user_id
         return response
     except psycopg2.IntegrityError:
         conn.close()
@@ -208,9 +209,9 @@ async def register(request: Request, name: str = Form(...), email: str = Form(..
 
 
 @app.get("/logout")
-async def logout():
+async def logout(request: Request):
     response = RedirectResponse(url="/", status_code=303)
-    response.delete_cookie("user_id")
+    request.session.clear()
     return response
 
 def map_diagnostic_score(value: int) -> int:
@@ -761,7 +762,7 @@ async def auth_google(request: Request):
         user_id = user["id"]
         
     response = RedirectResponse(url="/dashboard", status_code=303)
-    response.set_cookie(key="user_id", value=str(user_id), httponly=True)
+    request.session["user_id"] = user_id
     
     guest_cookie = request.cookies.get("guest_diagnostic")
     if guest_cookie:
@@ -798,9 +799,8 @@ async def auth_google(request: Request):
 def simulate_tutor_response(post_id: int, content: str, area: str):
     import time
     time.sleep(3)
-    import os
-    url = os.getenv("DATABASE_URL")
-    conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.DictCursor)
+    
+    conn = get_db()
     cursor = conn.cursor()
     
     tutor_row = cursor.execute("SELECT id FROM users WHERE email = 'tutor_david@saber11.edu.co'").fetchone()
@@ -938,11 +938,11 @@ async def create_post(
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO posts (user_id, content, area, likes) VALUES (%s, %s, %s, 0)",
+        "INSERT INTO posts (user_id, content, area, likes) VALUES (%s, %s, %s, 0) RETURNING id",
         (user["id"], content_clean, area)
     )
+    post_id = cursor.fetchone()[0]
     conn.commit()
-    post_id = cursor.lastrowid
     conn.close()
     
     # Trigger AI response simulation in background
@@ -961,15 +961,16 @@ async def toggle_like(request: Request, post_id: int):
     cursor = conn.cursor()
     
     # Check if already liked
-    liked_row = cursor.execute(
+    cursor.execute(
         "SELECT 1 FROM post_likes WHERE post_id = %s AND user_id = %s",
         (post_id, user["id"])
-    ).fetchone()
+    )
+    liked_row = cursor.fetchone()
     
     if liked_row:
         # Unlike
         cursor.execute("DELETE FROM post_likes WHERE post_id = %s AND user_id = %s", (post_id, user["id"]))
-        cursor.execute("UPDATE posts SET likes = MAX(0, likes - 1) WHERE id = %s", (post_id,))
+        cursor.execute("UPDATE posts SET likes = GREATEST(0, likes - 1) WHERE id = %s", (post_id,))
         liked = False
     else:
         # Like

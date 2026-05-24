@@ -420,6 +420,11 @@
             if (data.mode === 'ai') {
                 chatHistory.push({ role: 'user', parts: [message] });
                 chatHistory.push({ role: 'model', parts: [data.response] });
+                
+                // Conservar solo los últimos 10 mensajes (5 pares de pregunta-respuesta)
+                if (chatHistory.length > 10) {
+                    chatHistory = chatHistory.slice(chatHistory.length - 10);
+                }
             }
         } catch (error) {
             typingIndicator.style.display = 'none';
