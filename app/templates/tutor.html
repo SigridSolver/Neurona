@@ -17,10 +17,24 @@
     @media (max-width: 768px) {
         .tutor-layout {
             grid-template-columns: 1fr;
-            height: auto;
+            height: calc(100vh - 120px);
+            margin: 1rem auto;
+            gap: 1rem;
         }
         .tutor-sidebar {
             display: none;
+        }
+        .message {
+            max-width: 95%;
+        }
+        .chat-input-form {
+            flex-direction: column;
+        }
+        .chat-input {
+            width: 100%;
+        }
+        .chat-input-form button {
+            width: 100%;
         }
     }
 

@@ -496,6 +496,19 @@ async def chat_api(request: Request, body: ChatRequest):
     api_key = os.getenv("GEMINI_API_KEY")
     if api_key:
         try:
+            conn = get_db()
+            diagnostic = conn.execute("SELECT * FROM diagnostic_results WHERE user_id = %s ORDER BY date DESC LIMIT 1", (user["id"],)).fetchone()
+            conn.close()
+            
+            user_context = f"\n\nCONTEXTO DEL ESTUDIANTE CON EL QUE HABLAS:\n- Nombre: {user['name']}\n"
+            if diagnostic:
+                user_context += "- Resultados de su último diagnóstico (sobre 100):\n"
+                user_context += f"  * Matemáticas: {diagnostic['score_math']}\n"
+                user_context += f"  * Lectura Crítica: {diagnostic['score_reading']}\n"
+                user_context += f"  * Ciencias Naturales: {diagnostic['score_science']}\n"
+                user_context += f"  * Sociales y Ciudadanas: {diagnostic['score_social']}\n"
+                user_context += f"  * Inglés: {diagnostic['score_english']}\n"
+
             # System prompt for strict tutoring context
             system_instruction = (
                 "Eres 'David', un Tutor de Inteligencia Artificial enfocado en el proceso educativo, "
@@ -511,7 +524,7 @@ async def chat_api(request: Request, body: ChatRequest):
                 "debes responder de forma amable pero firme que tu rol es el de un Tutor Académico y redirigir "
                 "la conversación hacia el aprendizaje o la cultura general.\n"
                 "- Responde siempre en español de manera didáctica, clara, motivadora y con base en hechos verificables. "
-                "Usa ejemplos sencillos y fomenta el pensamiento crítico del estudiante."
+                f"Usa ejemplos sencillos y fomenta el pensamiento crítico del estudiante.{user_context}"
             )
             
             model = genai.GenerativeModel(
