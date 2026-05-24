@@ -37,7 +37,7 @@ def init_db():
     # Users Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY SERIAL,
+            id SERIAL PRIMARY KEY,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             name TEXT NOT NULL,
@@ -60,7 +60,7 @@ def init_db():
     # Diagnostic Results Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS diagnostic_results (
-            id INTEGER PRIMARY KEY SERIAL,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL,
             score_reading INTEGER DEFAULT 0,
             score_math INTEGER DEFAULT 0,
@@ -75,7 +75,7 @@ def init_db():
     # Knowledge Base Table (Extracted text from PDFs)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS knowledge_base (
-            id INTEGER PRIMARY KEY SERIAL,
+            id SERIAL PRIMARY KEY,
             area TEXT NOT NULL,
             content TEXT NOT NULL,
             source_pdf TEXT NOT NULL
@@ -85,7 +85,7 @@ def init_db():
     # Generated Questions Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS questions (
-            id INTEGER PRIMARY KEY SERIAL,
+            id SERIAL PRIMARY KEY,
             area TEXT NOT NULL,
             text TEXT NOT NULL,
             options TEXT NOT NULL, -- JSON string
@@ -105,7 +105,7 @@ def init_db():
     # Practice Sessions
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS practice_sessions (
-            id INTEGER PRIMARY KEY SERIAL,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL,
             area TEXT NOT NULL,
             difficulty TEXT NOT NULL,
@@ -119,7 +119,7 @@ def init_db():
     # Posts Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS posts (
-            id INTEGER PRIMARY KEY SERIAL,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL,
             content TEXT NOT NULL,
             area TEXT NOT NULL,
@@ -132,7 +132,7 @@ def init_db():
     # Comments Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS comments (
-            id INTEGER PRIMARY KEY SERIAL,
+            id SERIAL PRIMARY KEY,
             post_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             content TEXT NOT NULL,
