@@ -52,10 +52,7 @@ def init_db():
     
     # Migración de columnas de racha y perfil si no existen en la base de datos previa
     for column, col_type in [("streak", "INTEGER DEFAULT 0"), ("last_active_date", "TEXT"), ("bio", "TEXT DEFAULT ''"), ("avatar_color", "TEXT DEFAULT '#3b82f6'"), ("badges", "TEXT DEFAULT '[]'")]:
-        try:
-            cursor.execute(f"ALTER TABLE users ADD COLUMN {column} {col_type}")
-        except psycopg2.OperationalError:
-            pass
+        cursor.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column} {col_type}")
     
     # Diagnostic Results Table
     cursor.execute('''
@@ -97,10 +94,7 @@ def init_db():
     ''')
     
     # Migración de columna graphic en la tabla questions si no existe
-    try:
-        cursor.execute("ALTER TABLE questions ADD COLUMN graphic TEXT DEFAULT NULL")
-    except psycopg2.OperationalError:
-        pass
+    cursor.execute("ALTER TABLE questions ADD COLUMN IF NOT EXISTS graphic TEXT DEFAULT NULL")
     
     # Practice Sessions
     cursor.execute('''
