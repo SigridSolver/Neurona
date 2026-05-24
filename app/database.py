@@ -5,12 +5,30 @@ from pathlib import Path
 
 DATABASE_URL = str(Path(__file__).resolve().parent.parent / "saber11.db")
 
+class PostgresConnWrapper:
+    def __init__(self, conn):
+        self.conn = conn
+
+    def execute(self, query, params=None):
+        cursor = self.conn.cursor()
+        cursor.execute(query, params)
+        return cursor
+        
+    def commit(self):
+        self.conn.commit()
+        
+    def close(self):
+        self.conn.close()
+        
+    def cursor(self):
+        return self.conn.cursor()
+
 def get_db_connection():
     import os
     url = os.getenv("DATABASE_URL")
     conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.DictCursor)
     
-    return conn
+    return PostgresConnWrapper(conn)
 
 def init_db():
     conn = get_db_connection()
