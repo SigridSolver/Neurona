@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pypdf2
+pyjwt
+passlib[bcrypt]
+python-multipart
+jinja2
+authlib
+httpx
+python-dotenv
+google-generativeai

@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request, Form, Depends, HTTPException, status, Back
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
+from authlib.integrations.starlette_client import OAuth
 from passlib.context import CryptContext
 from pydantic import BaseModel
 import sqlite3
@@ -37,10 +39,22 @@ if GEMINI_API_KEY:
 
 # Initialize App
 app = FastAPI(title="David Saber 11")
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "tu_clave_super_secreta_aqui"))
+
+oauth = OAuth()
+oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR.parent / "saber11.db"
+DB_PATH = os.getenv("DB_PATH", BASE_DIR.parent / "saber11.db")
 
 # Mount Static and Templates
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -650,20 +664,33 @@ async def process_reset_password(
     
     return templates.TemplateResponse(request=request, name="login.html", context={"success": "Tu contraseña ha sido restablecida. Inicia sesión con tus nuevas credenciales."})
 
-@app.get("/login/google", response_class=HTMLResponse)
-async def google_login_page(request: Request):
-    return templates.TemplateResponse(request=request, name="google_login.html")
+@app.get("/login/google")
+async def google_login(request: Request):
+    redirect_uri = request.url_for('auth_google')
+    return await oauth.google.authorize_redirect(request, redirect_uri)
 
-@app.post("/login/google/callback")
-async def google_callback(request: Request, name: str = Form(...), email: str = Form(...)):
+@app.get("/auth/google/callback")
+async def auth_google(request: Request):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except Exception as e:
+        return RedirectResponse(url="/login?error=auth_failed")
+        
+    user_info = token.get('userinfo')
+    if not user_info:
+        return RedirectResponse(url="/login?error=auth_failed")
+        
+    email = user_info.get('email')
+    name = user_info.get('name', 'Estudiante')
+    
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email.strip(),)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
     
     if not user:
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-            (name.strip(), email.strip(), "google_sso_oauth_user")
+            (name, email, "google_sso_oauth_user")
         )
         conn.commit()
         user_id = cursor.lastrowid
