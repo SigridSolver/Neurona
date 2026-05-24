@@ -16,7 +16,7 @@
         <div class="container">
             <a href="/" class="navbar-brand">David Saber 11</a>
             <div class="navbar-nav">
-                {% if request.cookies.get('user_id') %}
+                {% if request.session.get('user_id') or user %}
                     <a href="/dashboard">Dashboard</a>
                     <a href="/comunidad">Comunidad</a>
                     <a href="/duelos">Duelos 1v1</a>

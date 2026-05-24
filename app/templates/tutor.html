@@ -316,10 +316,16 @@
         <!-- Input Area -->
         <div class="chat-input-area">
             <form id="chat-form" class="chat-input-form" onsubmit="handleChatSubmit(event)">
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('image-upload').click()" style="padding: 0 1rem; font-size: 1.2rem; background-color: rgba(30, 41, 59, 0.8);" title="Adjuntar imagen">📎</button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('image-upload').click()" style="padding: 0 0.8rem; font-size: 1.2rem; background-color: rgba(30, 41, 59, 0.8);" title="Adjuntar imagen">📎</button>
                 <input type="file" id="image-upload" accept="image/*" style="display:none" onchange="previewImage(event)">
-                <input type="text" id="chat-input" class="chat-input" placeholder="Pregúntame sobre cualquier área evaluada (ej: derivadas, efecto invernadero)..." required autocomplete="off">
-                <button type="submit" class="btn btn-primary">Preguntar</button>
+                
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('camera-upload').click()" style="padding: 0 0.8rem; font-size: 1.2rem; background-color: rgba(30, 41, 59, 0.8); margin-left: 0.5rem;" title="Tomar foto">📷</button>
+                <input type="file" id="camera-upload" accept="image/*" capture="environment" style="display:none" onchange="previewImage(event)">
+                
+                <button type="button" id="mic-btn" class="btn btn-secondary" onclick="toggleRecording()" style="padding: 0 0.8rem; font-size: 1.2rem; background-color: rgba(30, 41, 59, 0.8); margin-left: 0.5rem;" title="Usar micrófono">🎤</button>
+                
+                <input type="text" id="chat-input" class="chat-input" placeholder="Pregúntame sobre cualquier área evaluada..." required autocomplete="off" style="margin-left: 0.5rem;">
+                <button type="submit" class="btn btn-primary" style="margin-left: 0.5rem;">Preguntar</button>
             </form>
         </div>
     </div>
@@ -435,6 +441,58 @@
     function askSuggestion(question) {
         chatInput.value = question;
         document.getElementById('chat-form').dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+
+    // --- Lógica del Micrófono (Reconocimiento de Voz) ---
+    let recognition = null;
+    let isRecording = false;
+    const micBtn = document.getElementById('mic-btn');
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'es-CO'; // Español de Colombia
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = function() {
+            isRecording = true;
+            micBtn.style.color = '#ef4444'; // Color rojo parpadeante cuando graba
+            chatInput.placeholder = 'Escuchando tu pregunta...';
+        };
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            // Agregar contexto educativo si se usa voz
+            chatInput.value += (chatInput.value ? ' ' : '') + transcript;
+        };
+
+        recognition.onerror = function(event) {
+            console.error('Error de reconocimiento de voz:', event.error);
+            stopRecording();
+        };
+
+        recognition.onend = function() {
+            stopRecording();
+        };
+    }
+
+    function toggleRecording() {
+        if (!recognition) {
+            alert('El reconocimiento de voz no es soportado por tu navegador. Intenta en Chrome o Safari.');
+            return;
+        }
+        if (isRecording) {
+            recognition.stop();
+        } else {
+            recognition.start();
+        }
+    }
+
+    function stopRecording() {
+        isRecording = false;
+        micBtn.style.color = '';
+        chatInput.placeholder = 'Pregúntame sobre cualquier área evaluada...';
     }
 </script>
 {% endblock %}
