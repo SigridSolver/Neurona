@@ -1,7 +1,10 @@
+import sys
 import os
-import sqlite3
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.database import get_db_connection
+import os
+
 import json
-import random
 from pathlib import Path
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -12,10 +15,6 @@ load_dotenv()
 
 DB_PATH = Path(__file__).parent.parent / "saber11.db"
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 # Prototipo de preguntas pre-diseñadas por IA como base si no hay API Key disponible
 AI_MOCK_GENERATED_QUESTIONS = [
@@ -72,7 +71,7 @@ def generate_questions_with_gemini():
         genai.configure(api_key=api_key)
         
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn
         
         # Get a sample of chunks from knowledge base to use as context
         chunks = cursor.execute("SELECT area, content FROM knowledge_base ORDER BY RANDOM() LIMIT 3").fetchall()
@@ -126,14 +125,14 @@ def generate_questions_with_gemini():
 
     # Insert into database
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn
     inserted_count = 0
     for q in questions:
-        exists = cursor.execute("SELECT id FROM questions WHERE text = ?", (q["text"],)).fetchone()
+        exists = cursor.execute("SELECT id FROM questions WHERE text = %s", (q["text"],)).fetchone()
         if not exists:
             cursor.execute('''
                 INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
             ''', (q["area"], q["text"], json.dumps(q["options"], ensure_ascii=False), q["correct_answer"], q["explanation"], q["difficulty"]))
             inserted_count += 1
             
