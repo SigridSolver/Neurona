@@ -27,7 +27,7 @@ if not API_KEY:
     print("ERROR: No se encontró GEMINI_API_KEY en las variables de entorno.")
     sys.exit(1)
 genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-3.5-flash')
+model = genai.GenerativeModel('gemini-3.1-flash-lite')
 
 # Rutas
 PDF_DIR = Path(r"D:\Neurona\docs\Cuadernillos Saber 11 2026")
@@ -168,9 +168,9 @@ def extract_questions_with_gemini():
                 print(f"   [ERROR] Error con la API de Gemini: {str(e)}")
                 log_error(pdf_path.name, page_num + 1, f"Error de API: {str(e)}")
             
-            # Pausa de 15 segundos para no superar el límite de 5 RPM (peticiones por minuto)
-            print("   [INFO] Esperando 15 segundos para no saturar el límite gratuito de Gemini...")
-            time.sleep(15)
+            # Pausa de 5 segundos para no superar el límite de 15 RPM del modelo Lite
+            print("   [INFO] Esperando 5 segundos para no saturar el límite de RPM...")
+            time.sleep(5)
                 
     conn.commit()
     conn.close()
