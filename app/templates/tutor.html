@@ -3,6 +3,12 @@
 {% block title %}Tutor IA - David Saber 11{% endblock %}
 
 {% block extra_head %}
+<!-- KaTeX for Math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+<!-- Marked.js for Markdown rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
     .tutor-layout {
         display: grid;
@@ -14,7 +20,7 @@
         min-height: 550px;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
         .tutor-layout {
             grid-template-columns: 1fr;
             height: calc(100vh - 120px);
@@ -379,14 +385,26 @@
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
         
-        // Simple markdown parsing for rendering responses beautifully
-        let formattedText = text
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1); padding:2px 4px; border-radius:4px;">$1</code>')
-            .replace(/\n/g, '<br>');
+        let formattedText = "";
+        try {
+            formattedText = marked.parse(text);
+        } catch (e) {
+            formattedText = text.replace(/\n/g, '<br>');
+        }
             
         contentDiv.innerHTML = formattedText;
+        
+        try {
+            renderMathInElement(contentDiv, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                throwOnError: false
+            });
+        } catch(e) {}
         
         messageDiv.appendChild(contentDiv);
         chatMessages.appendChild(messageDiv);
