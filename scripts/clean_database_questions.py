@@ -1,4 +1,5 @@
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import re
 import json
 from pathlib import Path
@@ -31,7 +32,7 @@ def clean_question_text(text):
     )
     
     # Strip any leading Roman numerals followed by space (e.g. "II I VIV ")
-    text = re.sub(r'^[IVXLC\s\.-]+(?=\s[A-ZÁÉÍÓÚÑa-z¿¡"“])', '', text)
+    text = re.sub(r'^[IVXLC\s\.-]+(%s=\s[A-ZÁÉÍÓÚÑa-z¿¡"“])', '', text)
     
     # Trim and clean double spaces
     text = re.sub(r'\s+', ' ', text).strip()
@@ -41,7 +42,7 @@ def clean_question_text(text):
 def clean_option_text(opt):
     # Strip common header names or table headers appended at the end of the text
     opt = re.sub(
-        r'\s*(?:Número de|Nutrientes|Corriente|Tiburón|Piscina de niñ.*|Figura \d+|Altitud.*|Fuerza del río|Célula inicial.*|Duplicación.*|Reactivos.*|Productos.*)$',
+        r'\s*(%s:Número de|Nutrientes|Corriente|Tiburón|Piscina de niñ.*|Figura \d+|Altitud.*|Fuerza del río|Célula inicial.*|Duplicación.*|Reactivos.*|Productos.*)$',
         '', opt, flags=re.IGNORECASE
     )
     
@@ -90,7 +91,7 @@ def run_cleanup():
         # Update row if changes made
         if cleaned_text != text or cleaned_options != options or cleaned_correct != correct_answer:
             cursor.execute(
-                "UPDATE questions SET text = ?, options = ?, correct_answer = ? WHERE id = ?",
+                "UPDATE questions SET text = %s, options = %s, correct_answer = %s WHERE id = %s",
                 (cleaned_text, json.dumps(cleaned_options, ensure_ascii=False), cleaned_correct, q_id)
             )
             updated_count += 1

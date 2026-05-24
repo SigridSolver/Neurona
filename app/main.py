@@ -6,7 +6,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
 from passlib.context import CryptContext
 from pydantic import BaseModel
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import random
 import json
 from pathlib import Path
@@ -18,7 +19,7 @@ import re
 # Validation patterns
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 NAME_REGEX = r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]{3,50}$'
-PASSWORD_REGEX = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.+-])[A-Za-z\d@$!%*?&.+-]{8,}$'
+PASSWORD_REGEX = r'^(%s=.*[a-z])(%s=.*[A-Z])(%s=.*\d)(%s=.*[@$!%*?&.+-])[A-Za-z\d@$!%*?&.+-]{8,}$'
 
 FORBIDDEN_NAMES = {
     "admin", "administrator", "administrador", "root", "moderador", "moderator",
@@ -65,8 +66,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # DB Helper
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    import os
+    url = os.getenv("DATABASE_URL")
+    conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.DictCursor)
+    
     return conn
 
 # Mock Authentication (For MVP, using simple cookie sessions)
@@ -76,7 +79,7 @@ def get_current_user(request: Request):
     if not user_id:
         return None
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone()
     conn.close()
     return user
 
@@ -96,7 +99,7 @@ async def login_page(request: Request):
 @app.post("/login")
 async def login(request: Request, email: str = Form(...), password: str = Form(...)):
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE email = %s", (email,)).fetchone()
     conn.close()
     
     if not user or not pwd_context.verify(password, user["password_hash"]):
@@ -136,7 +139,7 @@ async def register(request: Request, name: str = Form(...), email: str = Form(..
 
     # 5. Check if user already exists
     conn = get_db()
-    existing_user = conn.execute("SELECT id FROM users WHERE email = ?", (email_clean,)).fetchone()
+    existing_user = conn.execute("SELECT id FROM users WHERE email = %s", (email_clean,)).fetchone()
     if existing_user:
         conn.close()
         return templates.TemplateResponse(request=request, name="register.html", context={"error": "El correo ya está registrado."})
@@ -144,7 +147,7 @@ async def register(request: Request, name: str = Form(...), email: str = Form(..
     hashed_pwd = pwd_context.hash(password)
     try:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)", (name_clean, email_clean, hashed_pwd))
+        cursor.execute("INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)", (name_clean, email_clean, hashed_pwd))
         conn.commit()
         user_id = cursor.lastrowid
         
@@ -168,7 +171,7 @@ async def register(request: Request, name: str = Form(...), email: str = Form(..
                 
                 cursor.execute('''
                     INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                 ''', (user_id, s_math, s_reading, s_social, s_science, s_english))
                 conn.commit()
                 response.delete_cookie("guest_diagnostic")
@@ -178,7 +181,7 @@ async def register(request: Request, name: str = Form(...), email: str = Form(..
         conn.close()
         response.set_cookie(key="user_id", value=str(user_id), httponly=True)
         return response
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         conn.close()
         return templates.TemplateResponse(request=request, name="register.html", context={"error": "El correo ya está registrado."})
 
@@ -215,22 +218,22 @@ async def dashboard(request: Request):
     
     if last_active is None:
         streak = 1
-        conn.execute("UPDATE users SET streak = ?, last_active_date = ? WHERE id = ?", (streak, today_str, user_id))
+        conn.execute("UPDATE users SET streak = %s, last_active_date = %s WHERE id = %s", (streak, today_str, user_id))
         conn.commit()
     elif last_active == yesterday_str:
         streak += 1
-        conn.execute("UPDATE users SET streak = ?, last_active_date = ? WHERE id = ?", (streak, today_str, user_id))
+        conn.execute("UPDATE users SET streak = %s, last_active_date = %s WHERE id = %s", (streak, today_str, user_id))
         conn.commit()
     elif last_active != today_str:
         streak = 1
-        conn.execute("UPDATE users SET streak = ?, last_active_date = ? WHERE id = ?", (streak, today_str, user_id))
+        conn.execute("UPDATE users SET streak = %s, last_active_date = %s WHERE id = %s", (streak, today_str, user_id))
         conn.commit()
         
     # Get updated user record
-    user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone()
     # ------------------------------------
     
-    diagnostic = conn.execute("SELECT * FROM diagnostic_results WHERE user_id = ? ORDER BY date DESC LIMIT 1", (user["id"],)).fetchone()
+    diagnostic = conn.execute("SELECT * FROM diagnostic_results WHERE user_id = %s ORDER BY date DESC LIMIT 1", (user["id"],)).fetchone()
     
     proficiency = {}
     global_score = None
@@ -249,7 +252,7 @@ async def dashboard(request: Request):
             practice_stats = conn.execute('''
                 SELECT SUM(score) as correct, SUM(total_questions) as total 
                 FROM practice_sessions 
-                WHERE user_id = ? AND area = ?
+                WHERE user_id = %s AND area = %s
             ''', (user["id"], area)).fetchone()
             
             if practice_stats and practice_stats["total"] and practice_stats["total"] > 0:
@@ -266,7 +269,7 @@ async def dashboard(request: Request):
         )
         global_score = round((weighted_sum / 13) * 5)
         
-    practice_history = conn.execute("SELECT * FROM practice_sessions WHERE user_id = ? ORDER BY date DESC LIMIT 5", (user["id"],)).fetchall()
+    practice_history = conn.execute("SELECT * FROM practice_sessions WHERE user_id = %s ORDER BY date DESC LIMIT 5", (user["id"],)).fetchall()
     
     # Query leaderboard (top 5 users ranked by estimated global score)
     leaderboard = []
@@ -360,7 +363,7 @@ async def submit_diagnostico(
         conn = get_db()
         conn.execute('''
             INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
         ''', (user["id"], s_math, s_reading, s_social, s_science, s_english))
         conn.commit()
         conn.close()
@@ -392,7 +395,7 @@ async def get_practice_questions(area: str):
     conn = get_db()
     # Query 5 random questions matching the selected area
     rows = conn.execute(
-        "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = ? ORDER BY RANDOM() LIMIT 5",
+        "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 5",
         (area,)
     ).fetchall()
     conn.close()
@@ -440,7 +443,7 @@ async def save_practice_result(request: Request, data: dict):
     conn = get_db()
     conn.execute('''
         INSERT INTO practice_sessions (user_id, area, difficulty, score, total_questions)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
     ''', (user["id"], data.get("area"), data.get("difficulty", "Intermedio"), data.get("score"), data.get("total")))
     conn.commit()
     conn.close()
@@ -562,7 +565,7 @@ async def chat_api(request: Request, body: ChatRequest):
     if query_area:
         # Search questions matching query_area and keywords in text
         rows = conn.execute(
-            "SELECT text, options, correct_answer, explanation FROM questions WHERE area = ? ORDER BY RANDOM() LIMIT 2",
+            "SELECT text, options, correct_answer, explanation FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 2",
             (query_area,)
         ).fetchall()
         for r in rows:
@@ -583,7 +586,7 @@ async def chat_api(request: Request, body: ChatRequest):
         words = [w for w in user_msg.lower().split() if len(w) > 4]
         for w in words[:3]:
             rows = conn.execute(
-                "SELECT area, text, correct_answer, explanation FROM questions WHERE text LIKE ? LIMIT 1",
+                "SELECT area, text, correct_answer, explanation FROM questions WHERE text LIKE %s LIMIT 1",
                 (f"%{w}%",)
             ).fetchall()
             for r in rows:
@@ -625,7 +628,7 @@ async def forgot_password_page(request: Request):
 @app.post("/forgot-password")
 async def process_forgot_password(request: Request, email: str = Form(...)):
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email.strip(),)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE email = %s", (email.strip(),)).fetchone()
     conn.close()
     
     # Simulación local del enlace de recuperación
@@ -652,13 +655,13 @@ async def process_reset_password(
         })
         
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE email = %s", (email,)).fetchone()
     if not user:
         conn.close()
         return templates.TemplateResponse(request=request, name="reset_password.html", context={"error": "Usuario no encontrado."})
         
     hashed_pwd = pwd_context.hash(password)
-    conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hashed_pwd, user["id"]))
+    conn.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hashed_pwd, user["id"]))
     conn.commit()
     conn.close()
     
@@ -684,12 +687,12 @@ async def auth_google(request: Request):
     name = user_info.get('name', 'Estudiante')
     
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE email = %s", (email,)).fetchone()
     
     if not user:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+            "INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)",
             (name, email, "google_sso_oauth_user")
         )
         conn.commit()
@@ -719,7 +722,7 @@ async def auth_google(request: Request):
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
             ''', (user_id, s_math, s_reading, s_social, s_science, s_english))
             conn.commit()
             response.delete_cookie("guest_diagnostic")
@@ -735,7 +738,9 @@ async def auth_google(request: Request):
 def simulate_tutor_response(post_id: int, content: str, area: str):
     import time
     time.sleep(3)
-    conn = sqlite3.connect(DB_PATH)
+    import os
+    url = os.getenv("DATABASE_URL")
+    conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.DictCursor)
     cursor = conn.cursor()
     
     tutor_row = cursor.execute("SELECT id FROM users WHERE email = 'tutor_david@saber11.edu.co'").fetchone()
@@ -773,7 +778,7 @@ def simulate_tutor_response(post_id: int, content: str, area: str):
         }
         response_text = fallback_responses.get(area, "¡Hola! Gracias por compartir tu duda en la comunidad. Recuerda revisar nuestro banco de preguntas y practicar diariamente para fortalecer tus competencias en esta área. ¡Tú puedes! 🤖")
         
-    cursor.execute("INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)", (post_id, tutor_id, response_text))
+    cursor.execute("INSERT INTO comments (post_id, user_id, content) VALUES (%s, %s, %s)", (post_id, tutor_id, response_text))
     conn.commit()
     conn.close()
 
@@ -794,7 +799,7 @@ async def comunidad_page(request: Request, area: str = None):
     '''
     params = []
     if area and area != "Todas":
-        query += " WHERE p.area = ?"
+        query += " WHERE p.area = %s"
         params.append(area)
         
     query += " ORDER BY p.created_at DESC"
@@ -805,7 +810,7 @@ async def comunidad_page(request: Request, area: str = None):
     for r in post_rows:
         # Check if current user liked this post
         liked_row = conn.execute(
-            "SELECT 1 FROM post_likes WHERE post_id = ? AND user_id = ?",
+            "SELECT 1 FROM post_likes WHERE post_id = %s AND user_id = %s",
             (r["id"], user["id"])
         ).fetchone()
         liked = liked_row is not None
@@ -815,7 +820,7 @@ async def comunidad_page(request: Request, area: str = None):
             SELECT c.id, c.content, c.created_at, u.name as user_name, u.avatar_color
             FROM comments c
             JOIN users u ON c.user_id = u.id
-            WHERE c.post_id = ?
+            WHERE c.post_id = %s
             ORDER BY c.created_at ASC
         '''
         comment_rows = conn.execute(comments_query, (r["id"],)).fetchall()
@@ -873,7 +878,7 @@ async def create_post(
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO posts (user_id, content, area, likes) VALUES (?, ?, ?, 0)",
+        "INSERT INTO posts (user_id, content, area, likes) VALUES (%s, %s, %s, 0)",
         (user["id"], content_clean, area)
     )
     conn.commit()
@@ -897,25 +902,25 @@ async def toggle_like(request: Request, post_id: int):
     
     # Check if already liked
     liked_row = cursor.execute(
-        "SELECT 1 FROM post_likes WHERE post_id = ? AND user_id = ?",
+        "SELECT 1 FROM post_likes WHERE post_id = %s AND user_id = %s",
         (post_id, user["id"])
     ).fetchone()
     
     if liked_row:
         # Unlike
-        cursor.execute("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?", (post_id, user["id"]))
-        cursor.execute("UPDATE posts SET likes = MAX(0, likes - 1) WHERE id = ?", (post_id,))
+        cursor.execute("DELETE FROM post_likes WHERE post_id = %s AND user_id = %s", (post_id, user["id"]))
+        cursor.execute("UPDATE posts SET likes = MAX(0, likes - 1) WHERE id = %s", (post_id,))
         liked = False
     else:
         # Like
-        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)", (post_id, user["id"]))
-        cursor.execute("UPDATE posts SET likes = likes + 1 WHERE id = ?", (post_id,))
+        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (%s, %s)", (post_id, user["id"]))
+        cursor.execute("UPDATE posts SET likes = likes + 1 WHERE id = %s", (post_id,))
         liked = True
         
     conn.commit()
     
     # Get new likes count
-    new_likes = cursor.execute("SELECT likes FROM posts WHERE id = ?", (post_id,)).fetchone()[0]
+    new_likes = cursor.execute("SELECT likes FROM posts WHERE id = %s", (post_id,)).fetchone()[0]
     conn.close()
     
     return {"likes": new_likes, "liked": liked}
@@ -939,7 +944,7 @@ async def add_comment(request: Request, post_id: int, content: str = Form(...)):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)",
+        "INSERT INTO comments (post_id, user_id, content) VALUES (%s, %s, %s)",
         (post_id, user["id"], content_clean)
     )
     conn.commit()
@@ -979,7 +984,7 @@ async def start_duel(request: Request, body: dict):
     
     conn = get_db()
     rows = conn.execute(
-        "SELECT id, area, text, options, correct_answer, explanation, difficulty FROM questions WHERE area = ? ORDER BY RANDOM() LIMIT 3",
+        "SELECT id, area, text, options, correct_answer, explanation, difficulty FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 3",
         (area,)
     ).fetchall()
     
@@ -1031,7 +1036,7 @@ async def start_duel(request: Request, body: dict):
         
     opponent_name = body.get("opponent_name", "Carlos Gómez")
     opponent_row = conn.execute(
-        "SELECT name, avatar_color, bio, streak FROM users WHERE name = ?", 
+        "SELECT name, avatar_color, bio, streak FROM users WHERE name = %s", 
         (opponent_name,)
     ).fetchone()
     
@@ -1097,19 +1102,19 @@ async def save_duel_result(request: Request, body: dict):
             
         if "Duelos Ganados" not in badges_list:
             badges_list.append("Duelos Ganados")
-            cursor.execute("UPDATE users SET badges = ? WHERE id = ?", (json.dumps(badges_list), user["id"]))
+            cursor.execute("UPDATE users SET badges = %s WHERE id = %s", (json.dumps(badges_list), user["id"]))
             
-        cursor.execute("UPDATE users SET streak = ?, last_active_date = ? WHERE id = ?", (current_streak, today_str, user["id"]))
+        cursor.execute("UPDATE users SET streak = %s, last_active_date = %s WHERE id = %s", (current_streak, today_str, user["id"]))
     
     session_title = f"Duelo contra {opponent_name} ({area})"
     cursor.execute('''
         INSERT INTO practice_sessions (user_id, area, difficulty, score, total_questions)
-        VALUES (?, ?, 'Rápido 1v1', ?, 3)
+        VALUES (%s, %s, 'Rápido 1v1', %s, 3)
     ''', (user["id"], session_title, user_score))
     
     conn.commit()
     
-    updated_user = cursor.execute("SELECT streak, badges FROM users WHERE id = ?", (user["id"],)).fetchone()
+    updated_user = cursor.execute("SELECT streak, badges FROM users WHERE id = %s", (user["id"],)).fetchone()
     user_streak = updated_user["streak"]
     user_badges = json.loads(updated_user["badges"]) if updated_user["badges"] else []
     
@@ -1201,7 +1206,7 @@ async def update_profile(request: Request, bio: str = Form(...), avatar_color: s
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE users SET bio = ?, avatar_color = ? WHERE id = ?",
+        "UPDATE users SET bio = %s, avatar_color = %s WHERE id = %s",
         (bio_clean, avatar_color, user["id"])
     )
     conn.commit()

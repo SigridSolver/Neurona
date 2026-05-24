@@ -1,12 +1,15 @@
-import sqlite3
+import psycopg2
+import psycopg2.extras
 from typing import Dict, Any
 from pathlib import Path
 
 DATABASE_URL = str(Path(__file__).resolve().parent.parent / "saber11.db")
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE_URL)
-    conn.row_factory = sqlite3.Row
+    import os
+    url = os.getenv("DATABASE_URL")
+    conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.DictCursor)
+    
     return conn
 
 def init_db():
@@ -16,7 +19,7 @@ def init_db():
     # Users Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY SERIAL,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             name TEXT NOT NULL,
@@ -33,13 +36,13 @@ def init_db():
     for column, col_type in [("streak", "INTEGER DEFAULT 0"), ("last_active_date", "TEXT"), ("bio", "TEXT DEFAULT ''"), ("avatar_color", "TEXT DEFAULT '#3b82f6'"), ("badges", "TEXT DEFAULT '[]'")]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {column} {col_type}")
-        except sqlite3.OperationalError:
+        except psycopg2.OperationalError:
             pass
     
     # Diagnostic Results Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS diagnostic_results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY SERIAL,
             user_id INTEGER NOT NULL,
             score_reading INTEGER DEFAULT 0,
             score_math INTEGER DEFAULT 0,
@@ -54,7 +57,7 @@ def init_db():
     # Knowledge Base Table (Extracted text from PDFs)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS knowledge_base (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY SERIAL,
             area TEXT NOT NULL,
             content TEXT NOT NULL,
             source_pdf TEXT NOT NULL
@@ -64,7 +67,7 @@ def init_db():
     # Generated Questions Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY SERIAL,
             area TEXT NOT NULL,
             text TEXT NOT NULL,
             options TEXT NOT NULL, -- JSON string
@@ -78,13 +81,13 @@ def init_db():
     # Migración de columna graphic en la tabla questions si no existe
     try:
         cursor.execute("ALTER TABLE questions ADD COLUMN graphic TEXT DEFAULT NULL")
-    except sqlite3.OperationalError:
+    except psycopg2.OperationalError:
         pass
     
     # Practice Sessions
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS practice_sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY SERIAL,
             user_id INTEGER NOT NULL,
             area TEXT NOT NULL,
             difficulty TEXT NOT NULL,
@@ -98,7 +101,7 @@ def init_db():
     # Posts Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS posts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY SERIAL,
             user_id INTEGER NOT NULL,
             content TEXT NOT NULL,
             area TEXT NOT NULL,
@@ -111,7 +114,7 @@ def init_db():
     # Comments Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS comments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY SERIAL,
             post_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             content TEXT NOT NULL,
@@ -148,25 +151,25 @@ def init_db():
     ]
 
     for email, pwd_hash, name, streak, last_active, bio, color, badges in mock_users:
-        user_row = cursor.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        user_row = cursor.execute("SELECT id FROM users WHERE email = %s", (email,)).fetchone()
         if not user_row:
             cursor.execute('''
                 INSERT INTO users (email, password_hash, name, streak, last_active_date, bio, avatar_color, badges)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', (email, pwd_hash, name, streak, last_active, bio, color, badges))
             user_id = cursor.lastrowid
             
             # Add diagnostic results for leaderboard
             if email == "carlos@saber11.edu.co":
-                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (?, 85, 65, 60, 75, 55)", (user_id,))
+                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (%s, 85, 65, 60, 75, 55)", (user_id,))
             elif email == "sofia@saber11.edu.co":
-                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (?, 60, 88, 85, 65, 70)", (user_id,))
+                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (%s, 60, 88, 85, 65, 70)", (user_id,))
             elif email == "mateo@saber11.edu.co":
-                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (?, 75, 70, 68, 90, 65)", (user_id,))
+                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (%s, 75, 70, 68, 90, 65)", (user_id,))
             elif email == "valeria@saber11.edu.co":
-                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (?, 70, 78, 80, 72, 88)", (user_id,))
+                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (%s, 70, 78, 80, 72, 88)", (user_id,))
             elif email == "tutor_david@saber11.edu.co":
-                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (?, 95, 95, 95, 95, 95)", (user_id,))
+                cursor.execute("INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english) VALUES (%s, 95, 95, 95, 95, 95)", (user_id,))
                 
     conn.commit()
 
@@ -182,51 +185,51 @@ def init_db():
         # Post 1
         cursor.execute('''
             INSERT INTO posts (user_id, content, area, likes)
-            VALUES (?, 'Hola a todos! ¿Alguien tiene algún truco para recordar las diferencias entre los tipos de células en Ciencias Naturales?', 'Ciencias Naturales', 4)
+            VALUES (%s, 'Hola a todos! ¿Alguien tiene algún truco para recordar las diferencias entre los tipos de células en Ciencias Naturales?', 'Ciencias Naturales', 4)
         ''', (valeria_id,))
         p1_id = cursor.lastrowid
         
         # Comments on Post 1
         cursor.execute('''
             INSERT INTO comments (post_id, user_id, content)
-            VALUES (?, ?, 'Valeria, yo suelo hacer analogías con una fábrica: la mitocondria es la central de energía y el núcleo es la oficina de administración. ¡Me sirve muchísimo! 🧪')
+            VALUES (%s, %s, 'Valeria, yo suelo hacer analogías con una fábrica: la mitocondria es la central de energía y el núcleo es la oficina de administración. ¡Me sirve muchísimo! 🧪')
         ''', (p1_id, mateo_id))
         
         cursor.execute('''
             INSERT INTO comments (post_id, user_id, content)
-            VALUES (?, ?, '¡Excelente analogía, Mateo! Recuerden también que en las pruebas Saber 11 suelen preguntar mucho sobre la respiración celular (en la mitocondria) y la fotosíntesis (en el cloroplasto) como procesos complementarios. ¡Sigan así! 🤖')
+            VALUES (%s, %s, '¡Excelente analogía, Mateo! Recuerden también que en las pruebas Saber 11 suelen preguntar mucho sobre la respiración celular (en la mitocondria) y la fotosíntesis (en el cloroplasto) como procesos complementarios. ¡Sigan así! 🤖')
         ''', (p1_id, tutor_id))
 
         # Post 2
         cursor.execute('''
             INSERT INTO posts (user_id, content, area, likes)
-            VALUES (?, '¡Qué buen duelo acabo de tener con Sofía en Matemáticas! Esas preguntas de probabilidad estaban bien picantes. ⚡', 'Matemáticas', 2)
+            VALUES (%s, '¡Qué buen duelo acabo de tener con Sofía en Matemáticas! Esas preguntas de probabilidad estaban bien picantes. ⚡', 'Matemáticas', 2)
         ''', (carlos_id,))
         p2_id = cursor.lastrowid
         
         cursor.execute('''
             INSERT INTO comments (post_id, user_id, content)
-            VALUES (?, ?, '¡Jajaja estuvo súper cerrado! Para la próxima te gano en el último segundo. ¡Prepárate! 🏎️💨')
+            VALUES (%s, %s, '¡Jajaja estuvo súper cerrado! Para la próxima te gano en el último segundo. ¡Prepárate! 🏎️💨')
         ''', (p2_id, sofia_id))
 
         # Post 3
         cursor.execute('''
             INSERT INTO posts (user_id, content, area, likes)
-            VALUES (?, 'Recomiendo mucho leer noticias de actualidad para la sección de Sociales y Ciudadanas. Ayuda a entender mejor los mecanismos de participación ciudadana y la estructura del Estado.', 'Sociales y Ciudadanas', 5)
+            VALUES (%s, 'Recomiendo mucho leer noticias de actualidad para la sección de Sociales y Ciudadanas. Ayuda a entender mejor los mecanismos de participación ciudadana y la estructura del Estado.', 'Sociales y Ciudadanas', 5)
         ''', (sofia_id,))
         p3_id = cursor.lastrowid
         
         cursor.execute('''
             INSERT INTO comments (post_id, user_id, content)
-            VALUES (?, ?, '¡Totalmente de acuerdo, Sofía! Especialmente repasar qué es la tutela, el plebiscito y las funciones del Congreso. Siempre sale al menos una pregunta de eso. 👍')
+            VALUES (%s, %s, '¡Totalmente de acuerdo, Sofía! Especialmente repasar qué es la tutela, el plebiscito y las funciones del Congreso. Siempre sale al menos una pregunta de eso. 👍')
         ''', (p3_id, carlos_id))
 
         # Insert some initial likes in post_likes
-        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)", (p1_id, carlos_id))
-        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)", (p1_id, sofia_id))
-        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)", (p1_id, mateo_id))
-        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)", (p2_id, mateo_id))
-        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)", (p3_id, valeria_id))
+        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (%s, %s)", (p1_id, carlos_id))
+        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (%s, %s)", (p1_id, sofia_id))
+        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (%s, %s)", (p1_id, mateo_id))
+        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (%s, %s)", (p2_id, mateo_id))
+        cursor.execute("INSERT INTO post_likes (post_id, user_id) VALUES (%s, %s)", (p3_id, valeria_id))
 
         conn.commit()
 

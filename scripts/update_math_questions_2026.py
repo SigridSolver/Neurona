@@ -1,4 +1,5 @@
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import json
 from pathlib import Path
 
@@ -135,13 +136,13 @@ def update_questions():
 
     print("Updating Question 1 (ID 110)...")
     cursor.execute(
-        "UPDATE questions SET text = ?, options = ?, correct_answer = ?, explanation = ?, graphic = ? WHERE id = 110",
+        "UPDATE questions SET text = %s, options = %s, correct_answer = %s, explanation = %s, graphic = %s WHERE id = 110",
         (q1_text, json.dumps(q1_options, ensure_ascii=False), q1_correct, q1_explanation, svg_q1)
     )
 
     print("Updating Question 2 (ID 111)...")
     cursor.execute(
-        "UPDATE questions SET text = ?, options = ?, correct_answer = ?, explanation = ?, graphic = ? WHERE id = 111",
+        "UPDATE questions SET text = %s, options = %s, correct_answer = %s, explanation = %s, graphic = %s WHERE id = 111",
         (q2_text, json.dumps(q2_options, ensure_ascii=False), q2_correct, q2_explanation, svg_q2)
     )
 
