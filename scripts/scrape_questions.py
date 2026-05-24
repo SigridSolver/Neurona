@@ -1,17 +1,15 @@
-import sqlite3
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.database import get_db_connection
+
 import json
-import random
 import urllib.request
-import re
 from pathlib import Path
 
 # Paths
 DB_PATH = Path(__file__).parent.parent / "saber11.db"
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 # List of public educational simulator URLs with Saber 11 questions to scrape/parse
 PUBLIC_SOURCES = [
@@ -213,7 +211,7 @@ def scrape_public_resources():
 
     # Insert into database
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn
     
     inserted_count = 0
     for q in scraped_questions:

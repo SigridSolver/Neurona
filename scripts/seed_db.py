@@ -1,4 +1,8 @@
-import sqlite3
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.database import get_db_connection
+
 import re
 import json
 import random
@@ -11,13 +15,9 @@ DB_PATH = Path(__file__).parent.parent / "saber11.db"
 # Password Hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def parse_and_insert_questions(conn):
-    cursor = conn.cursor()
+    cursor = conn
     
     # Clean existing questions
     cursor.execute("DELETE FROM questions")
@@ -116,7 +116,7 @@ def parse_and_insert_questions(conn):
     print(f"Successfully inserted {questions_count} questions into the 'questions' table.")
 
 def seed_user_data(conn):
-    cursor = conn.cursor()
+    cursor = conn
     
     # 1. Create Test User
     email = "estudiante@saber11.com"
@@ -132,7 +132,7 @@ def seed_user_data(conn):
         VALUES (?, ?, ?)
     ''', (email, hashed_password, name))
     
-    user_id = cursor.lastrowid
+    user_id = cursor.fetchone()[0] if cursor.description else None
     print(f"Created test user with ID: {user_id} ({email} / {password})")
     
     # 2. Clear and Insert Diagnostic Result

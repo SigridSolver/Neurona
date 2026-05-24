@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Request, Form, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -512,7 +512,7 @@ async def chat_api(request: Request, body: ChatRequest):
             
             response = model.generate_content(user_msg)
             return {"response": response.text, "mode": "ai"}
-        except Exception as e:
+        except Exception:
             # Fallback to local agent on Gemini API error
             pass
             
@@ -625,7 +625,7 @@ async def chat_api(request: Request, body: ChatRequest):
         
     if found_content:
         response_text = (
-            f"He buscado en nuestro banco de preguntas del Saber 11 y encontré material relevante:\n\n"
+            "He buscado en nuestro banco de preguntas del Saber 11 y encontré material relevante:\n\n"
             + "\n\n---\n\n".join(found_content) + notice
         )
     else:
@@ -693,7 +693,7 @@ async def google_login(request: Request):
 async def auth_google(request: Request):
     try:
         token = await oauth.google.authorize_access_token(request)
-    except Exception as e:
+    except Exception:
         return RedirectResponse(url="/login?error=auth_failed")
         
     user_info = token.get('userinfo')

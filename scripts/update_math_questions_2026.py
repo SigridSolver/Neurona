@@ -1,5 +1,7 @@
-import psycopg2
-import psycopg2.extras
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.database import get_db_connection
 import json
 from pathlib import Path
 
@@ -8,8 +10,8 @@ DB_PATH = Path(__file__).parent.parent / "saber11.db"
 
 def update_questions():
     print(f"Connecting to database at: {DB_PATH}")
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn
     
     # SVG definition for Question 1: Pentagon with houses I to V
     svg_q1 = """<svg viewBox="0 0 200 200" width="100%" style="max-width: 280px; margin: 1.5rem auto; display: block;">

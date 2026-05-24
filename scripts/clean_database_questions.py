@@ -1,5 +1,7 @@
-import psycopg2
-import psycopg2.extras
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.database import get_db_connection
 import re
 import json
 from pathlib import Path
@@ -56,8 +58,8 @@ def clean_option_text(opt):
 
 def run_cleanup():
     print(f"Connecting to database at: {DB_PATH}")
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn
     
     questions = cursor.execute("SELECT id, text, options, correct_answer FROM questions").fetchall()
     

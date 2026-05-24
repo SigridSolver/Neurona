@@ -1,4 +1,8 @@
-import sqlite3
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.database import get_db_connection
+
 from pathlib import Path
 from passlib.context import CryptContext
 
@@ -7,8 +11,8 @@ DB_PATH = Path(__file__).parent.parent / "saber11.db"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def seed_leaderboard():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn
 
     dummy_users = [
         # (name, email, password, math, reading, science, social, english)
@@ -25,7 +29,7 @@ def seed_leaderboard():
         if not row:
             hashed_pwd = pwd_context.hash(password)
             cursor.execute("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)", (name, email, hashed_pwd))
-            user_id = cursor.lastrowid
+            user_id = cursor.fetchone()[0] if cursor.description else None
             
             # Insert diagnostic result
             cursor.execute('''

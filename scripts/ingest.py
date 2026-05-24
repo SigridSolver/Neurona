@@ -1,5 +1,9 @@
+import sys
 import os
-import sqlite3
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.database import get_db_connection
+import os
+
 import PyPDF2
 from pathlib import Path
 
@@ -8,7 +12,7 @@ DB_PATH = Path(__file__).parent.parent / "saber11.db"
 DOCS_DIR = Path(__file__).parent.parent / "docs"
 
 def get_db():
-    return sqlite3.connect(DB_PATH)
+    return get_db_connection()
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -43,7 +47,7 @@ def categorize_area(filename, text):
 
 def ingest_pdfs():
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = conn
     
     print(f"Scanning directory: {DOCS_DIR}")
     for root, dirs, files in os.walk(DOCS_DIR):
