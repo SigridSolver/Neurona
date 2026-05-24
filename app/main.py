@@ -469,8 +469,13 @@ async def save_practice_result(request: Request, data: dict):
     
     return {"status": "success"}
 
+class ChatMessage(BaseModel):
+    role: str
+    parts: list[str]
+
 class ChatRequest(BaseModel):
     message: str
+    history: list[ChatMessage] = []
 
 @app.get("/tutor", response_class=HTMLResponse)
 async def tutor_page(request: Request):
@@ -514,9 +519,17 @@ async def chat_api(request: Request, body: ChatRequest):
                 system_instruction=system_instruction
             )
             
-            response = model.generate_content(user_msg)
+            # Format history for Gemini API
+            gemini_history = []
+            for h in body.history:
+                # The google-generativeai API requires parts to be a list of strings for simple text
+                gemini_history.append({"role": h.role, "parts": h.parts})
+                
+            chat = model.start_chat(history=gemini_history)
+            response = chat.send_message(user_msg)
             return {"response": response.text, "mode": "ai"}
-        except Exception:
+        except Exception as e:
+            print("Gemini API Error:", e)
             # Fallback to local agent on Gemini API error
             pass
             

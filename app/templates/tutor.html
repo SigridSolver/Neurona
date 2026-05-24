@@ -307,6 +307,9 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
     const typingIndicator = document.getElementById('typing-indicator');
+    
+    // Almacena el contexto de la conversación
+    let chatHistory = [];
 
     function appendMessage(text, isUser = false) {
         const messageDiv = document.createElement('div');
@@ -347,7 +350,10 @@
             const res = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message })
+                body: JSON.stringify({ 
+                    message: message,
+                    history: chatHistory
+                })
             });
             const data = await res.json();
             
@@ -355,6 +361,12 @@
             typingIndicator.style.display = 'none';
             
             appendMessage(data.response, false);
+            
+            // Si la respuesta proviene de la IA, actualizamos el historial
+            if (data.mode === 'ai') {
+                chatHistory.push({ role: 'user', parts: [message] });
+                chatHistory.push({ role: 'model', parts: [data.response] });
+            }
         } catch (error) {
             typingIndicator.style.display = 'none';
             appendMessage('Lo siento, ocurrió un error al procesar tu pregunta. Intenta de nuevo por favor.', false);
