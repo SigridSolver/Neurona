@@ -3,6 +3,7 @@ import sys
 import json
 import re
 import random
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -166,6 +167,10 @@ def extract_questions_with_gemini():
             except Exception as e:
                 print(f"   [ERROR] Error con la API de Gemini: {str(e)}")
                 log_error(pdf_path.name, page_num + 1, f"Error de API: {str(e)}")
+            
+            # Pausa de 15 segundos para no superar el límite de 5 RPM (peticiones por minuto)
+            print("   [INFO] Esperando 15 segundos para no saturar el límite gratuito de Gemini...")
+            time.sleep(15)
                 
     conn.commit()
     conn.close()
