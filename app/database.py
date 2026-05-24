@@ -245,6 +245,10 @@ def init_db():
 
         conn.commit()
 
+    # Fix 'Área General' migration to 'Matemáticas'
+    cursor.execute("UPDATE questions SET area = 'Matemáticas' WHERE area = 'Área General'")
+    conn.commit()
+
     conn.close()
 
 if __name__ == "__main__":

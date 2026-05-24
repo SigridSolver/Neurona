@@ -339,8 +339,18 @@
     const typingIndicator = document.getElementById('typing-indicator');
     
     // Almacena el contexto de la conversación
-    let chatHistory = [];
+    let chatHistory = JSON.parse(sessionStorage.getItem('tutorChatHistory')) || [];
     let currentImageBase64 = null;
+
+    window.addEventListener('load', () => {
+        if (chatHistory.length > 0) {
+            document.getElementById('chat-messages').innerHTML = '';
+            chatHistory.forEach(msg => {
+                const isUser = msg.role === 'user';
+                appendMessage(msg.parts[0], isUser);
+            });
+        }
+    });
 
     function previewImage(event) {
         const file = event.target.files[0];
@@ -431,6 +441,7 @@
                 if (chatHistory.length > 10) {
                     chatHistory = chatHistory.slice(chatHistory.length - 10);
                 }
+                sessionStorage.setItem('tutorChatHistory', JSON.stringify(chatHistory));
             }
         } catch (error) {
             typingIndicator.style.display = 'none';

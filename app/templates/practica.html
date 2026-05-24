@@ -197,7 +197,11 @@
     function renderQuestion() {
         const q = questions[currentQIndex];
         document.getElementById('quiz-progress').innerText = `Pregunta ${currentQIndex + 1} de ${questions.length}`;
-        document.getElementById('question-text').innerText = q.text;
+        let textContent = q.text;
+        const imgRegex = /(\/static\/images\/recortes\/[^\s]+\.(?:png|jpg|jpeg))/g;
+        textContent = textContent.replace(imgRegex, '<br><img src="$1" style="max-width: 100%; border-radius: 8px; margin-top: 1rem;"><br>');
+        textContent = textContent.replace(/\n/g, '<br>');
+        document.getElementById('question-text').innerHTML = textContent;
         
         const graphicContainer = document.getElementById('graphic-container');
         if (q.graphic) {
