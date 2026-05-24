@@ -164,10 +164,9 @@ async def register(request: Request, name: str = Form(...), email: str = Form(..
 
     hashed_pwd = pwd_context.hash(password)
     try:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)", (name_clean, email_clean, hashed_pwd))
+        cursor = conn.execute("INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s) RETURNING id", (name_clean, email_clean, hashed_pwd))
+        user_id = cursor.fetchone()[0]
         conn.commit()
-        user_id = cursor.lastrowid
         
         # Save guest diagnostic results if they exist in cookies
         guest_cookie = request.cookies.get("guest_diagnostic")
@@ -708,13 +707,12 @@ async def auth_google(request: Request):
     user = conn.execute("SELECT * FROM users WHERE email = %s", (email,)).fetchone()
     
     if not user:
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)",
+        cursor = conn.execute(
+            "INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s) RETURNING id",
             (name, email, "google_sso_oauth_user")
         )
+        user_id = cursor.fetchone()[0]
         conn.commit()
-        user_id = cursor.lastrowid
     else:
         user_id = user["id"]
         

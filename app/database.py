@@ -32,7 +32,8 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    # Usaremos conn directamente ya que nuestro wrapper soporta execute
+    cursor = conn
     
     # Users Table
     cursor.execute('''
@@ -165,11 +166,11 @@ def init_db():
     for email, pwd_hash, name, streak, last_active, bio, color, badges in mock_users:
         user_row = cursor.execute("SELECT id FROM users WHERE email = %s", (email,)).fetchone()
         if not user_row:
-            cursor.execute('''
+            res = cursor.execute('''
                 INSERT INTO users (email, password_hash, name, streak, last_active_date, bio, avatar_color, badges)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
             ''', (email, pwd_hash, name, streak, last_active, bio, color, badges))
-            user_id = cursor.lastrowid
+            user_id = res.fetchone()[0]
             
             # Add diagnostic results for leaderboard
             if email == "carlos@saber11.edu.co":
@@ -195,11 +196,11 @@ def init_db():
         tutor_id = cursor.execute("SELECT id FROM users WHERE email = 'tutor_david@saber11.edu.co'").fetchone()[0]
 
         # Post 1
-        cursor.execute('''
+        res = cursor.execute('''
             INSERT INTO posts (user_id, content, area, likes)
-            VALUES (%s, 'Hola a todos! ¿Alguien tiene algún truco para recordar las diferencias entre los tipos de células en Ciencias Naturales?', 'Ciencias Naturales', 4)
+            VALUES (%s, 'Hola a todos! ¿Alguien tiene algún truco para recordar las diferencias entre los tipos de células en Ciencias Naturales?', 'Ciencias Naturales', 4) RETURNING id
         ''', (valeria_id,))
-        p1_id = cursor.lastrowid
+        p1_id = res.fetchone()[0]
         
         # Comments on Post 1
         cursor.execute('''
@@ -213,11 +214,11 @@ def init_db():
         ''', (p1_id, tutor_id))
 
         # Post 2
-        cursor.execute('''
+        res = cursor.execute('''
             INSERT INTO posts (user_id, content, area, likes)
-            VALUES (%s, '¡Qué buen duelo acabo de tener con Sofía en Matemáticas! Esas preguntas de probabilidad estaban bien picantes. ⚡', 'Matemáticas', 2)
+            VALUES (%s, '¡Qué buen duelo acabo de tener con Sofía en Matemáticas! Esas preguntas de probabilidad estaban bien picantes. ⚡', 'Matemáticas', 2) RETURNING id
         ''', (carlos_id,))
-        p2_id = cursor.lastrowid
+        p2_id = res.fetchone()[0]
         
         cursor.execute('''
             INSERT INTO comments (post_id, user_id, content)
@@ -225,11 +226,11 @@ def init_db():
         ''', (p2_id, sofia_id))
 
         # Post 3
-        cursor.execute('''
+        res = cursor.execute('''
             INSERT INTO posts (user_id, content, area, likes)
-            VALUES (%s, 'Recomiendo mucho leer noticias de actualidad para la sección de Sociales y Ciudadanas. Ayuda a entender mejor los mecanismos de participación ciudadana y la estructura del Estado.', 'Sociales y Ciudadanas', 5)
+            VALUES (%s, 'Recomiendo mucho leer noticias de actualidad para la sección de Sociales y Ciudadanas. Ayuda a entender mejor los mecanismos de participación ciudadana y la estructura del Estado.', 'Sociales y Ciudadanas', 5) RETURNING id
         ''', (sofia_id,))
-        p3_id = cursor.lastrowid
+        p3_id = res.fetchone()[0]
         
         cursor.execute('''
             INSERT INTO comments (post_id, user_id, content)
