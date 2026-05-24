@@ -4,6 +4,9 @@ import json
 import re
 import random
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configurar el entorno para poder importar app.database
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
