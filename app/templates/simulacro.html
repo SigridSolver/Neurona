@@ -1,0 +1,562 @@
+{% extends "base.html" %}
+
+{% block title %}Simulacro Completo - David Saber 11{% endblock %}
+
+{% block extra_head %}
+<style>
+    .simulacro-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 2rem;
+        margin: 2rem auto;
+        align-items: start;
+    }
+
+    @media (max-width: 992px) {
+        .simulacro-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Timer Widget */
+    .timer-card {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.05));
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: var(--border-radius);
+        padding: 1.25rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .timer-display {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #ef4444;
+        font-family: monospace;
+        letter-spacing: 2px;
+        text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+        margin-top: 0.5rem;
+    }
+
+    /* Question Navigation Grid */
+    .nav-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .nav-num-btn {
+        aspect-ratio: 1;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-muted);
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+
+    .nav-num-btn:hover {
+        border-color: var(--accent);
+        background: rgba(59, 130, 246, 0.1);
+        color: #fff;
+    }
+
+    .nav-num-btn.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+    }
+
+    .nav-num-btn.answered {
+        background: rgba(16, 185, 129, 0.2);
+        border-color: var(--success);
+        color: var(--success);
+    }
+
+    /* Question Layout */
+    .question-box {
+        min-height: 350px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .option-row {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: var(--border-radius);
+        padding: 1.15rem 1.5rem;
+        margin-bottom: 0.85rem;
+        color: #fff;
+        font-size: 1.05rem;
+        text-align: left;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    .option-row:hover {
+        background: rgba(59, 130, 246, 0.08);
+        border-color: var(--accent);
+        transform: translateX(4px);
+    }
+
+    .option-row.selected {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: var(--accent);
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+    }
+
+    .option-badge {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        background: rgba(255, 255, 255, 0.04);
+        transition: var(--transition);
+    }
+
+    .option-row.selected .option-badge {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+    }
+
+    .progress-bar-container {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), #8b5cf6);
+        width: 0%;
+        transition: width 0.4s ease;
+    }
+
+    /* Result UI Styling */
+    .result-score-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--border-radius);
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+
+    .global-score-badge {
+        font-size: 5rem;
+        font-weight: 900;
+        color: var(--accent);
+        text-shadow: 0 0 20px rgba(59, 130, 246, 0.45);
+        margin: 1.5rem 0;
+        line-height: 1;
+    }
+
+    .area-score-bar {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .area-score-fill {
+        height: 8px;
+        border-radius: 4px;
+        background: var(--accent);
+        margin-top: 0.5rem;
+    }
+
+    /* Loader View */
+    .loader-view {
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .loader-spinner {
+        border: 4px solid rgba(255, 255, 255, 0.05);
+        border-top: 4px solid var(--accent);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1.5rem;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px;">
+
+    <!-- VIEW 1: Instructions & Setup -->
+    <div id="setupView" class="card" style="margin: 2rem auto; max-width: 750px; padding: 2.5rem;">
+        <h2 class="text-center mb-3">⏱️ Simulacro Completo ICFES Saber 11</h2>
+        <p class="text-muted text-center mb-4" style="line-height: 1.6; font-size: 1.05rem;">
+            Prepárate bajo condiciones reales. Este simulacro contiene <strong>25 preguntas</strong> (5 de cada área evaluada por el ICFES) y un tiempo límite de <strong>45 minutos</strong>. Tus resultados se guardarán automáticamente en tu perfil para actualizar tu diagnóstico de desempeño general.
+        </p>
+
+        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+            <h4 class="mb-3">Directrices y Estructura:</h4>
+            <ul style="padding-left: 1.25rem; margin: 0; line-height: 1.8; color: var(--text-muted);">
+                <li><strong>Matemáticas:</strong> 5 preguntas de formulación, ejecución y argumentación.</li>
+                <li><strong>Lectura Crítica:</strong> 5 preguntas de comprensión lectora e inferencia de textos.</li>
+                <li><strong>Ciencias Naturales:</strong> 5 preguntas sobre indagación y explicación de fenómenos.</li>
+                <li><strong>Sociales y Ciudadanas:</strong> 5 preguntas sobre pensamiento social y multiperspectivismo.</li>
+                <li><strong>Inglés:</strong> 5 preguntas de vocabulario, gramática y lectura (A2/B1).</li>
+                <li><strong>Tiempo límite:</strong> 45:00 minutos. Si el tiempo expira, las respuestas se enviarán automáticamente.</li>
+            </ul>
+        </div>
+
+        <button class="btn btn-primary" onclick="startSimulacro()" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700;">Iniciar Simulacro Oficial</button>
+    </div>
+
+    <!-- VIEW 2: Loading State -->
+    <div id="loadingView" class="card loader-view" style="display: none; margin: 2rem auto; max-width: 600px;">
+        <div class="loader-spinner"></div>
+        <h3>Preparando tu Examen...</h3>
+        <p class="text-muted text-center mt-2">Generando tus preguntas dinámicas basadas en los estándares ICFES Saber 11.</p>
+    </div>
+
+    <!-- VIEW 3: Active Exam Screen -->
+    <div id="examView" class="simulacro-layout" style="display: none;">
+        <!-- Left Panel: Info, Timer, Nav Grid -->
+        <div>
+            <!-- Timer Widget -->
+            <div class="timer-card">
+                <span class="text-muted" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Tiempo Restante</span>
+                <div class="timer-display" id="examTimer">45:00</div>
+            </div>
+
+            <!-- Nav Grid Card -->
+            <div class="card" style="padding: 1.25rem;">
+                <h4 style="margin-bottom: 0.75rem;">Navegación</h4>
+                <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 1rem;">Haz clic para saltar a cualquier pregunta:</p>
+                
+                <div class="nav-grid" id="navGridContainer">
+                    <!-- Numbers will be injected dynamically -->
+                </div>
+
+                <button class="btn btn-danger mt-4" onclick="confirmSubmitSimulacro()" style="width: 100%; font-size: 0.9rem; font-weight: 700;">Finalizar y Calificar</button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Questions Workspace -->
+        <div class="card" style="padding: 2rem;">
+            <!-- Progress Bar -->
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+
+            <!-- Active Question Workspace -->
+            <div class="question-box" id="questionWorkspace">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
+                    <span class="area-badge" id="questionAreaLabel">Matemáticas</span>
+                    <span class="text-muted" style="font-weight:700;" id="questionNumberLabel">Pregunta 1 de 25</span>
+                </div>
+
+                <h3 id="questionText" style="font-size: 1.25rem; line-height: 1.5; margin-bottom: 2rem; color: #fff;">
+                    Cargando enunciado...
+                </h3>
+
+                <div id="optionsContainer">
+                    <!-- Option items will be injected here -->
+                </div>
+
+                <!-- Navigation buttons at bottom -->
+                <div style="display:flex; justify-content:space-between; margin-top: auto; padding-top: 2rem;">
+                    <button class="btn btn-secondary" id="prevBtn" onclick="goToPrevQuestion()" style="padding: 0.6rem 1.5rem;">Anterior</button>
+                    <button class="btn btn-primary" id="nextBtn" onclick="goToNextQuestion()" style="padding: 0.6rem 2rem;">Siguiente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 4: Result / Dashboard Report -->
+    <div id="resultView" class="card result-score-card" style="display: none; max-width: 800px; margin: 2rem auto;">
+        <h2>📝 Resultado del Simulacro</h2>
+        <p class="text-muted mt-1">Tu examen ha sido calificado bajo los estándares ICFES Saber 11.</p>
+
+        <div class="global-score-badge" id="globalScoreVal">---</div>
+        <h4 style="margin-bottom: 2rem; color: var(--text-muted)">Puntaje Global Estimado (sobre 500)</h4>
+
+        <!-- Area Breakdowns -->
+        <div style="max-width: 600px; margin: 0 auto 2.5rem auto; text-align: left;">
+            <h3 class="mb-4 text-center">Desempeño Detallado por Competencias</h3>
+            
+            <div id="areaBreakdownsContainer">
+                <!-- Competency score bars injected here -->
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center gap-3">
+            <a href="/dashboard" class="btn btn-primary" style="padding: 0.75rem 2rem; font-weight: 700;">Ver en mi Dashboard</a>
+            <button onclick="location.reload()" class="btn btn-secondary" style="padding: 0.75rem 2rem;">Realizar otro Simulacro</button>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let questions = [];
+    let answers = {}; // Maps question index -> selected option text
+    let currentIdx = 0;
+    let timerInterval = null;
+    let timeRemaining = 45 * 60; // 45 minutes in seconds
+
+    async function startSimulacro() {
+        document.getElementById("setupView").style.display = "none";
+        document.getElementById("loadingView").style.display = "flex";
+
+        try {
+            const res = await fetch("/api/simulacro/questions");
+            const data = await res.json();
+            questions = data.questions;
+
+            document.getElementById("loadingView").style.display = "none";
+            document.getElementById("examView").style.display = "grid";
+
+            buildNavGrid();
+            renderQuestion();
+            startTimer();
+        } catch (e) {
+            alert("Error al cargar las preguntas del simulacro.");
+            location.reload();
+        }
+    }
+
+    function buildNavGrid() {
+        const container = document.getElementById("navGridContainer");
+        container.innerHTML = "";
+        
+        for (let i = 0; i < questions.length; i++) {
+            const btn = document.createElement("button");
+            btn.className = "nav-num-btn";
+            btn.innerText = i + 1;
+            btn.id = `nav-btn-${i}`;
+            btn.onclick = () => jumpToQuestion(i);
+            container.appendChild(btn);
+        }
+    }
+
+    function renderQuestion() {
+        const q = questions[currentIdx];
+        
+        // Update nav active states
+        for (let i = 0; i < questions.length; i++) {
+            const btn = document.getElementById(`nav-btn-${i}`);
+            if (btn) {
+                btn.className = "nav-num-btn";
+                if (i === currentIdx) {
+                    btn.classList.add("active");
+                } else if (answers[i] !== undefined) {
+                    btn.classList.add("answered");
+                }
+            }
+        }
+
+        // Update progress bar
+        const progressPercent = ((Object.keys(answers).length) / questions.length) * 100;
+        document.getElementById("progressBarFill").style.style = `width: ${progressPercent}%;`;
+        document.getElementById("progressBarFill").style.width = `${progressPercent}%`;
+
+        // Load Question content
+        document.getElementById("questionAreaLabel").innerText = q.area;
+        document.getElementById("questionNumberLabel").innerText = `Pregunta ${currentIdx + 1} de ${questions.length}`;
+        
+        // Format layout formatting
+        let formattedText = q.text.replace(/\n/g, "<br>");
+        document.getElementById("questionText").innerHTML = formattedText;
+
+        const optionsContainer = document.getElementById("optionsContainer");
+        optionsContainer.innerHTML = "";
+
+        // Render Options
+        const alphabet = ["A", "B", "C", "D"];
+        q.options.forEach((opt, index) => {
+            const button = document.createElement("button");
+            button.className = "option-row";
+            if (answers[currentIdx] === opt) {
+                button.classList.add("selected");
+            }
+            button.onclick = () => selectOption(opt);
+
+            button.innerHTML = `
+                <div class="option-badge">${alphabet[index]}</div>
+                <div>${opt}</div>
+            `;
+            optionsContainer.appendChild(button);
+        });
+
+        // Toggle Prev/Next buttons
+        document.getElementById("prevBtn").disabled = (currentIdx === 0);
+        if (currentIdx === questions.length - 1) {
+            document.getElementById("nextBtn").innerText = "Revisar / Entregar";
+        } else {
+            document.getElementById("nextBtn").innerText = "Siguiente";
+        }
+    }
+
+    function selectOption(opt) {
+        answers[currentIdx] = opt;
+        renderQuestion();
+    }
+
+    function jumpToQuestion(idx) {
+        currentIdx = idx;
+        renderQuestion();
+    }
+
+    function goToNextQuestion() {
+        if (currentIdx < questions.length - 1) {
+            currentIdx++;
+            renderQuestion();
+        } else {
+            confirmSubmitSimulacro();
+        }
+    }
+
+    function goToPrevQuestion() {
+        if (currentIdx > 0) {
+            currentIdx--;
+            renderQuestion();
+        }
+    }
+
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            timeRemaining--;
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                alert("¡El tiempo ha terminado! Tu simulacro se enviará para ser calificado.");
+                submitSimulacro();
+            } else {
+                const mins = Math.floor(timeRemaining / 60);
+                const secs = timeRemaining % 60;
+                document.getElementById("examTimer").innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+    }
+
+    function confirmSubmitSimulacro() {
+        const totalAnswered = Object.keys(answers).length;
+        const unanswered = questions.length - totalAnswered;
+        
+        let confirmMsg = "¿Estás seguro de que deseas finalizar tu simulacro?";
+        if (unanswered > 0) {
+            confirmMsg += ` Tienes ${unanswered} preguntas sin responder.`;
+        }
+
+        if (confirm(confirmMsg)) {
+            submitSimulacro();
+        }
+    }
+
+    async function submitSimulacro() {
+        clearInterval(timerInterval);
+        
+        // Calculate scores per area
+        // 5 questions per area. Each correct answer is 20 points (total 100 per area)
+        let areaCorrectCounts = {
+            "Matemáticas": 0,
+            "Lectura Crítica": 0,
+            "Ciencias Naturales": 0,
+            "Sociales y Ciudadanas": 0,
+            "Inglés": 0
+        };
+
+        questions.forEach((q, idx) => {
+            const selected = answers[idx];
+            if (selected === q.correct_answer) {
+                areaCorrectCounts[q.area]++;
+            }
+        });
+
+        let areaScores = {};
+        for (let area in areaCorrectCounts) {
+            areaScores[area] = areaCorrectCounts[area] * 20; // 0 to 100
+        }
+
+        // Show processing state
+        document.getElementById("examView").style.display = "none";
+        document.getElementById("loadingView").querySelector("h3").innerText = "Calificando...";
+        document.getElementById("loadingView").style.display = "flex";
+
+        try {
+            const res = await fetch("/api/simulacro/result", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    scores: areaScores
+                })
+            });
+            const data = await res.json();
+
+            // Load Report Screen
+            document.getElementById("loadingView").style.display = "none";
+            document.getElementById("resultView").style.display = "block";
+            document.getElementById("globalScoreVal").innerText = data.global_score;
+
+            const container = document.getElementById("areaBreakdownsContainer");
+            container.innerHTML = "";
+
+            const areas = ["Matemáticas", "Lectura Crítica", "Ciencias Naturales", "Sociales y Ciudadanas", "Inglés"];
+            areas.forEach(area => {
+                const score = data.scores[area];
+                const card = document.createElement("div");
+                card.className = "area-score-bar";
+
+                let fillClass = "#3b82f6"; // Blue
+                if (score < 50) fillClass = "#ef4444"; // Red
+                else if (score < 75) fillClass = "#fbbf24"; // Yellow
+                else fillClass = "#10b981"; // Green
+
+                card.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="display:flex; justify-content:space-between; font-weight:700;">
+                            <span>${area}</span>
+                            <span>${score} / 100</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05); height:8px; border-radius:4px; margin-top:0.5rem; overflow:hidden;">
+                            <div style="background:${fillClass}; width:${score}%; height:100%; border-radius:4px;"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+        } catch (e) {
+            alert("Error al guardar los resultados.");
+            location.reload();
+        }
+    }
+</script>
+{% endblock %}

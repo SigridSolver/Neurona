@@ -423,9 +423,9 @@ async def practica_page(request: Request):
 @app.get("/api/questions/{area}")
 async def get_practice_questions(area: str):
     conn = get_db()
-    # Query 5 random questions matching the selected area
+    # Query 20 random questions matching the selected area
     rows = conn.execute(
-        "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 5",
+        "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 20",
         (area,)
     ).fetchall()
     
@@ -447,7 +447,7 @@ async def get_practice_questions(area: str):
             "graphic": r["graphic"]
         })
         
-    needed = 5 - len(questions)
+    needed = 20 - len(questions)
     api_key = os.getenv("GEMINI_API_KEY")
     
     if needed > 0 and api_key:
@@ -456,35 +456,38 @@ async def get_practice_questions(area: str):
             model = genai.GenerativeModel('gemini-2.5-flash')
             cursor = conn.cursor()
             
-            for _ in range(needed):
-                prompt = f"""
-                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
-                Genera 1 pregunta de selección múltiple original, inédita y de alta calidad para el área de {area}.
+            # Generate the needed questions in a single prompt to prevent timeout
+            prompt = f"""
+            Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
+            Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {area}.
+            
+            REGLAS DE DISEÑO ICFES SABER 11:
+            1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación.
+            2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, opinión) y formula una pregunta de inferencia.
+            3. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico.
+            4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, o análisis de multiperspectivismo.
+            5. Para **Inglés**: Gramática y vocabulario de nivel A2/B1 o comprensión lectora.
+            
+            CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
+            
+            El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
+               - "area": "{area}"
+               - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
+               - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
+               - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+               - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
+               - "difficulty": "Intermedio"
+            """
+            
+            response = model.generate_content(prompt)
+            text_response = response.text.strip()
+            text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
+            q_list = json.loads(text_response)
+            
+            if isinstance(q_list, dict):
+                q_list = [q_list]
                 
-                REGLAS DE DISEÑO ICFES SABER 11:
-                1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación (ej. álgebra, geometría, probabilidad, estadística o razonamiento cuantitativo).
-                2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, columna de opinión o texto discontinuo descriptivo) y formula una pregunta de inferencia o análisis sobre él.
-                3. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico donde se evalúe indagación o explicación de fenómenos.
-                4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, mecanismo de participación o análisis de multiperspectivismo donde haya diferentes puntos de vista en juego.
-                5. Para **Inglés**: Genera un ejercicio enfocado en comprensión lectora o gramática y vocabulario de nivel A2/B1.
-                
-                ESTRUCTURA DE RESPUESTA REQUERIDA:
-                La respuesta correcta debe ser indiscutible y las otras tres opciones (distractores) deben representar errores conceptuales o interpretativos comunes y verosímiles.
-                
-                El formato de salida DEBE ser estrictamente un objeto JSON en español, sin envolverlo en bloques markdown (sin ```json) y con las siguientes llaves:
-                   - "area": "{area}"
-                   - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
-                   - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
-                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-                   - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
-                   - "difficulty": "[Básico, Intermedio, Avanzado]"
-                """
-                
-                response = model.generate_content(prompt)
-                text_response = response.text.strip()
-                text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
-                q_data = json.loads(text_response)
-                
+            for q_data in q_list:
                 cursor.execute('''
                     INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
                     VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
@@ -494,11 +497,10 @@ async def get_practice_questions(area: str):
                     json.dumps(q_data["options"], ensure_ascii=False),
                     q_data["correct_answer"],
                     q_data["explanation"],
-                    q_data["difficulty"],
+                    q_data.get("difficulty", "Intermedio"),
                     None
                 ))
                 new_id = cursor.fetchone()[0]
-                conn.commit()
                 
                 questions.append({
                     "id": new_id,
@@ -507,17 +509,18 @@ async def get_practice_questions(area: str):
                     "options": q_data["options"],
                     "correct_answer": q_data["correct_answer"],
                     "explanation": q_data["explanation"],
-                    "difficulty": q_data["difficulty"],
+                    "difficulty": q_data.get("difficulty", "Intermedio"),
                     "graphic": None
                 })
+            conn.commit()
         except Exception as e:
-            print("Error generating dynamic question with Gemini:", e)
+            print("Error generating dynamic questions batch with Gemini:", e)
             
     conn.close()
     
-    # Fallback if still less than 5
-    if len(questions) < 5:
-        for i in range(5 - len(questions)):
+    # Fallback if still less than 20
+    if len(questions) < 20:
+        for i in range(20 - len(questions)):
             questions.append({
                 "id": i + 1000,
                 "area": area,
@@ -1291,6 +1294,24 @@ async def add_comment(request: Request, post_id: int, content: str = Form(...)):
 
 # --- DUELS ROUTES ---
 
+def check_expired_duels(conn):
+    from datetime import datetime, timedelta
+    cutoff = datetime.now() - timedelta(hours=24)
+    # Get all pending duels created more than 24 hours ago
+    expired_duels = conn.execute(
+        "SELECT id, challenger_id, opponent_id, area FROM tutor_duels WHERE status = 'pending' AND created_at < %s",
+        (cutoff,)
+    ).fetchall()
+    
+    if expired_duels:
+        cursor = conn.cursor()
+        for d in expired_duels:
+            cursor.execute(
+                "UPDATE tutor_duels SET opponent_score = 0, status = 'resolved', resolved_at = %s WHERE id = %s",
+                (datetime.now(), d["id"])
+            )
+        conn.commit()
+
 @app.get("/duelos", response_class=HTMLResponse)
 async def duels_page(request: Request):
     user = get_current_user(request)
@@ -1298,17 +1319,125 @@ async def duels_page(request: Request):
         return RedirectResponse(url="/login", status_code=303)
         
     conn = get_db()
-    bots = conn.execute(
-        "SELECT name, avatar_color, bio, streak, id FROM users WHERE email IN ('carlos@saber11.edu.co', 'sofia@saber11.edu.co', 'mateo@saber11.edu.co', 'valeria@saber11.edu.co')"
+    # 1. Run expiration check
+    try:
+        check_expired_duels(conn)
+    except Exception as e:
+        print("Error checking expired duels:", e)
+        
+    # 2. Get active incoming challenges (where user is the opponent)
+    incoming_rows = conn.execute('''
+        SELECT d.id, d.area, d.challenger_score, d.created_at, u.name as challenger_name, u.avatar_color
+        FROM tutor_duels d
+        JOIN users u ON d.challenger_id = u.id
+        WHERE d.opponent_id = %s AND d.status = 'pending'
+        ORDER BY d.created_at DESC
+    ''', (user["id"],)).fetchall()
+    
+    incoming_challenges = []
+    for r in incoming_rows:
+        incoming_challenges.append({
+            "id": r["id"],
+            "area": r["area"],
+            "challenger_name": r["challenger_name"],
+            "avatar_color": r["avatar_color"] or "#3b82f6",
+            "created_at": r["created_at"].strftime("%d/%m %I:%M %p")
+        })
+
+    # 3. Get active outgoing challenges (where user is the challenger)
+    outgoing_rows = conn.execute('''
+        SELECT d.id, d.area, d.created_at, u.name as opponent_name, u.avatar_color
+        FROM tutor_duels d
+        JOIN users u ON d.opponent_id = u.id
+        WHERE d.challenger_id = %s AND d.status = 'pending'
+        ORDER BY d.created_at DESC
+    ''', (user["id"],)).fetchall()
+    
+    outgoing_challenges = []
+    for r in outgoing_rows:
+        outgoing_challenges.append({
+            "id": r["id"],
+            "area": r["area"],
+            "opponent_name": r["opponent_name"],
+            "avatar_color": r["avatar_color"] or "#3b82f6",
+            "created_at": r["created_at"].strftime("%d/%m %I:%M %p")
+        })
+
+    # 4. Get completed duels history
+    completed_rows = conn.execute('''
+        SELECT d.id, d.area, d.challenger_score, d.opponent_score, d.resolved_at,
+               u1.name as challenger_name, u1.id as challenger_id,
+               u2.name as opponent_name, u2.id as opponent_id
+        FROM tutor_duels d
+        JOIN users u1 ON d.challenger_id = u1.id
+        JOIN users u2 ON d.opponent_id = u2.id
+        WHERE (d.challenger_id = %s OR d.opponent_id = %s) AND d.status = 'resolved'
+        ORDER BY d.resolved_at DESC LIMIT 10
+    ''', (user["id"], user["id"])).fetchall()
+    
+    completed_duels = []
+    for r in completed_rows:
+        winner_name = "Empate"
+        if r["challenger_score"] > r["opponent_score"]:
+            winner_name = r["challenger_name"]
+        elif r["opponent_score"] > r["challenger_score"]:
+            winner_name = r["opponent_name"]
+            
+        completed_duels.append({
+            "id": r["id"],
+            "area": r["area"],
+            "challenger_name": r["challenger_name"],
+            "opponent_name": r["opponent_name"],
+            "challenger_score": r["challenger_score"],
+            "opponent_score": r["opponent_score"],
+            "winner_name": winner_name,
+            "resolved_at": r["resolved_at"].strftime("%d/%m %I:%M %p") if r["resolved_at"] else ""
+        })
+
+    # 5. Get list of other registered users to challenge
+    opponents_rows = conn.execute(
+        "SELECT id, name, avatar_color, streak FROM users WHERE id != %s ORDER BY name ASC",
+        (user["id"],)
     ).fetchall()
+    
+    opponents = [{
+        "id": r["id"],
+        "name": r["name"],
+        "avatar_color": r["avatar_color"] or "#3b82f6",
+        "streak": r["streak"] or 0
+    } for r in opponents_rows]
+
+    # 6. Calculate Leaderboard (Won Duels ranking)
+    leaderboard = {}
+    for op in opponents:
+        leaderboard[op["id"]] = {"name": op["name"], "avatar_color": op["avatar_color"], "wins": 0, "streak": op["streak"]}
+    # Add ourselves
+    leaderboard[user["id"]] = {"name": user["name"], "avatar_color": user["avatar_color"] or "#3b82f6", "wins": 0, "streak": user["streak"] or 0}
+    
+    all_resolved = conn.execute("SELECT challenger_id, opponent_id, challenger_score, opponent_score FROM tutor_duels WHERE status = 'resolved'").fetchall()
+    for d in all_resolved:
+        if d["challenger_score"] > d["opponent_score"]:
+            if d["challenger_id"] in leaderboard:
+                leaderboard[d["challenger_id"]]["wins"] += 1
+        elif d["opponent_score"] > d["challenger_score"]:
+            if d["opponent_id"] in leaderboard:
+                leaderboard[d["opponent_id"]]["wins"] += 1
+                
+    leaderboard_sorted = sorted(leaderboard.values(), key=lambda x: x["wins"], reverse=True)[:5]
     conn.close()
     
     return templates.TemplateResponse(
         request=request, 
         name="duelos.html", 
-        context={"user": user, "opponents": bots}
+        context={
+            "user": user, 
+            "opponents": opponents,
+            "incoming": incoming_challenges,
+            "outgoing": outgoing_challenges,
+            "completed": completed_duels,
+            "leaderboard": leaderboard_sorted
+        }
     )
-
 
 @app.post("/api/duelos/start")
 async def start_duel(request: Request, body: dict):
@@ -1317,89 +1446,136 @@ async def start_duel(request: Request, body: dict):
         raise HTTPException(status_code=401, detail="No autorizado")
         
     area = body.get("area", "Matemáticas")
+    opponent_id = body.get("opponent_id")
     
     conn = get_db()
-    rows = conn.execute(
-        "SELECT id, area, text, options, correct_answer, explanation, difficulty FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 3",
+    # 1. Fetch 1 random question for this area from DB
+    r = conn.execute(
+        "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 1",
         (area,)
-    ).fetchall()
-    
-    questions = []
-    for r in rows:
-        try:
-            opts = json.loads(r["options"])
-            random.shuffle(opts)
-        except Exception:
-            opts = [r["correct_answer"], "Opción B", "Opción C", "Opción D"]
-            random.shuffle(opts)
-            
-        questions.append({
-            "id": r["id"],
-            "area": r["area"],
-            "text": r["text"],
-            "options": opts,
-            "correct_answer": r["correct_answer"],
-            "explanation": r["explanation"]
-        })
-        
-    if len(questions) < 3:
-        mock_qs = {
-            "Matemáticas": [
-                {"text": "¿Cuál es la probabilidad de obtener un número par al lanzar un dado de 6 caras?", "options": ["1/2", "1/3", "2/3", "1/6"], "correct_answer": "1/2", "explanation": "Los números pares son 2, 4 y 6 (3 casos favorables de 6 posibles, es decir, 3/6 = 1/2)."},
-                {"text": "Si 3x - 5 = 10, ¿cuál es el valor de x?", "options": ["5", "3", "15", "10"], "correct_answer": "5", "explanation": "Sumando 5 a ambos lados da 3x = 15. Dividiendo por 3 se obtiene x = 5."},
-                {"text": "¿Cuál es el área de un rectángulo con base de 8 cm y altura de 5 cm?", "options": ["40 cm²", "26 cm²", "13 cm²", "20 cm²"], "correct_answer": "40 cm²", "explanation": "El área de un rectángulo es base por altura: 8 * 5 = 40 cm²."}
-            ],
-            "Ciencias Naturales": [
-                {"text": "¿Qué organelo celular se encarga de la síntesis de proteínas?", "options": ["Ribosoma", "Mitocondria", "Aparato de Golgi", "Lisosoma"], "correct_answer": "Ribosoma", "explanation": "Los ribosomas son las estructuras celulares donde se realiza la traducción y síntesis de proteínas."},
-                {"text": "¿Cuál es el gas más abundante en la atmósfera terrestre?", "options": ["Nitrógeno", "Oxígeno", "Dióxido de carbono", "Argón"], "correct_answer": "Nitrógeno", "explanation": "El nitrógeno compone aproximadamente el 78% de la atmósfera de la Tierra."},
-                {"text": "El agua pasa de estado gaseoso a líquido mediante el proceso de:", "options": ["Condensación", "Evaporación", "Solidificación", "Fusión"], "correct_answer": "Condensación", "explanation": "La condensación es el cambio de fase de gas a líquido."}
-            ],
-            "Lectura Crítica": [
-                {"text": "¿Cuál es la función principal de un conector adversativo como 'sin embargo'?", "options": ["Indicar oposición o contraste", "Indicar adición", "Indicar causa", "Indicar consecuencia"], "correct_answer": "Indicar oposición o contraste", "explanation": "Los conectores adversativos introducen un contraste u oposición entre ideas."},
-                {"text": "Un texto argumentativo tiene como propósito principal:", "options": ["Persuadir al lector sobre una tesis", "Narrar una historia de ficción", "Describir detalladamente un objeto", "Instruir sobre un procedimiento"], "correct_answer": "Persuadir al lector sobre una tesis", "explanation": "Los textos argumentativos buscan convencer o persuadir a través de razones y argumentos."},
-                {"text": "La ironía en un fragmento literario sirve usualmente para:", "options": ["Dar a entender lo contrario de lo que se dice expresamente", "Exagerar las cualidades de un personaje", "Hacer rimas poéticas", "Definir términos científicos"], "correct_answer": "Dar a entender lo contrario de lo que se dice expresamente", "explanation": "La ironía consiste en dar a entender lo contrario de lo que se dice, con tono burlesco o crítico."}
-            ],
-            "Sociales y Ciudadanas": [
-                {"text": "¿Cuál es el mecanismo constitucional para proteger de manera inmediata los Derechos Fundamentales en Colombia?", "options": ["Acción de Tutela", "Acción Popular", "Derecho de Petición", "Plebiscito"], "correct_answer": "Acción de Tutela", "explanation": "La acción de tutela está consagrada en el Artículo 86 de la Constitución para proteger de forma inmediata los derechos constitucionales fundamentales."},
-                {"text": "¿Quién ejerce la función de hacer las leyes en la República de Colombia?", "options": ["El Congreso de la República", "El Presidente de la República", "La Corte Suprema de Justicia", "El Alcalde Mayor"], "correct_answer": "El Congreso de la República", "explanation": "La rama legislativa, representada por el Congreso (Senado y Cámara de Representantes), hace las leyes."},
-                {"text": "El plebiscito es un mecanismo de participación ciudadana mediante el cual:", "options": ["El Presidente convoca al pueblo para pronunciarse sobre sus políticas", "Se eligen los miembros del Congreso", "Se destituye a un alcalde", "Se aprueba un proyecto de ley ordinaria"], "correct_answer": "El Presidente convoca al pueblo para pronunciarse sobre sus políticas", "explanation": "El plebiscito es el pronunciamiento del pueblo convocado por el Presidente de la República para apoyar o rechazar una decisión del Ejecutivo."}
-            ],
-            "Inglés": [
-                {"text": "Complete: She ________ study English last night.", "options": ["didn't", "don't", "doesn't", "hasn't"], "correct_answer": "didn't", "explanation": "Para el pasado simple negativo se usa el auxiliar 'didn't' seguido del verbo en infinitivo."},
-                {"text": "What is the opposite of 'sharp'?", "options": ["dull", "bright", "narrow", "clever"], "correct_answer": "dull", "explanation": "'Sharp' significa afilado o agudo, y su opuesto es 'dull' (desafiliado o apagado)."},
-                {"text": "Complete: I have ________ in Bogotá for five years.", "options": ["lived", "live", "living", "lives"], "correct_answer": "lived", "explanation": "El presente perfecto requiere el verbo auxiliar 'have/has' y el participio pasado del verbo principal ('lived')."}
-            ]
-        }
-        questions = mock_qs.get(area, mock_qs["Matemáticas"])[:3]
-        
-    opponent_name = body.get("opponent_name", "Carlos Gómez")
-    opponent_row = conn.execute(
-        "SELECT name, avatar_color, bio, streak FROM users WHERE name = %s", 
-        (opponent_name,)
     ).fetchone()
     
-    if opponent_row:
-        opponent = {
-            "name": opponent_row["name"],
-            "avatar_color": opponent_row["avatar_color"] or "#10b981",
-            "bio": opponent_row["bio"] or "",
-            "streak": opponent_row["streak"] or 0
+    # Dynamic generation fallback
+    if not r:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key:
+            try:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                prompt = f"""
+                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
+                Genera 1 pregunta de selección múltiple original, inédita y de alta calidad para el área de {area}.
+                
+                REGLAS DE DISEÑO ICFES SABER 11:
+                1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación (ej. álgebra, geometría, probabilidad, estadística o razonamiento cuantitativo).
+                2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, columna de opinión o texto discontinuo descriptivo) y formula una pregunta de inferencia o análisis sobre él.
+                3. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico donde se evalúe indagación o explicación de fenómenos.
+                4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, mecanismo de participación o análisis de multiperspectivismo donde haya diferentes puntos de vista en juego.
+                5. Para **Inglés**: Genera un ejercicio enfocado en comprensión lectora o gramática y vocabulario de nivel A2/B1.
+                
+                ESTRUCTURA DE RESPUESTA REQUERIDA:
+                La respuesta correcta debe ser indiscutible y las otras tres opciones (distractores) deben representar errores conceptuales o interpretativos comunes y verosímiles.
+                
+                El formato de salida DEBE ser estrictamente un objeto JSON en español, sin envolverlo en bloques markdown (sin ```json) y con las siguientes llaves:
+                   - "area": "{area}"
+                   - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
+                   - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
+                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+                   - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
+                   - "difficulty": "[Básico, Intermedio, Avanzado]"
+                """
+                response = model.generate_content(prompt)
+                text_response = response.text.strip()
+                text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
+                q_data = json.loads(text_response)
+                
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+                ''', (
+                    area,
+                    q_data["text"],
+                    json.dumps(q_data["options"], ensure_ascii=False),
+                    q_data["correct_answer"],
+                    q_data["explanation"],
+                    q_data["difficulty"],
+                    None
+                ))
+                new_id = cursor.fetchone()[0]
+                conn.commit()
+                
+                r = {
+                    "id": new_id,
+                    "area": area,
+                    "text": q_data["text"],
+                    "options": json.dumps(q_data["options"], ensure_ascii=False),
+                    "correct_answer": q_data["correct_answer"],
+                    "explanation": q_data["explanation"],
+                    "graphic": None
+                }
+            except Exception as e:
+                print("Error generating question for duel:", e)
+                
+    if not r:
+        # Static mock questions fallback
+        mock_qs = {
+            "Matemáticas": {"text": "¿Cuál es la probabilidad de obtener un número par al lanzar un dado de 6 caras?", "options": ["1/2", "1/3", "2/3", "1/6"], "correct_answer": "1/2", "explanation": "Los números pares son 2, 4 y 6 (3 casos favorables de 6 posibles, es decir, 3/6 = 1/2)."}
         }
-    else:
-        opponent = {
-            "name": "Carlos Gómez",
-            "avatar_color": "#10b981",
-            "bio": "¡Estudiando duro para Ingeniería! 🚀",
-            "streak": 5
+        fallback_q = mock_qs.get(area, mock_qs["Matemáticas"])
+        # Ensure it exists in questions table
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM questions WHERE text = %s", (fallback_q["text"],))
+        ex = cursor.fetchone()
+        if ex:
+            q_id = ex[0]
+        else:
+            cursor.execute('''
+                INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty)
+                VALUES (%s, %s, %s, %s, %s, 'Intermedio') RETURNING id
+            ''', (area, fallback_q["text"], json.dumps(fallback_q["options"]), fallback_q["correct_answer"], fallback_q["explanation"]))
+            q_id = cursor.fetchone()[0]
+            conn.commit()
+            
+        r = {
+            "id": q_id,
+            "area": area,
+            "text": fallback_q["text"],
+            "options": json.dumps(fallback_q["options"]),
+            "correct_answer": fallback_q["correct_answer"],
+            "explanation": fallback_q["explanation"],
+            "graphic": None
         }
+
+    try:
+        opts = json.loads(r["options"])
+    except Exception:
+        opts = [r["correct_answer"], "Opción B", "Opción C", "Opción D"]
         
+    question = {
+        "id": r["id"],
+        "area": r["area"],
+        "text": r["text"],
+        "options": opts,
+        "correct_answer": r["correct_answer"],
+        "explanation": r["explanation"],
+        "graphic": r["graphic"]
+    }
+    
+    opponent_row = conn.execute("SELECT id, name, avatar_color, streak FROM users WHERE id = %s", (opponent_id,)).fetchone()
     conn.close()
     
+    opponent = {
+        "id": opponent_row["id"],
+        "name": opponent_row["name"],
+        "avatar_color": opponent_row["avatar_color"] or "#10b981",
+        "streak": opponent_row["streak"] or 0
+    } if opponent_row else None
+    
     return {
-        "questions": questions,
+        "question": question,
         "opponent": opponent
     }
-
 
 @app.post("/api/duelos/result")
 async def save_duel_result(request: Request, body: dict):
@@ -1407,64 +1583,145 @@ async def save_duel_result(request: Request, body: dict):
     if not user:
         raise HTTPException(status_code=401, detail="No autorizado")
         
-    user_score = body.get("score", 0)
+    opponent_id = body.get("opponent_id")
+    question_id = body.get("question_id")
+    score = body.get("score", 0) # 0 or 1
     area = body.get("area", "Matemáticas")
-    opponent_name = body.get("opponent_name", "Carlos Gómez")
     
-    opponent_score = random.choices([0, 1, 2, 3], weights=[10, 20, 45, 25], k=1)[0]
-    
-    winner = "tie"
-    streak_bonus = False
-    
-    if user_score > opponent_score:
-        winner = "user"
-    elif user_score < opponent_score:
-        winner = "opponent"
-        
     conn = get_db()
     cursor = conn.cursor()
     
-    from datetime import date
-    today_str = date.today().isoformat()
-    current_streak = user["streak"] or 0
+    # Save the pending challenge
+    cursor.execute('''
+        INSERT INTO tutor_duels (challenger_id, opponent_id, area, question_id, challenger_score, opponent_score, status)
+        VALUES (%s, %s, %s, %s, %s, NULL, 'pending') RETURNING id
+    ''', (user["id"], opponent_id, area, question_id, score))
+    duel_id = cursor.fetchone()[0]
+    conn.commit()
+    conn.close()
     
-    if winner == "user":
-        current_streak += 1
-        streak_bonus = True
+    return {
+        "status": "success",
+        "duel_id": duel_id,
+        "message": "Desafío enviado correctamente"
+    }
+
+@app.get("/api/duelos/load/{duel_id}")
+async def load_pending_duel(duel_id: int, request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
         
-        badges_list = []
+    conn = get_db()
+    duel = conn.execute('''
+        SELECT d.id, d.area, d.challenger_score, q.id as q_id, q.text, q.options, q.correct_answer, q.explanation, q.graphic, u.name as challenger_name, u.avatar_color
+        FROM tutor_duels d
+        JOIN questions q ON d.question_id = q.id
+        JOIN users u ON d.challenger_id = u.id
+        WHERE d.id = %s AND d.opponent_id = %s AND d.status = 'pending'
+    ''', (duel_id, user["id"])).fetchone()
+    conn.close()
+    
+    if not duel:
+        raise HTTPException(status_code=404, detail="Desafío no encontrado o ya respondido")
+        
+    try:
+        opts = json.loads(duel["options"])
+    except Exception:
+        opts = [duel["correct_answer"], "Opción B", "Opción C", "Opción D"]
+        
+    return {
+        "id": duel["id"],
+        "area": duel["area"],
+        "challenger_name": duel["challenger_name"],
+        "avatar_color": duel["avatar_color"] or "#3b82f6",
+        "question": {
+            "id": duel["q_id"],
+            "text": duel["text"],
+            "options": opts,
+            "correct_answer": duel["correct_answer"],
+            "explanation": duel["explanation"],
+            "graphic": duel["graphic"]
+        }
+    }
+
+@app.post("/api/duelos/respond")
+async def respond_to_duel(request: Request, body: dict):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+        
+    duel_id = body.get("duel_id")
+    score = body.get("score", 0) # 0 or 1
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    duel = conn.execute('''
+        SELECT d.*, u.name as challenger_name, u.streak as challenger_streak
+        FROM tutor_duels d
+        JOIN users u ON d.challenger_id = u.id
+        WHERE d.id = %s AND d.opponent_id = %s AND d.status = 'pending'
+    ''', (duel_id, user["id"])).fetchone()
+    
+    if not duel:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Desafío no encontrado")
+        
+    from datetime import datetime, date
+    today_str = date.today().isoformat()
+    
+    cursor.execute('''
+        UPDATE tutor_duels 
+        SET opponent_score = %s, status = 'resolved', resolved_at = %s
+        WHERE id = %s
+    ''', (score, datetime.now(), duel_id))
+    
+    # Calculate winner
+    winner = "tie"
+    streak_bonus = False
+    challenger_score = duel["challenger_score"]
+    
+    if challenger_score > score:
+        winner = "challenger"
+        # Challenger gets streak
+    elif score > challenger_score:
+        winner = "opponent"
+        # Opponent (current user) gets streak increase
+        user_streak = (user["streak"] or 0) + 1
+        streak_bonus = True
+        cursor.execute("UPDATE users SET streak = %s, last_active_date = %s WHERE id = %s", (user_streak, today_str, user["id"]))
+        
+        # Add badge to opponent
+        badges = []
         try:
-            badges_list = json.loads(user["badges"]) if user["badges"] else []
+            badges = json.loads(user["badges"]) if user["badges"] else []
         except Exception:
             pass
+        if "Duelo Ganado" not in badges:
+            badges.append("Duelo Ganado")
+            cursor.execute("UPDATE users SET badges = %s WHERE id = %s", (json.dumps(badges), user["id"]))
             
-        if "Duelos Ganados" not in badges_list:
-            badges_list.append("Duelos Ganados")
-            cursor.execute("UPDATE users SET badges = %s WHERE id = %s", (json.dumps(badges_list), user["id"]))
-            
-        cursor.execute("UPDATE users SET streak = %s, last_active_date = %s WHERE id = %s", (current_streak, today_str, user["id"]))
-    
-    session_title = f"Duelo contra {opponent_name} ({area})"
-    cursor.execute('''
-        INSERT INTO practice_sessions (user_id, area, difficulty, score, total_questions)
-        VALUES (%s, %s, 'Rápido 1v1', %s, 3)
-    ''', (user["id"], session_title, user_score))
-    
     conn.commit()
     
-    updated_user = cursor.execute("SELECT streak, badges FROM users WHERE id = %s", (user["id"],)).fetchone()
-    user_streak = updated_user["streak"]
-    user_badges = json.loads(updated_user["badges"]) if updated_user["badges"] else []
+    # Load updated user streak and badges
+    updated_user = conn.execute("SELECT streak, badges FROM users WHERE id = %s", (user["id"],)).fetchone()
+    current_user_streak = updated_user["streak"] if updated_user["streak"] is not None else 0
     
+    try:
+        current_user_badges = json.loads(updated_user["badges"]) if updated_user["badges"] else []
+    except Exception:
+        current_user_badges = []
+        
     conn.close()
     
     return {
         "status": "success",
         "winner": winner,
-        "user_score": user_score,
-        "opponent_score": opponent_score,
-        "streak": user_streak,
-        "badges": user_badges,
+        "challenger_score": challenger_score,
+        "opponent_score": score,
+        "streak": current_user_streak,
+        "badges": current_user_badges,
         "streak_bonus": streak_bonus
     }
 
@@ -1472,60 +1729,133 @@ async def save_duel_result(request: Request, body: dict):
 # --- MICROLEARNING (FLASHCARDS) ---
 
 @app.get("/aprender", response_class=HTMLResponse)
-async def learn_page(request: Request):
+async def learn_page(request: Request, area: str = "Todas"):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
         
-    flashcards = [
-        {
-            "id": 1,
-            "area": "Matemáticas",
-            "title": "Área del Círculo",
-            "front": "¿Cómo se calcula el área de un círculo y qué representa Pi (π)?",
-            "back": "Fórmula: A = π * r²\n\n- π (Pi) es aproximadamente 3.1416.\n- r es el radio del círculo.\n\nTip Saber 11: Muchas veces dejan la respuesta expresada en términos de π (ej. 25π) sin multiplicar. ¡Fíjate bien en las opciones antes de operar!"
-        },
-        {
-            "id": 2,
-            "area": "Ciencias Naturales",
-            "title": "Efecto Invernadero",
-            "front": "¿Qué es el efecto invernadero y qué gas es su principal causante de origen humano?",
-            "back": "Es el calentamiento natural de la Tierra provocado por gases en la atmósfera que retienen calor. El principal causante de origen humano es el Dióxido de Carbono (CO₂).\n\nTip Saber 11: Distingue entre efecto invernadero natural (esencial para la vida) y el calentamiento global acelerado por el hombre."
-        },
-        {
-            "id": 3,
-            "area": "Sociales y Ciudadanas",
-            "title": "Acción de Tutela",
-            "front": "¿Qué es la Acción de Tutela y cuándo se debe interponer?",
-            "back": "Es un mecanismo constitucional en Colombia para proteger de forma inmediata los Derechos Fundamentales (vida, salud, libre expresión, etc.) cuando estos sean vulnerados o amenazados por autoridades o particulares.\n\nTip Saber 11: Solo se puede usar cuando no exista otro medio de defensa judicial, salvo que sea para evitar un perjuicio irremediable."
-        },
-        {
-            "id": 4,
-            "area": "Lectura Crítica",
-            "title": "Tesis Textual",
-            "front": "¿Qué es la tesis en un texto argumentativo?",
-            "back": "Es la postura, opinión o idea central que el autor defiende a lo largo del texto mediante argumentos.\n\nTip Saber 11: La tesis no es un hecho indiscutible, sino una afirmación debatible. Suele estar al inicio (introducción) o al final (conclusión) del fragmento."
-        },
-        {
-            "id": 5,
-            "area": "Inglés",
-            "title": "Present Perfect vs Simple Past",
-            "front": "¿Cuándo se usa Present Perfect ('I have lived') en comparación con Simple Past ('I lived')?",
-            "back": "- Simple Past: Acciones que terminaron en un tiempo específico en el pasado. (Ej: 'I visited Paris in 2022').\n- Present Perfect: Acciones que ocurrieron en un tiempo no especificado o que conectan el pasado con el presente. (Ej: 'I have visited Paris twice')."
-        },
-        {
-            "id": 6,
-            "area": "Matemáticas",
-            "title": "Teorema de Pitágoras",
-            "front": "¿En qué tipo de triángulos se aplica el Teorema de Pitágoras y cuál es su fórmula?",
-            "back": "Se aplica exclusivamente en triángulos rectángulos (que tienen un ángulo de 90°).\n\nFórmula: h² = a² + b² (donde h es la hipotenusa y a, b son los catetos).\n\nTip Saber 11: Aprende los tríos pitagóricos más comunes: (3, 4, 5) y (5, 12, 13). Te ahorrarán mucho tiempo en el examen."
-        }
-    ]
+    conn = get_db()
     
+    # Fetch questions
+    if area == "Todas":
+        rows = conn.execute(
+            "SELECT id, area, text, correct_answer, explanation FROM questions ORDER BY RANDOM() LIMIT 5"
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT id, area, text, correct_answer, explanation FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 5",
+            (area,)
+        ).fetchall()
+        
+    questions = []
+    for r in rows:
+        questions.append({
+            "id": r["id"],
+            "area": r["area"],
+            "text": r["text"],
+            "correct_answer": r["correct_answer"],
+            "explanation": r["explanation"]
+        })
+        
+    needed = 5 - len(questions)
+    if needed > 0:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key:
+            try:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                
+                target_area = area if area != "Todas" else random.choice(["Matemáticas", "Lectura Crítica", "Ciencias Naturales", "Sociales y Ciudadanas", "Inglés"])
+                
+                prompt = f"""
+                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
+                Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {target_area}.
+                
+                REGLAS DE DISEÑO ICFES SABER 11:
+                1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación (ej. álgebra, geometría, probabilidad, estadística o razonamiento cuantitativo).
+                2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, columna de opinión o texto discontinuo descriptivo) y formula una pregunta de inferencia o análisis sobre él.
+                3. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico donde se evalúe indagación o explicación de fenómenos.
+                4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, mecanismo de participación o análisis de multiperspectivismo donde haya diferentes puntos de vista en juego.
+                5. Para **Inglés**: Genera un ejercicio enfocado en comprensión lectora o gramática y vocabulario de nivel A2/B1.
+                
+                CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
+                
+                El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
+                   - "area": "{target_area}"
+                   - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
+                   - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
+                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+                   - "explanation": "[Justificación detallada de por qué es la clave correcta]"
+                   - "difficulty": "Intermedio"
+                """
+                
+                response = model.generate_content(prompt)
+                text_response = response.text.strip()
+                text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
+                q_list = json.loads(text_response)
+                
+                if isinstance(q_list, dict):
+                    q_list = [q_list]
+                    
+                cursor = conn.cursor()
+                for q_data in q_list:
+                    cursor.execute('''
+                        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty)
+                        VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+                    ''', (
+                        q_data["area"],
+                        q_data["text"],
+                        json.dumps(q_data["options"], ensure_ascii=False),
+                        q_data["correct_answer"],
+                        q_data["explanation"],
+                        q_data.get("difficulty", "Intermedio")
+                    ))
+                    new_id = cursor.fetchone()[0]
+                    questions.append({
+                        "id": new_id,
+                        "area": q_data["area"],
+                        "text": q_data["text"],
+                        "correct_answer": q_data["correct_answer"],
+                        "explanation": q_data["explanation"]
+                    })
+                conn.commit()
+            except Exception as e:
+                print("Error generating dynamic flashcard questions:", e)
+                
+    conn.close()
+    
+    # Fallback to make sure we have 5 cards if Gemini failed or is not available
+    if len(questions) < 5:
+        fallbacks = [
+            {"id": 901, "area": "Matemáticas", "text": "¿Cómo se calcula el área de un círculo?", "correct_answer": "A = π * r²", "explanation": "π es la relación entre el perímetro y el diámetro de un círculo, r es el radio."},
+            {"id": 902, "area": "Ciencias Naturales", "text": "¿Cuál es el gas causante del efecto invernadero más emitido por actividades humanas?", "correct_answer": "Dióxido de Carbono (CO₂)", "explanation": "El CO₂ es emitido principalmente por la quema de combustibles fósiles."},
+            {"id": 903, "area": "Sociales y Ciudadanas", "text": "¿Qué mecanismo protege de forma inmediata los derechos fundamentales en Colombia?", "correct_answer": "La Acción de Tutela", "explanation": "Establecida en el artículo 86 de la Constitución de 1991."},
+            {"id": 904, "area": "Lectura Crítica", "text": "¿Qué es la tesis de un texto argumentativo?", "correct_answer": "La idea u opinión central que el autor defiende", "explanation": "Es la columna vertebral del texto argumentativo y se sustenta con argumentos."},
+            {"id": 905, "area": "Inglés", "text": "What is the correct auxiliary verb for the Present Perfect tense?", "correct_answer": "Have / Has", "explanation": "Present perfect uses have/has + past participle."}
+        ]
+        for f in fallbacks:
+            if len(questions) >= 5:
+                break
+            if area == "Todas" or f["area"] == area:
+                questions.append(f)
+                
+    # Format them as flashcards for the UI
+    flashcards = []
+    for q in questions:
+        front_text = q["text"]
+        back_text = f"Respuesta Correcta: {q['correct_answer']}\n\nExplicación:\n{q['explanation']}"
+        flashcards.append({
+            "id": q["id"],
+            "area": q["area"],
+            "title": f"Pregunta de {q['area']}",
+            "front": front_text,
+            "back": back_text
+        })
+        
     return templates.TemplateResponse(
         request=request, 
         name="aprender.html", 
-        context={"user": user, "flashcards": flashcards}
+        context={"user": user, "flashcards": flashcards, "active_area": area}
     )
 
 
@@ -1551,6 +1881,186 @@ async def update_profile(request: Request, bio: str = Form(...), avatar_color: s
     conn.close()
     
     return RedirectResponse(url="/dashboard", status_code=303)
+
+
+# --- SIMULACRO (MOCK EXAM) ---
+
+@app.get("/simulacro", response_class=HTMLResponse)
+async def simulacro_page(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse(request=request, name="simulacro.html", context={"user": user})
+
+@app.get("/api/simulacro/questions")
+async def get_simulacro_questions():
+    areas = ["Matemáticas", "Lectura Crítica", "Ciencias Naturales", "Sociales y Ciudadanas", "Inglés"]
+    conn = get_db()
+    
+    all_questions = []
+    
+    for area in areas:
+        rows = conn.execute(
+            "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 5",
+            (area,)
+        ).fetchall()
+        
+        area_questions = []
+        for r in rows:
+            try:
+                opts = json.loads(r["options"])
+            except Exception:
+                opts = [r["correct_answer"], "Opción B", "Opción C", "Opción D"]
+            area_questions.append({
+                "id": r["id"],
+                "area": r["area"],
+                "text": r["text"],
+                "options": opts,
+                "correct_answer": r["correct_answer"],
+                "explanation": r["explanation"],
+                "difficulty": r["difficulty"],
+                "graphic": r["graphic"]
+            })
+            
+        needed = 5 - len(area_questions)
+        if needed > 0:
+            api_key = os.getenv("GEMINI_API_KEY")
+            if api_key:
+                try:
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    cursor = conn.cursor()
+                    
+                    prompt = f"""
+                    Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
+                    Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {area}.
+                    
+                    REGLAS DE DISEÑO ICFES:
+                    - Para Matemáticas: modelación, formulación y ejecución, o argumentación.
+                    - Para Lectura Crítica: fragmento corto y pregunta de inferencia.
+                    - Para Ciencias Naturales: indagación o explicación de fenómenos.
+                    - Para Sociales y Ciudadanas: dilema ético, conflicto social o multiperspectivismo.
+                    - Para Inglés: gramática, vocabulario nivel A2/B1 o comprensión lectora.
+                    
+                    CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
+                    
+                    El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
+                       - "area": "{area}"
+                       - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
+                       - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
+                       - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+                       - "explanation": "[Justificación detallada de por qué es la clave correcta]"
+                       - "difficulty": "Intermedio"
+                    """
+                    response = model.generate_content(prompt)
+                    text_response = response.text.strip()
+                    text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
+                    q_list = json.loads(text_response)
+                    
+                    if isinstance(q_list, dict):
+                        q_list = [q_list]
+                        
+                    for q_data in q_list:
+                        cursor.execute('''
+                            INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty)
+                            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+                        ''', (
+                            area,
+                            q_data["text"],
+                            json.dumps(q_data["options"], ensure_ascii=False),
+                            q_data["correct_answer"],
+                            q_data["explanation"],
+                            q_data.get("difficulty", "Intermedio")
+                        ))
+                        new_id = cursor.fetchone()[0]
+                        area_questions.append({
+                            "id": new_id,
+                            "area": area,
+                            "text": q_data["text"],
+                            "options": q_data["options"],
+                            "correct_answer": q_data["correct_answer"],
+                            "explanation": q_data["explanation"],
+                            "difficulty": q_data.get("difficulty", "Intermedio"),
+                            "graphic": None
+                        })
+                    conn.commit()
+                except Exception as e:
+                    print(f"Error generating dynamic questions for {area} in mock exam:", e)
+                    
+        # Fallback if still less than 5
+        if len(area_questions) < 5:
+            fallbacks = {
+                "Matemáticas": {"text": "¿Cuál es el valor de x si 2x + 5 = 15?", "options": ["5", "10", "15", "20"], "correct_answer": "5", "explanation": "Restando 5 a ambos lados queda 2x = 10, por tanto x = 5."},
+                "Lectura Crítica": {"text": "En el texto discontinuo de una caricatura, el sarcasmo se usa principalmente para:", "options": ["Criticar de forma indirecta", "Hacer reír sin reflexionar", "Explicar científicamente", "Describir paisajes"], "correct_answer": "Criticar de forma indirecta", "explanation": "El sarcasmo en caricaturas políticas busca la crítica social indirecta."},
+                "Ciencias Naturales": {"text": "¿Cuál de los siguientes es un cambio químico?", "options": ["La combustión de la madera", "La evaporación del agua", "La fusión del hielo", "La trituración de una piedra"], "correct_answer": "La combustión de la madera", "explanation": "La combustión altera la composición química de la materia, produciendo nuevas sustancias como CO2 y cenizas."},
+                "Sociales y Ciudadanas": {"text": "¿Qué rama del poder público en Colombia se encarga de hacer las leyes?", "options": ["Rama Legislativa", "Rama Ejecutiva", "Rama Judicial", "Órganos de control"], "correct_answer": "Rama Legislativa", "explanation": "El Congreso de la República (Senado y Cámara) conforma la rama legislativa y hace las leyes."},
+                "Inglés": {"text": "Choose the correct word: She ____ to the gym every day.", "options": ["goes", "go", "going", "gone"], "correct_answer": "goes", "explanation": "Third person singular in Present Simple requires 'goes'."}
+            }
+            f_q = fallbacks[area]
+            for i in range(5 - len(area_questions)):
+                area_questions.append({
+                    "id": i + 5000 + (hash(area) % 1000),
+                    "area": area,
+                    "text": f_q["text"],
+                    "options": f_q["options"],
+                    "correct_answer": f_q["correct_answer"],
+                    "explanation": f_q["explanation"],
+                    "difficulty": "Intermedio",
+                    "graphic": None
+                })
+        
+        all_questions.extend(area_questions)
+        
+    conn.close()
+    
+    # Shuffle slightly so areas are mixed
+    random.shuffle(all_questions)
+    return {"questions": all_questions}
+
+@app.post("/api/simulacro/result")
+async def save_simulacro_result(request: Request, data: dict):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+        
+    scores = data.get("scores", {})
+    
+    score_math = scores.get("Matemáticas", 0)
+    score_reading = scores.get("Lectura Crítica", 0)
+    score_science = scores.get("Ciencias Naturales", 0)
+    score_social = scores.get("Sociales y Ciudadanas", 0)
+    score_english = scores.get("Inglés", 0)
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO diagnostic_results (user_id, score_math, score_reading, score_social, score_science, score_english)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    ''', (user["id"], score_math, score_reading, score_social, score_science, score_english))
+    conn.commit()
+    conn.close()
+    
+    # Calculate global score
+    weighted_sum = (
+        score_math * 3 +
+        score_reading * 3 +
+        score_science * 3 +
+        score_social * 3 +
+        score_english * 1
+    )
+    global_score = round((weighted_sum / 13) * 5)
+    
+    return {
+        "status": "success",
+        "global_score": global_score,
+        "scores": {
+            "Matemáticas": score_math,
+            "Lectura Crítica": score_reading,
+            "Ciencias Naturales": score_science,
+            "Sociales y Ciudadanas": score_social,
+            "Inglés": score_english
+        }
+    }
 
 
 if __name__ == "__main__":

@@ -180,7 +180,18 @@
 <div class="container">
     <div class="text-center mt-4">
         <h2>💡 Tarjetas de Microaprendizaje</h2>
-        <p class="text-muted">Desliza o haz clic para voltear las tarjetas y repasar fórmulas, tips y conceptos clave del Saber 11.</p>
+        <p class="text-muted mb-3">Desliza o haz clic para voltear las tarjetas y repasar fórmulas, tips y conceptos clave del Saber 11.</p>
+        
+        <div style="max-width: 320px; margin: 0 auto 1.5rem auto;">
+            <select id="areaFilter" class="form-control" onchange="filterArea(this.value)">
+                <option value="Todas" {% if active_area == "Todas" %}selected{% endif %}>🌍 Todas las Áreas</option>
+                <option value="Matemáticas" {% if active_area == "Matemáticas" %}selected{% endif %}>📐 Matemáticas</option>
+                <option value="Lectura Crítica" {% if active_area == "Lectura Crítica" %}selected{% endif %}>📚 Lectura Crítica</option>
+                <option value="Ciencias Naturales" {% if active_area == "Ciencias Naturales" %}selected{% endif %}>🧪 Ciencias Naturales</option>
+                <option value="Sociales y Ciudadanas" {% if active_area == "Sociales y Ciudadanas" %}selected{% endif %}>🌎 Sociales y Ciudadanas</option>
+                <option value="Inglés" {% if active_area == "Inglés" %}selected{% endif %}>🇬🇧 Inglés</option>
+            </select>
+        </div>
     </div>
 
     <div class="learn-container">
@@ -235,6 +246,10 @@
     const cards = document.querySelectorAll('.flashcard');
     const progressEl = document.getElementById('cardProgress');
     const totalCards = cards.length;
+
+    function filterArea(val) {
+        window.location.href = `/aprender?area=${encodeURIComponent(val)}`;
+    }
 
     function flipCard(cardElement) {
         cardElement.classList.toggle('flipped');

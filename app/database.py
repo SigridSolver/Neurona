@@ -175,6 +175,25 @@ def init_db():
         )
     ''')
 
+    # Tutor Duels Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tutor_duels (
+            id SERIAL PRIMARY KEY,
+            challenger_id INTEGER NOT NULL,
+            opponent_id INTEGER NOT NULL,
+            area TEXT NOT NULL,
+            question_id INTEGER NOT NULL,
+            challenger_score INTEGER NOT NULL,
+            opponent_score INTEGER DEFAULT NULL,
+            status TEXT NOT NULL, -- 'pending', 'resolved'
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TIMESTAMP DEFAULT NULL,
+            FOREIGN KEY(challenger_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(opponent_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE
+        )
+    ''')
+
     conn.commit()
 
     # --- SEEDING MOCK USERS AND COMMUNITY ---
