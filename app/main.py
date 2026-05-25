@@ -482,6 +482,91 @@ async def save_practice_result(request: Request, data: dict):
     
     return {"status": "success"}
 
+class QuestionSaveRequest(BaseModel):
+    area: str
+    text: str
+    options: list[str]
+    correct_answer: str
+    explanation: str
+    difficulty: str
+    graphic: str | None = None
+
+class QuestionGenerateRequest(BaseModel):
+    area: str
+
+@app.get("/api/admin/clear-questions")
+async def clear_questions_route(request: Request):
+    conn = get_db()
+    conn.execute("DELETE FROM questions")
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": "Preguntas eliminadas correctamente de la base de datos"}
+
+@app.post("/api/admin/generate-question")
+async def generate_question_route(request: Request, body: QuestionGenerateRequest):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY no configurada en las variables de entorno")
+    
+    conn = get_db()
+    chunk = conn.execute(
+        "SELECT content FROM knowledge_base WHERE area = %s ORDER BY RANDOM() LIMIT 1",
+        (body.area,)
+    ).fetchone()
+    conn.close()
+    
+    context_str = ""
+    if chunk:
+        context_str = f"\n\nContexto extraído de lecturas reales:\n\"\"\"{chunk['content']}\"\"\""
+        
+    prompt = f"""
+    Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
+    Genera 1 pregunta de selección múltiple con 4 opciones únicas para el área de {body.area}.
+    {context_str}
+    
+    REGLAS DE DISEÑO ICFES:
+    1. Debe evaluar una competencia oficial (ej. Uso comprensivo del conocimiento científico, Razonamiento cuantitativo, Lectura crítica, etc.).
+    2. La respuesta correcta debe ser indiscutible y las otras tres opciones (distractores) deben ser verosímiles y representar malinterpretaciones comunes.
+    3. El formato de salida DEBE ser estrictamente un objeto JSON en español, sin envolverlo en bloques markdown (sin ```json) y con las siguientes llaves:
+       - "area": "{body.area}"
+       - "text": "[El enunciado de la pregunta]"
+       - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
+       - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+       - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
+       - "difficulty": "[Básico, Intermedio, Avanzado]"
+    """
+    
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        text_response = response.text.strip()
+        text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
+        question_data = json.loads(text_response)
+        return question_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar la pregunta con la IA: {str(e)}")
+
+@app.post("/api/admin/save-question")
+async def save_question_route(request: Request, body: QuestionSaveRequest):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        body.area,
+        body.text,
+        json.dumps(body.options, ensure_ascii=False),
+        body.correct_answer,
+        body.explanation,
+        body.difficulty,
+        body.graphic
+    ))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": "Pregunta guardada correctamente"}
+
 class ChatMessage(BaseModel):
     role: str
     parts: list[str]
