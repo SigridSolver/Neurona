@@ -45,6 +45,15 @@ if GEMINI_API_KEY:
 app = FastAPI(title="David Saber 11")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "tu_clave_super_secreta_aqui"))
 
+@app.on_event("startup")
+def on_startup():
+    from app.database import init_db
+    try:
+        init_db()
+        print("Database auto-migrated on startup!")
+    except Exception as e:
+        print("Error auto-migrating database on startup:", e)
+
 oauth = OAuth()
 oauth.register(
     name='google',
@@ -481,6 +490,10 @@ class ChatRequest(BaseModel):
     message: str
     history: list[ChatMessage] = []
     image_base64: str | None = None
+    chat_id: int | None = None
+
+class RenameChatRequest(BaseModel):
+    title: str
 
 @app.get("/tutor", response_class=HTMLResponse)
 async def tutor_page(request: Request):
@@ -489,6 +502,73 @@ async def tutor_page(request: Request):
         return RedirectResponse(url="/login", status_code=303)
     return templates.TemplateResponse(request=request, name="tutor.html", context={"user": user})
 
+@app.get("/api/chats")
+async def get_chats(request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    conn = get_db()
+    rows = conn.execute("SELECT id, title, created_at FROM tutor_chats WHERE user_id = %s ORDER BY created_at DESC", (user["id"],)).fetchall()
+    conn.close()
+    return [{"id": r["id"], "title": r["title"], "created_at": r["created_at"]} for r in rows]
+
+@app.post("/api/chats")
+async def create_chat_session(request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO tutor_chats (user_id, title) VALUES (%s, 'Nuevo chat') RETURNING id", (user["id"],))
+    chat_id = cursor.fetchone()[0]
+    conn.commit()
+    conn.close()
+    return {"chat_id": chat_id, "title": "Nuevo chat"}
+
+@app.put("/api/chats/{chat_id}")
+async def rename_chat_session(chat_id: int, request: Request, body: RenameChatRequest):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    conn = get_db()
+    chat = conn.execute("SELECT 1 FROM tutor_chats WHERE id = %s AND user_id = %s", (chat_id, user["id"])).fetchone()
+    if not chat:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Chat no encontrado")
+    conn.execute("UPDATE tutor_chats SET title = %s WHERE id = %s", (body.title.strip(), chat_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+@app.delete("/api/chats/{chat_id}")
+async def delete_chat_session(chat_id: int, request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    conn = get_db()
+    chat = conn.execute("SELECT 1 FROM tutor_chats WHERE id = %s AND user_id = %s", (chat_id, user["id"])).fetchone()
+    if not chat:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Chat no encontrado")
+    conn.execute("DELETE FROM tutor_chats WHERE id = %s", (chat_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+@app.get("/api/chats/{chat_id}/messages")
+async def get_chat_messages(chat_id: int, request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    conn = get_db()
+    chat = conn.execute("SELECT 1 FROM tutor_chats WHERE id = %s AND user_id = %s", (chat_id, user["id"])).fetchone()
+    if not chat:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Chat no encontrado")
+    rows = conn.execute("SELECT role, content FROM tutor_messages WHERE chat_id = %s ORDER BY created_at ASC", (chat_id,)).fetchall()
+    conn.close()
+    return [{"role": r["role"], "parts": [r["content"]]} for r in rows]
+
 @app.post("/api/chat")
 async def chat_api(request: Request, body: ChatRequest):
     user = get_current_user(request)
@@ -496,15 +576,57 @@ async def chat_api(request: Request, body: ChatRequest):
         raise HTTPException(status_code=401, detail="No autorizado")
         
     user_msg = body.message
+    chat_id = body.chat_id
     
-    # Check if Gemini is configured (only from environment)
+    # 1. Resolve or create chat session
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    if chat_id:
+        chat = conn.execute("SELECT id, title FROM tutor_chats WHERE id = %s AND user_id = %s", (chat_id, user["id"])).fetchone()
+        if not chat:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Chat no encontrado")
+        chat_title = chat["title"]
+    else:
+        # Create a new chat session automatically
+        # Set a tentative title based on user message (limit to 35 chars)
+        tentative_title = user_msg.strip()[:35] + ("..." if len(user_msg.strip()) > 35 else "")
+        if not tentative_title:
+            tentative_title = "Nuevo chat"
+        cursor.execute("INSERT INTO tutor_chats (user_id, title) VALUES (%s, %s) RETURNING id", (user["id"], tentative_title))
+        chat_id = cursor.fetchone()[0]
+        conn.commit()
+        chat_title = tentative_title
+        
+    # 2. Save user message to tutor_messages
+    cursor.execute("INSERT INTO tutor_messages (chat_id, role, content) VALUES (%s, 'user', %s)", (chat_id, user_msg))
+    conn.commit()
+    
+    # If the title was "Nuevo chat" or was just created, let's update it if needed
+    if chat_title == "Nuevo chat":
+        new_title = user_msg.strip()[:35] + ("..." if len(user_msg.strip()) > 35 else "")
+        if new_title:
+            cursor.execute("UPDATE tutor_chats SET title = %s WHERE id = %s", (new_title, chat_id))
+            conn.commit()
+            
+    # 3. Retrieve chat history from DB for Gemini context
+    history_rows = conn.execute("SELECT role, content FROM tutor_messages WHERE chat_id = %s ORDER BY created_at ASC", (chat_id,)).fetchall()
+    
+    # Format history for Gemini API (excluding the last message we just added to send as user_content)
+    gemini_history = []
+    for h in history_rows[:-1]:
+        gemini_history.append({"role": h["role"], "parts": [h["content"]]})
+        
+    # Check if Gemini is configured
     api_key = os.getenv("GEMINI_API_KEY")
+    response_text = ""
+    mode = "local"
+    
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            conn = get_db()
             diagnostic = conn.execute("SELECT * FROM diagnostic_results WHERE user_id = %s ORDER BY date DESC LIMIT 1", (user["id"],)).fetchone()
-            conn.close()
             
             user_context = f"\n\nCONTEXTO DEL ESTUDIANTE CON EL QUE HABLAS:\n- Nombre: {user['name']}\n"
             if diagnostic:
@@ -533,12 +655,6 @@ async def chat_api(request: Request, body: ChatRequest):
                 f"Usa ejemplos sencillos y fomenta el pensamiento crítico del estudiante.{user_context}"
             )
             
-            # Format history for Gemini API
-            gemini_history = []
-            for h in body.history:
-                # The google-generativeai API requires parts to be a list of strings for simple text
-                gemini_history.append({"role": h.role, "parts": h.parts})
-                
             user_content = [user_msg]
             if body.image_base64:
                 b64_str = body.image_base64
@@ -565,135 +681,136 @@ async def chat_api(request: Request, body: ChatRequest):
                 chat = model.start_chat(history=gemini_history)
                 response = chat.send_message(user_content)
                 
-            return {"response": response.text, "mode": "ai"}
+            response_text = response.text
+            mode = "ai"
         except Exception as e:
             print("Gemini API Error:", e)
-            return {
-                "response": f"Hola. La consulta a la API de Gemini falló con el siguiente error: `{str(e)}`. Por favor, verifica la clave API en tus variables de entorno de Render.com (GEMINI_API_KEY).",
-                "mode": "local"
-            }
+            response_text = f"Hola. La consulta a la API de Gemini falló con el siguiente error: `{str(e)}`. Por favor, verifica la clave API en tus variables de entorno de Render.com (GEMINI_API_KEY)."
+            mode = "local"
             
-    # LOCAL AGENT FALLBACK (Keyword-based search in database)
-    keywords = {
-        "matem": "Matemáticas",
-        "cálculo": "Matemáticas",
-        "círculo": "Matemáticas",
-        "radio": "Matemáticas",
-        "geomet": "Matemáticas",
-        "númer": "Matemáticas",
-        "lectura": "Lectura Crítica",
-        "crític": "Lectura Crítica",
-        "texto": "Lectura Crítica",
-        "autor": "Lectura Crítica",
-        "párrafo": "Lectura Crítica",
-        "quím": "Ciencias Naturales",
-        "físic": "Ciencias Naturales",
-        "biol": "Ciencias Naturales",
-        "hongo": "Ciencias Naturales",
-        "pestalotiopsis": "Ciencias Naturales",
-        "gas": "Ciencias Naturales",
-        "invernadero": "Ciencias Naturales",
-        "poliuretano": "Ciencias Naturales",
-        "social": "Sociales y Ciudadanas",
-        "ciudadan": "Sociales y Ciudadanas",
-        "constituc": "Sociales y Ciudadanas",
-        "derech": "Sociales y Ciudadanas",
-        "congreso": "Sociales y Ciudadanas",
-        "ley": "Sociales y Ciudadanas",
-        "ingles": "Inglés",
-        "inglés": "Inglés",
-        "verb": "Inglés",
-        "vocab": "Inglés",
-        "grammar": "Inglés",
-        "she": "Inglés"
-    }
-    
-    # Detect query area
-    query_area = None
-    for kw, area in keywords.items():
-        if kw in user_msg.lower():
-            query_area = area
-            break
-            
-    # Check if the user is asking about out-of-context topics (e.g. food, coding)
-    out_of_context_keywords = [
-        "receta", "cocinar", "arroz", "fútbol", "chiste", "programación", "python",
-        "java", "javascript", "code", "amor", "novia", "novio", "juego", "clima"
-    ]
-    is_out_of_context = any(okw in user_msg.lower() for okw in out_of_context_keywords)
-    
-    if is_out_of_context:
-        return {
-            "response": (
+    if not response_text:
+        # LOCAL AGENT FALLBACK (Keyword-based search in database)
+        keywords = {
+            "matem": "Matemáticas",
+            "cálculo": "Matemáticas",
+            "círculo": "Matemáticas",
+            "radio": "Matemáticas",
+            "geomet": "Matemáticas",
+            "númer": "Matemáticas",
+            "lectura": "Lectura Crítica",
+            "crític": "Lectura Crítica",
+            "texto": "Lectura Crítica",
+            "autor": "Lectura Crítica",
+            "párrafo": "Lectura Crítica",
+            "quím": "Ciencias Naturales",
+            "físic": "Ciencias Naturales",
+            "biol": "Ciencias Naturales",
+            "hongo": "Ciencias Naturales",
+            "pestalotiopsis": "Ciencias Naturales",
+            "gas": "Ciencias Naturales",
+            "invernadero": "Ciencias Naturales",
+            "poliuretano": "Ciencias Naturales",
+            "social": "Sociales y Ciudadanas",
+            "ciudadan": "Sociales y Ciudadanas",
+            "constituc": "Sociales y Ciudadanas",
+            "derech": "Sociales y Ciudadanas",
+            "congreso": "Sociales y Ciudadanas",
+            "ley": "Sociales y Ciudadanas",
+            "ingles": "Inglés",
+            "inglés": "Inglés",
+            "verb": "Inglés",
+            "vocab": "Inglés",
+            "grammar": "Inglés",
+            "she": "Inglés"
+        }
+        
+        # Detect query area
+        query_area = None
+        for kw, area in keywords.items():
+            if kw in user_msg.lower():
+                query_area = area
+                break
+                
+        # Check if the user is asking about out-of-context topics (e.g. food, coding)
+        out_of_context_keywords = [
+            "receta", "cocinar", "arroz", "fútbol", "chiste", "programación", "python",
+            "java", "javascript", "code", "amor", "novia", "novio", "juego", "clima"
+        ]
+        is_out_of_context = any(okw in user_msg.lower() for okw in out_of_context_keywords)
+        
+        if is_out_of_context:
+            response_text = (
                 "Hola. Como Tutor IA de David Saber 11, mi propósito está estrictamente limitado "
                 "a ayudarte con temas relacionados a las áreas del examen Saber 11 (Matemáticas, "
                 "Lectura Crítica, Ciencias Naturales, Sociales y Ciudadanas, e Inglés). "
                 "No puedo responder a preguntas sobre otros temas."
-            ),
-            "mode": "local_restricted"
-        }
-        
-    conn = get_db()
-    # Search for matching questions or content
-    found_content = []
-    if query_area:
-        # Search questions matching query_area and keywords in text
-        rows = conn.execute(
-            "SELECT text, options, correct_answer, explanation FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 2",
-            (query_area,)
-        ).fetchall()
-        for r in rows:
-            try:
-                opts = json.loads(r["options"])
-                opts_str = ", ".join(opts)
-            except Exception:
-                opts_str = "A, B, C, D"
-            found_content.append(
-                f"**Pregunta de {query_area}:** {r['text']}\n"
-                f"*Opciones:* {opts_str}\n"
-                f"*Clave Correcta:* {r['correct_answer']}\n"
-                f"*Explicación:* {r['explanation']}"
             )
-            
-    # If still empty, search general questions with matching keywords
-    if not found_content:
-        words = [w for w in user_msg.lower().split() if len(w) > 4]
-        for w in words[:3]:
-            rows = conn.execute(
-                "SELECT area, text, correct_answer, explanation FROM questions WHERE text LIKE %s LIMIT 1",
-                (f"%{w}%",)
-            ).fetchall()
-            for r in rows:
-                found_content.append(
-                    f"**Pregunta de {r['area']}:** {r['text']}\n"
-                    f"*Respuesta correcta:* {r['correct_answer']}\n"
-                    f"*Explicación:* {r['explanation']}"
+            mode = "local_restricted"
+        else:
+            # Search for matching questions or content
+            found_content = []
+            if query_area:
+                # Search questions matching query_area and keywords in text
+                rows = conn.execute(
+                    "SELECT text, options, correct_answer, explanation FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 2",
+                    (query_area,)
+                ).fetchall()
+                for r in rows:
+                    try:
+                        opts = json.loads(r["options"])
+                        opts_str = ", ".join(opts)
+                    except Exception:
+                        opts_str = "A, B, C, D"
+                    found_content.append(
+                        f"**Pregunta de {query_area}:** {r['text']}\n"
+                        f"*Opciones:* {opts_str}\n"
+                        f"*Clave Correcta:* {r['correct_answer']}\n"
+                        f"*Explicación:* {r['explanation']}"
+                    )
+                    
+            # If still empty, search general questions with matching keywords
+            if not found_content:
+                words = [w for w in user_msg.lower().split() if len(w) > 4]
+                for w in words[:3]:
+                    rows = conn.execute(
+                        "SELECT area, text, correct_answer, explanation FROM questions WHERE text LIKE %s LIMIT 1",
+                        (f"%{w}%",)
+                    ).fetchall()
+                    for r in rows:
+                        found_content.append(
+                            f"**Pregunta de {r['area']}:** {r['text']}\n"
+                            f"*Respuesta correcta:* {r['correct_answer']}\n"
+                            f"*Explicación:* {r['explanation']}"
+                        )
+                        
+            notice = ""
+            if not api_key:
+                notice = (
+                    "\n\n*(Nota: Configura tu clave `GEMINI_API_KEY` en un archivo `.env` "
+                    "en la raíz para habilitar un chat conversacional fluido con IA. "
+                    "Actualmente estás en modo de búsqueda local).* "
                 )
                 
+            if found_content:
+                response_text = (
+                    "He buscado en nuestro banco de preguntas del Saber 11 y encontré material relevante:\n\n"
+                    + "\n\n---\n\n".join(found_content) + notice
+                )
+            else:
+                response_text = (
+                    "Hola. Soy tu Tutor local de David Saber 11. No encontré una pregunta exacta en "
+                    "mi base de datos local relacionada con tu consulta. Puedes preguntarme sobre conceptos específicos "
+                    "como 'círculo', 'gas', 'hongo', 'congreso', 'inglés', o configurar una clave `GEMINI_API_KEY` "
+                    "para habilitar respuestas de IA personalizadas para cualquier duda." + notice
+                )
+            mode = "local"
+            
+    # 4. Save tutor's response to tutor_messages
+    cursor.execute("INSERT INTO tutor_messages (chat_id, role, content) VALUES (%s, 'model', %s)", (chat_id, response_text))
+    conn.commit()
     conn.close()
     
-    notice = ""
-    if not api_key:
-        notice = (
-            "\n\n*(Nota: Configura tu clave `GEMINI_API_KEY` en un archivo `.env` "
-            "en la raíz para habilitar un chat conversacional fluido con IA. "
-            "Actualmente estás en modo de búsqueda local).* "
-        )
-        
-    if found_content:
-        response_text = (
-            "He buscado en nuestro banco de preguntas del Saber 11 y encontré material relevante:\n\n"
-            + "\n\n---\n\n".join(found_content) + notice
-        )
-    else:
-        response_text = (
-            "Hola. Soy tu Tutor local de David Saber 11. No encontré una pregunta exacta en "
-            "mi base de datos local relacionada con tu consulta. Puedes preguntarme sobre conceptos específicos "
-            "como 'círculo', 'gas', 'hongo', 'congreso', 'inglés', o configurar una clave `GEMINI_API_KEY` "
-            "para habilitar respuestas de IA personalizadas para cualquier duda." + notice
-        )
-        
-    return {"response": response_text, "mode": "local"}
+    return {"response": response_text, "chat_id": chat_id, "mode": mode}
 
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):

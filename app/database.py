@@ -31,7 +31,6 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
-    # Usaremos conn directamente ya que nuestro wrapper soporta execute
     cursor = conn
     
     # Users Table
@@ -153,11 +152,35 @@ def init_db():
         )
     ''')
 
+    # Tutor Chats Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tutor_chats (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+
+    # Tutor Messages Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tutor_messages (
+            id SERIAL PRIMARY KEY,
+            chat_id INTEGER NOT NULL,
+            role TEXT NOT NULL, -- 'user' or 'model'
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(chat_id) REFERENCES tutor_chats(id) ON DELETE CASCADE
+        )
+    ''')
+
     conn.commit()
 
     # --- SEEDING MOCK USERS AND COMMUNITY ---
     # Add mock users if they don't exist
     from datetime import date
+    import json
     today_str = date.today().isoformat()
     
     mock_users = [

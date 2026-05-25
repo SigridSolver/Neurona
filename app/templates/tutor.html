@@ -10,213 +10,397 @@
 <!-- Marked.js for Markdown rendering -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
+    /* Premium Gemini-style Layout */
     .tutor-layout {
-        display: grid;
-        grid-template-columns: 280px 1fr;
-        gap: 2rem;
-        margin: 2rem auto;
-        max-width: 1200px;
-        height: calc(100vh - 180px);
-        min-height: 550px;
-    }
-
-    @media (max-width: 1024px) {
-        .tutor-layout {
-            grid-template-columns: 1fr;
-            height: calc(100vh - 120px);
-            margin: 1rem auto;
-            gap: 1rem;
-        }
-        .tutor-sidebar {
-            display: none !important;
-        }
-        .message {
-            max-width: 95%;
-        }
-        .chat-input-form {
-            flex-direction: column;
-        }
-        .chat-input {
-            width: 100%;
-        }
-        .chat-input-form button {
-            width: 100%;
-        }
-    }
-
-    .tutor-sidebar {
         display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .info-card {
-        padding: 1.5rem;
-        background-color: var(--bg-card);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: var(--border-radius);
-    }
-
-    .area-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-
-    .badge-mat { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .badge-lect { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
-    .badge-nat { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .badge-soc { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-    .badge-ing { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-
-    .chat-container {
-        display: flex;
-        flex-direction: column;
-        background-color: var(--bg-card);
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: var(--border-radius);
+        height: calc(100vh - 70px);
+        margin: 0;
+        max-width: 100%;
         overflow: hidden;
-        height: 100%;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        background-color: #030712;
     }
 
-    .chat-header {
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    /* Sidebar Styles */
+    .tutor-sidebar {
+        width: 280px;
+        background-color: #090d16;
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 10;
+        flex-shrink: 0;
+    }
+
+    .tutor-sidebar.collapsed {
+        width: 0;
+        overflow: hidden;
+        border-right: none;
+    }
+
+    .sidebar-header {
+        padding: 1.25rem;
         display: flex;
         align-items: center;
-        gap: 1rem;
-        background-color: rgba(15, 23, 42, 0.4);
+        justify-content: space-between;
     }
 
-    .tutor-avatar {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    .new-chat-btn {
+        width: 100%;
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+        border-radius: 12px;
+        padding: 0.8rem 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
-        box-shadow: 0 0 15px var(--accent-glow);
-        animation: pulse 3s infinite;
+        gap: 8px;
+        transition: var(--transition);
     }
 
-    @keyframes pulse {
-        0% { transform: scale(1); box-shadow: 0 0 15px var(--accent-glow); }
-        50% { transform: scale(1.05); box-shadow: 0 0 25px rgba(139, 92, 246, 0.7); }
-        100% { transform: scale(1); box-shadow: 0 0 15px var(--accent-glow); }
+    .new-chat-btn:hover {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: #3b82f6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
     }
 
-    .chat-messages {
+    .recent-chats-container {
         flex: 1;
-        padding: 1.5rem;
         overflow-y: auto;
+        padding: 0.5rem 0.75rem;
         display: flex;
         flex-direction: column;
-        gap: 1.25rem;
-        scroll-behavior: smooth;
+        gap: 4px;
     }
 
-    .message {
+    .recent-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        padding: 0.75rem 0.5rem 0.5rem 0.5rem;
+        font-weight: 700;
+    }
+
+    .chat-session-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.7rem 0.75rem;
+        border-radius: 10px;
+        cursor: pointer;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        transition: var(--transition);
+        position: relative;
+        group: hover;
+    }
+
+    .chat-session-item:hover, .chat-session-item.active {
+        background-color: rgba(255, 255, 255, 0.04);
+        color: var(--text-main);
+    }
+
+    .chat-session-item.active {
+        background-color: rgba(59, 130, 246, 0.1);
+        border-left: 3px solid #3b82f6;
+    }
+
+    .chat-session-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+        padding-right: 0.5rem;
+    }
+
+    .chat-session-actions {
+        display: none;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .chat-session-item:hover .chat-session-actions {
+        display: flex;
+    }
+
+    .action-icon-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.85rem;
+        padding: 2px;
+        border-radius: 4px;
+        transition: color 0.2s, background-color 0.2s;
+    }
+
+    .action-icon-btn:hover {
+        color: white;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Main Chat Container */
+    .chat-container {
+        flex: 1;
         display: flex;
         flex-direction: column;
-        max-width: 80%;
-        animation: messageFade 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        background: radial-gradient(circle at top, #0c101d 0%, #030712 100%);
     }
 
-    @keyframes messageFade {
-        from { opacity: 0; transform: translateY(10px); }
+    /* Top Action Bar */
+    .chat-topbar {
+        padding: 0.85rem 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: rgba(10, 15, 28, 0.4);
+    }
+
+    .toggle-sidebar-btn {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        color: var(--text-muted);
+        width: 38px;
+        height: 38px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition);
+    }
+
+    .toggle-sidebar-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+    }
+
+    /* Welcome / Greeting Screen */
+    .welcome-screen {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        max-width: 800px;
+        width: 90%;
+        margin: 0 auto;
+        padding: 2rem 0;
+        text-align: center;
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(15px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
-    .message-user {
-        align-self: flex-end;
+    .greeting-text {
+        font-size: 2.8rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+        letter-spacing: -1px;
     }
 
-    .message-tutor {
-        align-self: flex-start;
+    .sub-greeting-text {
+        font-size: 1.25rem;
+        color: var(--text-muted);
+        margin-bottom: 2.5rem;
+        font-weight: 500;
     }
 
-    .message-content {
-        padding: 1rem 1.25rem;
-        border-radius: var(--border-radius);
+    .suggestions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        width: 100%;
+    }
+
+    @media (max-width: 640px) {
+        .suggestions-grid {
+            grid-template-columns: 1fr;
+        }
+        .greeting-text {
+            font-size: 2rem;
+        }
+    }
+
+    .suggestion-card {
+        background: rgba(30, 41, 59, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 1.25rem;
+        text-align: left;
+        cursor: pointer;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .suggestion-card:hover {
+        background: rgba(59, 130, 246, 0.08);
+        border-color: rgba(59, 130, 246, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .suggestion-card h5 {
         font-size: 0.95rem;
-        line-height: 1.5;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 0.4rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
-    .message-user .message-content {
-        background: linear-gradient(135deg, var(--accent), #4f46e5);
-        color: #fff;
+    .suggestion-card p {
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        line-height: 1.4;
+    }
+
+    /* Message Area */
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+        scroll-behavior: smooth;
+    }
+
+    .message-row {
+        display: flex;
+        width: 100%;
+        max-width: 820px;
+        margin: 0 auto;
+    }
+
+    .message-row.user-row {
+        justify-content: flex-end;
+    }
+
+    .message-row.tutor-row {
+        justify-content: flex-start;
+    }
+
+    .message-wrapper {
+        display: flex;
+        gap: 1rem;
+        max-width: 82%;
+    }
+
+    .message-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+        flex-shrink: 0;
+    }
+
+    .message-body {
+        padding: 0.85rem 1.25rem;
+        border-radius: 18px;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        word-break: break-word;
+    }
+
+    .user-row .message-body {
+        background: linear-gradient(135deg, #2563eb, #4f46e5);
+        color: white;
         border-bottom-right-radius: 4px;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
     }
 
-    .message-tutor .message-content {
-        background-color: rgba(30, 41, 59, 0.7);
+    .tutor-row .message-body {
+        background-color: rgba(30, 41, 59, 0.55);
         color: var(--text-main);
         border-bottom-left-radius: 4px;
         border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .message-content p {
-        margin-bottom: 0.75rem;
-    }
-    .message-content p:last-child {
-        margin-bottom: 0;
-    }
-    .message-content ul, .message-content ol {
-        margin-left: 1.25rem;
-        margin-bottom: 0.75rem;
-    }
-    .message-content strong {
+    /* Math Formula Styles */
+    .message-body strong {
         color: #60a5fa;
     }
 
-    .chat-input-area {
-        padding: 1.5rem;
-        background-color: transparent;
-        border-top: none;
+    .message-body ul, .message-body ol {
+        margin-left: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .message-body p {
+        margin-bottom: 0.6rem;
+    }
+
+    .message-body p:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Centered Pill Input Form */
+    .chat-bottom-form {
+        max-width: 820px;
+        width: 95%;
+        margin: 0 auto;
+        padding: 1rem 0 2rem 0;
+        background: transparent;
     }
 
     .pill-input-container {
         display: flex;
         align-items: center;
         background-color: rgba(30, 41, 59, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 28px;
         padding: 0.4rem 0.6rem;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
         transition: all 0.3s ease;
     }
 
     .pill-input-container:focus-within {
-        border-color: var(--accent);
-        box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
-        background-color: rgba(15, 23, 42, 0.9);
+        border-color: #3b82f6;
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+        background-color: rgba(15, 23, 42, 0.95);
     }
 
     .pill-btn {
         background: transparent;
         border: none;
         color: var(--text-muted);
-        font-size: 1.2rem;
+        font-size: 1.25rem;
         cursor: pointer;
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: color 0.2s, background-color 0.2s;
+        transition: var(--transition);
     }
 
     .pill-btn:hover {
         color: white;
-        background-color: rgba(255,255,255,0.1);
+        background-color: rgba(255, 255, 255, 0.08);
     }
 
     .chat-input {
@@ -235,40 +419,42 @@
     }
 
     .submit-btn {
-        background-color: var(--accent);
+        background-color: #3b82f6;
         border: none;
         color: white;
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
         border-radius: 50%;
-        font-weight: bold;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: var(--transition);
         margin-left: 0.5rem;
-        transition: background-color 0.2s;
     }
 
     .submit-btn:hover {
-        background-color: var(--accent-hover);
+        background-color: #2563eb;
+        transform: scale(1.05);
     }
 
     .typing-indicator {
         display: flex;
         align-items: center;
-        gap: 4px;
-        padding: 0.5rem 1rem;
-        background-color: rgba(30, 41, 59, 0.4);
-        border-radius: var(--border-radius);
+        gap: 5px;
+        padding: 0.6rem 1.2rem;
+        background-color: rgba(30, 41, 59, 0.5);
+        border-radius: 18px;
         align-self: flex-start;
         display: none;
+        width: fit-content;
+        border: 1px solid rgba(255,255,255,0.03);
     }
 
     .typing-dot {
         width: 6px;
         height: 6px;
-        background-color: var(--text-muted);
+        background-color: #60a5fa;
         border-radius: 50%;
         animation: typingBounce 1.4s infinite ease-in-out both;
     }
@@ -281,26 +467,7 @@
         40% { transform: scale(1); }
     }
 
-    .suggestion-btn {
-        background-color: rgba(30, 41, 59, 0.5);
-        border: 1px solid rgba(255,255,255,0.05);
-        border-radius: 20px;
-        color: var(--text-muted);
-        padding: 0.4rem 1rem;
-        font-size: 0.85rem;
-        cursor: pointer;
-        transition: var(--transition);
-        text-align: left;
-    }
-
-    .suggestion-btn:hover {
-        background-color: rgba(59, 130, 246, 0.1);
-        color: var(--accent-hover);
-        border-color: var(--accent);
-        transform: translateY(-2px);
-    }
-
-    /* Live Overlay Styles (Gemini Live Experience) */
+    /* Live Screen Overlay */
     .live-overlay {
         display: none;
         position: fixed;
@@ -308,7 +475,7 @@
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+        background: radial-gradient(circle at center, #0a0e1a 0%, #02040a 100%);
         z-index: 2000;
         flex-direction: column;
         align-items: center;
@@ -325,13 +492,12 @@
 
     .live-header {
         text-align: center;
-        margin-top: 1rem;
     }
 
     .live-header h2 {
-        font-size: 2.2rem;
+        font-size: 2.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #a78bfa, #60a5fa, #ec4899);
+        background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin-bottom: 0.5rem;
@@ -340,113 +506,97 @@
     .live-status {
         color: #94a3b8;
         font-size: 1.1rem;
-        font-weight: 500;
         display: flex;
         align-items: center;
-        justify-content: center;
         gap: 8px;
+        justify-content: center;
     }
 
     .live-orb-container {
         position: relative;
-        width: 250px;
-        height: 250px;
+        width: 300px;
+        height: 300px;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
     .live-orb {
-        width: 140px;
-        height: 140px;
+        width: 160px;
+        height: 160px;
         border-radius: 50%;
-        background: radial-gradient(circle at 30% 30%, #8b5cf6, #3b82f6);
-        box-shadow: 0 0 50px rgba(139, 92, 246, 0.5), 
-                    inset 0 0 25px rgba(255, 255, 255, 0.2);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
+        background: radial-gradient(circle at 35% 35%, #3b82f6, #8b5cf6);
+        box-shadow: 0 0 60px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(255,255,255,0.15);
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         z-index: 2;
     }
 
-    /* Dynamic outer waves */
     .live-wave {
         position: absolute;
-        width: 140px;
-        height: 140px;
+        width: 160px;
+        height: 160px;
         border-radius: 50%;
-        border: 2px solid rgba(139, 92, 246, 0.3);
-        animation: waveRipple 2.5s infinite linear;
+        border: 2px solid rgba(139, 92, 246, 0.25);
+        animation: waveRipple 3s infinite linear;
         opacity: 0;
         z-index: 1;
-        pointer-events: none;
     }
 
-    .live-wave:nth-child(2) {
-        animation-delay: 0.8s;
-    }
-
-    .live-wave:nth-child(3) {
-        animation-delay: 1.6s;
-    }
+    .live-wave:nth-child(2) { animation-delay: 1s; }
+    .live-wave:nth-child(3) { animation-delay: 2s; }
 
     @keyframes waveRipple {
         0% { transform: scale(1); opacity: 0.8; }
-        100% { transform: scale(2.2); opacity: 0; }
+        100% { transform: scale(2.5); opacity: 0; }
     }
 
-    /* Orb states */
     .orb-listening {
-        background: radial-gradient(circle at 30% 30%, #10b981, #3b82f6);
-        box-shadow: 0 0 60px rgba(16, 185, 129, 0.6),
-                    inset 0 0 25px rgba(255, 255, 255, 0.2);
-        animation: pulseOrb 1.5s infinite ease-in-out;
+        background: radial-gradient(circle at 35% 35%, #10b981, #3b82f6);
+        box-shadow: 0 0 70px rgba(16, 185, 129, 0.5);
+        animation: pulseOrb 1.6s infinite ease-in-out;
     }
-    
+
     .orb-thinking {
-        background: radial-gradient(circle at 30% 30%, #ec4899, #8b5cf6);
-        box-shadow: 0 0 70px rgba(236, 72, 153, 0.7),
-                    inset 0 0 25px rgba(255, 255, 255, 0.2);
-        animation: rotateOrb 1.2s infinite linear;
+        background: radial-gradient(circle at 35% 35%, #ec4899, #8b5cf6);
+        box-shadow: 0 0 80px rgba(236, 72, 153, 0.6);
+        animation: rotateOrb 1.4s infinite linear;
     }
 
     .orb-speaking {
-        background: radial-gradient(circle at 30% 30%, #f59e0b, #ec4899);
-        box-shadow: 0 0 80px rgba(245, 158, 11, 0.7),
-                    inset 0 0 25px rgba(255, 255, 255, 0.2);
+        background: radial-gradient(circle at 35% 35%, #f59e0b, #ec4899);
+        box-shadow: 0 0 90px rgba(245, 158, 11, 0.65);
         animation: speakOrb 0.5s infinite ease-in-out alternate;
     }
 
     @keyframes pulseOrb {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.06); }
-        100% { transform: scale(1); }
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.08); }
     }
 
     @keyframes speakOrb {
         0% { transform: scale(1.02); }
-        100% { transform: scale(1.14); }
+        100% { transform: scale(1.16); }
     }
 
     @keyframes rotateOrb {
-        0% { transform: rotate(0deg) scale(1.03); }
-        100% { transform: rotate(360deg) scale(1.03); }
+        0% { transform: rotate(0deg) scale(1.02); }
+        100% { transform: rotate(360deg) scale(1.02); }
     }
 
     .live-captions {
-        max-width: 600px;
+        max-width: 650px;
         width: 90%;
         text-align: center;
-        margin-bottom: 1.5rem;
-        min-height: 90px;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        justify-content: center;
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.06);
-        padding: 1.25rem 1.5rem;
-        border-radius: var(--border-radius);
-        backdrop-filter: blur(12px);
+        border-radius: 16px;
+        padding: 1.5rem;
+        min-height: 100px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 8px;
+        backdrop-filter: blur(10px);
     }
 
     .caption-user {
@@ -457,124 +607,127 @@
 
     .caption-david {
         color: #f8fafc;
-        font-size: 1.15rem;
+        font-size: 1.2rem;
         font-weight: 500;
-        line-height: 1.4;
+        line-height: 1.5;
     }
 
     .live-btn-hangup {
-        width: 64px;
-        height: 64px;
+        width: 70px;
+        height: 70px;
         border-radius: 50%;
         background-color: #ef4444;
         border: none;
         color: white;
-        font-size: 1.5rem;
+        font-size: 1.7rem;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+        box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
         transition: var(--transition);
     }
 
     .live-btn-hangup:hover {
-        transform: scale(1.1);
+        transform: scale(1.1) rotate(135deg);
         background-color: #dc2626;
-        box-shadow: 0 15px 25px rgba(239, 68, 68, 0.5);
-    }
-
-    /* Pulse for live button */
-    .live-pulse {
-        animation: liveIndicatorPulse 1.5s infinite;
-    }
-
-    @keyframes liveIndicatorPulse {
-        0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        70% { transform: scale(1.1); opacity: 0.8; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-        100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container tutor-layout">
-    <!-- Sidebar -->
-    <div class="tutor-sidebar">
-        <div class="info-card">
-            <h4 class="mb-2">¿Cómo funciona?</h4>
-            <p class="text-muted" style="font-size: 0.85rem;">David es un Tutor de IA especializado. Puedes preguntarle dudas, pedirle que te explique temas teóricos, o que te formule ejemplos de las siguientes materias:</p>
-            <div style="margin-top: 1.25rem; display:flex; flex-direction:column; gap:0.5rem;">
-                <div><span class="area-badge badge-mat">Matemáticas</span></div>
-                <div><span class="area-badge badge-lect">Lectura Crítica</span></div>
-                <div><span class="area-badge badge-nat">Ciencias Naturales</span></div>
-                <div><span class="area-badge badge-soc">Sociales y Ciudadanas</span></div>
-                <div><span class="area-badge badge-ing">Inglés</span></div>
-            </div>
+<div class="tutor-layout">
+    <!-- Collapsible Sidebar -->
+    <div class="tutor-sidebar" id="tutorSidebar">
+        <div class="sidebar-header">
+            <h4 style="margin: 0; font-weight: 700; color: #fff;">Chats</h4>
+            <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="Ocultar menú">◀</button>
+        </div>
+        
+        <div style="padding: 0 1.25rem 1rem 1.25rem;">
+            <button class="new-chat-btn" onclick="startNewChat()">
+                <span>➕</span> Nuevo chat
+            </button>
         </div>
 
-        <div class="info-card">
-            <h4 class="mb-2">Preguntas Sugeridas</h4>
-            <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1rem;">
-                <button class="suggestion-btn" onclick="askSuggestion('Explícame cómo resolver preguntas de Lectura Crítica de textos discontinuos.')">💡 Comprensión de textos discontinuos</button>
-                <button class="suggestion-btn" onclick="askSuggestion('¿Cuál es la diferencia entre ambiente aerobio y anaerobio con un ejemplo?')">🧬 Aerobio vs Anaerobio</button>
-                <button class="suggestion-btn" onclick="askSuggestion('Dame una regla rápida para diferenciar el uso de don\'t y doesn\'t en inglés.')">🌐 Regla simple don't / doesn't</button>
-                <button class="suggestion-btn" onclick="askSuggestion('¿Qué funciones tiene el Congreso de la República de Colombia?')">⚖️ Funciones del Congreso</button>
-            </div>
+        <div class="recent-title">Recientes</div>
+        
+        <div class="recent-chats-container" id="recentChatsList">
+            <!-- Chat lists dynamically loaded -->
+            <div class="text-muted" style="padding: 1rem; font-size: 0.85rem; text-align: center;">Cargando chats...</div>
         </div>
     </div>
 
-    <!-- Chat Area -->
+    <!-- Main Chat Workspace -->
     <div class="chat-container">
-        <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <div class="chat-topbar">
             <div style="display: flex; align-items: center; gap: 1rem;">
-                <div class="tutor-avatar" id="tutor-avatar-icon">🤖</div>
-                <div>
-                    <h4 style="margin:0;">Tutor David</h4>
-                    <span class="text-muted" style="font-size:0.8rem; display:flex; align-items:center; gap:5px;">
-                        <span style="width:8px; height:8px; background-color:var(--success); border-radius:50%; display:inline-block;"></span>
-                        Especialista en Saber 11
-                    </span>
+                <button class="toggle-sidebar-btn" id="sidebarExpandBtn" onclick="toggleSidebar()" title="Mostrar menú" style="display: none;">▶</button>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="message-avatar" style="width: 38px; height: 38px;">🤖</div>
+                    <div>
+                        <h5 style="margin: 0; color: white;" id="activeChatHeaderTitle">Tutor David</h5>
+                        <span style="font-size: 0.75rem; color: var(--success); display: flex; align-items: center; gap: 4px;">
+                            <span style="width: 6px; height: 6px; background-color: var(--success); border-radius: 50%; display: inline-block;"></span>
+                            Saber 11 & Ayuda Educativa
+                        </span>
+                    </div>
                 </div>
             </div>
-            
-            <div>
-                <!-- David Live Voice Toggle -->
-                <button type="button" id="live-mode-btn" class="pill-btn" onclick="toggleLiveMode()" title="Activar conversación en vivo (Manos libres)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); width: auto; padding: 0 0.85rem; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; border-radius: 20px; height: 36px; color: var(--text-muted);">
-                    <span id="live-indicator" style="width: 8px; height: 8px; background-color: #94a3b8; border-radius: 50%; display: inline-block;"></span>
+
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" id="live-mode-btn" class="pill-btn" onclick="toggleLiveMode()" title="David Live (Conversación de voz)" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px; font-size: 0.85rem; color: #34d399; font-weight: 600; padding: 0.4rem 1rem; display: flex; align-items: center; gap: 6px;">
+                    <span id="live-indicator" style="width: 7px; height: 7px; background-color: #10b981; border-radius: 50%; display: inline-block;"></span>
                     David Live
                 </button>
             </div>
         </div>
 
+        <!-- Chat messages view -->
         <div id="chat-messages" class="chat-messages">
-            <!-- Initial Message -->
-            <div class="message message-tutor">
-                <div class="message-content">
-                    <p>¡Hola <strong>{{ user.name }}</strong>! Soy David, tu tutor personal de Inteligencia Artificial para el examen Saber 11.</p>
-                    <p>Estoy entrenado exclusivamente para ayudarte en Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales y Ciudadanas, e Inglés.</p>
-                    <p>¿Qué tema te gustaría repasar o entender hoy?</p>
+            <!-- Welcome screen (hidden if active conversation has messages) -->
+            <div class="welcome-screen" id="welcomeScreen">
+                <div class="greeting-text">Hola, {{ user.name }}</div>
+                <div class="sub-greeting-text">¿Qué área académica repasamos hoy?</div>
+
+                <div class="suggestions-grid">
+                    <div class="suggestion-card" onclick="askSuggestion('Dame una explicación didáctica del Teorema de Pitágoras con un ejemplo aplicado.')">
+                        <h5>📐 Matemáticas</h5>
+                        <p>Aprende de forma intuitiva conceptos geométricos y algebraicos clave.</p>
+                    </div>
+                    <div class="suggestion-card" onclick="askSuggestion('¿Cómo identifico la idea principal en un texto discontinuo en Lectura Crítica?')">
+                        <h5>📚 Lectura Crítica</h5>
+                        <p>Tips para entender infografías, caricaturas y textos del examen.</p>
+                    </div>
+                    <div class="suggestion-card" onclick="askSuggestion('Explícame de manera simplificada la fotosíntesis y la respiración celular.')">
+                        <h5>🧪 Ciencias Naturales</h5>
+                        <p>Aclara dudas sobre física, química, y procesos celulares.</p>
+                    </div>
+                    <div class="suggestion-card" onclick="askSuggestion('¿Cuál es la función de la Corte Constitucional y la Acción de Tutela?')">
+                        <h5>🌎 Sociales y Ciudadanas</h5>
+                        <p>Domina los temas constitucionales y de participación ciudadana.</p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Typing Indicator -->
-        <div id="typing-indicator" class="typing-indicator" style="margin-left: 1.5rem; margin-bottom: 1rem;">
+        <div id="typing-indicator" class="typing-indicator" style="margin-left: 2rem; margin-bottom: 1rem;">
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
         </div>
 
-        <!-- Image Preview Container -->
-        <div id="image-preview-container" style="display:none; padding: 0.5rem 1.5rem; background-color: rgba(15, 23, 42, 0.5); border-top: 1px solid rgba(255, 255, 255, 0.05);">
+        <!-- Attached Image Preview Container -->
+        <div id="image-preview-container" style="display:none; padding: 0.5rem 2rem; background-color: rgba(15, 23, 42, 0.4); border-top: 1px solid rgba(255, 255, 255, 0.05); max-width: 820px; width: 95%; margin: 0 auto; border-radius: 12px 12px 0 0;">
             <div style="position: relative; display: inline-block;">
                 <img id="image-preview" src="" alt="Vista previa" style="max-height: 80px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-                <button type="button" onclick="clearImage()" style="position: absolute; top: -8px; right: -8px; background: var(--danger); border: none; color: white; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;">✕</button>
+                <button type="button" onclick="clearImage()" style="position: absolute; top: -8px; right: -8px; background: var(--danger); border: none; color: white; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center;">✕</button>
             </div>
         </div>
 
-        <!-- Input Area -->
-        <div class="chat-input-area">
+        <!-- Bottom Form Area -->
+        <div class="chat-bottom-form">
             <form id="chat-form" onsubmit="handleChatSubmit(event)">
                 <div class="pill-input-container">
                     <button type="button" class="pill-btn" onclick="document.getElementById('image-upload').click()" title="Adjuntar imagen">📎</button>
@@ -583,9 +736,9 @@
                     <button type="button" class="pill-btn" onclick="document.getElementById('camera-upload').click()" title="Tomar foto">📷</button>
                     <input type="file" id="camera-upload" accept="image/*" capture="environment" style="display:none" onchange="previewImage(event)">
                     
-                    <input type="text" id="chat-input" class="chat-input" placeholder="Pregúntame sobre cualquier área evaluada..." required autocomplete="off">
+                    <input type="text" id="chat-input" class="chat-input" placeholder="Pregunta sobre cualquier tema escolar..." required autocomplete="off">
                     
-                    <button type="button" id="mic-btn" class="pill-btn" onclick="toggleRecording()" title="Usar micrófono (Respuesta por voz)">🎤</button>
+                    <button type="button" id="mic-btn" class="pill-btn" onclick="toggleRecording()" title="Usar micrófono">🎤</button>
                     <button type="submit" class="submit-btn" title="Enviar">➤</button>
                 </div>
             </form>
@@ -593,7 +746,7 @@
     </div>
 </div>
 
-<!-- Gemini Live full-screen Overlay -->
+<!-- Gemini Live voice mode Overlay -->
 <div id="liveOverlay" class="live-overlay">
     <div class="live-header">
         <h2>David Live</h2>
@@ -628,29 +781,29 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
     const typingIndicator = document.getElementById('typing-indicator');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const recentChatsList = document.getElementById('recentChatsList');
+    const activeChatHeaderTitle = document.getElementById('activeChatHeaderTitle');
+    const tutorSidebar = document.getElementById('tutorSidebar');
+    const sidebarExpandBtn = document.getElementById('sidebarExpandBtn');
     
-    // Almacena el contexto de la conversación
-    let chatHistory = JSON.parse(sessionStorage.getItem('tutorChatHistory')) || [];
+    let activeChatId = null;
     let currentImageBase64 = null;
-
-    // --- Configuración de Voz Masculina ---
     let selectedVoice = null;
+    
+    // Voices list configuration for speech synthesis
     function getMaleSpanishVoice() {
         if (!window.speechSynthesis) return null;
         const voices = window.speechSynthesis.getVoices();
-        
-        // Find Spanish voices
         const spanishVoices = voices.filter(v => v.lang.startsWith('es'));
         if (spanishVoices.length === 0) return null;
         
-        // Look for typical male voice names in Spanish
-        const maleNames = ['jorge', 'david', 'julio', 'heriberto', 'alvaro', 'diego', 'jorge', 'male', 'hombre', 'natural', 'yago', 'miguel', 'antonio'];
+        const maleNames = ['jorge', 'david', 'julio', 'heriberto', 'alvaro', 'diego', 'male', 'hombre', 'natural', 'yago', 'miguel', 'antonio'];
         for (const name of maleNames) {
             const found = spanishVoices.find(v => v.name.toLowerCase().includes(name));
             if (found) return found;
         }
         
-        // Fallback to any voice with a name that doesn't sound clearly female
         const femaleNames = ['sabina', 'helena', 'monica', 'paulin', 'sandra', 'maria', 'rosa', 'hilda', 'dalia'];
         const fallbackMale = spanishVoices.find(v => !femaleNames.some(f => v.name.toLowerCase().includes(f)));
         
@@ -664,16 +817,161 @@
         selectedVoice = getMaleSpanishVoice();
     }
 
+    // App Initialization
     window.addEventListener('load', () => {
-        if (chatHistory.length > 0) {
-            document.getElementById('chat-messages').innerHTML = '';
-            chatHistory.forEach(msg => {
-                const isUser = msg.role === 'user';
-                appendMessage(msg.parts[0], isUser);
-            });
+        loadChatsList();
+        
+        // Listen to windows resize to auto collapse sidebar on smaller viewports
+        if (window.innerWidth <= 1024) {
+            tutorSidebar.classList.add('collapsed');
+            sidebarExpandBtn.style.display = 'flex';
         }
     });
 
+    // Toggle Sidebar display
+    function toggleSidebar() {
+        const isCollapsed = tutorSidebar.classList.toggle('collapsed');
+        sidebarExpandBtn.style.display = isCollapsed ? 'flex' : 'none';
+    }
+
+    // Load available chats list
+    async function loadChatsList() {
+        try {
+            const res = await fetch('/api/chats');
+            const chats = await res.json();
+            
+            recentChatsList.innerHTML = '';
+            
+            if (chats.length === 0) {
+                recentChatsList.innerHTML = '<div style="padding: 1rem; font-size: 0.85rem; color:#64748b; text-align:center;">No hay chats recientes</div>';
+                return;
+            }
+            
+            chats.forEach(chat => {
+                const item = document.createElement('div');
+                item.className = `chat-session-item ${activeChatId === chat.id ? 'active' : ''}`;
+                item.setAttribute('data-id', chat.id);
+                item.onclick = (e) => {
+                    // Prevent switching if click was on action button
+                    if (e.target.closest('.chat-session-actions')) return;
+                    selectChat(chat.id, chat.title);
+                };
+                
+                item.innerHTML = `
+                    <span class="chat-session-title">💬 ${chat.title}</span>
+                    <div class="chat-session-actions">
+                        <button class="action-icon-btn" onclick="renameChatPrompt(${chat.id}, '${chat.title}')" title="Renombrar">✏️</button>
+                        <button class="action-icon-btn" onclick="deleteChat(${chat.id})" title="Eliminar">🗑️</button>
+                    </div>
+                `;
+                recentChatsList.appendChild(item);
+            });
+        } catch (e) {
+            console.error("Error loading chat list:", e);
+            recentChatsList.innerHTML = '<div style="padding: 1rem; color:#ef4444; font-size:0.8rem; text-align:center;">Error al cargar</div>';
+        }
+    }
+
+    // Select and load a chat session
+    async function selectChat(chatId, title) {
+        activeChatId = chatId;
+        activeChatHeaderTitle.textContent = title;
+        
+        // Highlight active sidebar item
+        document.querySelectorAll('.chat-session-item').forEach(el => {
+            el.classList.remove('active');
+            if (el.getAttribute('data-id') == chatId) {
+                el.classList.add('active');
+            }
+        });
+        
+        // Clear message board
+        chatMessages.innerHTML = '';
+        welcomeScreen.style.display = 'none';
+        typingIndicator.style.display = 'flex';
+        
+        try {
+            const res = await fetch(`/api/chats/${chatId}/messages`);
+            const messages = await res.json();
+            
+            typingIndicator.style.display = 'none';
+            chatMessages.innerHTML = ''; // Clear indicator
+            
+            if (messages.length === 0) {
+                chatMessages.appendChild(welcomeScreen);
+                welcomeScreen.style.display = 'flex';
+            } else {
+                messages.forEach(msg => {
+                    const isUser = msg.role === 'user';
+                    appendMessage(msg.parts[0], isUser);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading chat messages:", e);
+            typingIndicator.style.display = 'none';
+            appendMessage('Error al cargar la conversación. Por favor intenta de nuevo.', false);
+        }
+    }
+
+    // Start a new clean chat session
+    function startNewChat() {
+        activeChatId = null;
+        activeChatHeaderTitle.textContent = 'Tutor David';
+        
+        document.querySelectorAll('.chat-session-item').forEach(el => el.classList.remove('active'));
+        
+        // Clean messages and show suggestion board
+        chatMessages.innerHTML = '';
+        chatMessages.appendChild(welcomeScreen);
+        welcomeScreen.style.display = 'flex';
+        
+        chatInput.focus();
+    }
+
+    // Rename chat prompt
+    async function renameChatPrompt(chatId, currentTitle) {
+        const newTitle = prompt("Renombrar conversación:", currentTitle);
+        if (newTitle === null) return;
+        const cleanTitle = newTitle.trim();
+        if (!cleanTitle) return;
+        
+        try {
+            const res = await fetch(`/api/chats/${chatId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: cleanTitle })
+            });
+            if (res.ok) {
+                if (activeChatId === chatId) {
+                    activeChatHeaderTitle.textContent = cleanTitle;
+                }
+                loadChatsList();
+            }
+        } catch (e) {
+            console.error("Error renaming chat:", e);
+            alert("No se pudo renombrar el chat.");
+        }
+    }
+
+    // Delete chat session
+    async function deleteChat(chatId) {
+        if (!confirm("¿Seguro que deseas eliminar esta conversación?")) return;
+        
+        try {
+            const res = await fetch(`/api/chats/${chatId}`, { method: 'DELETE' });
+            if (res.ok) {
+                if (activeChatId === chatId) {
+                    startNewChat();
+                }
+                loadChatsList();
+            }
+        } catch (e) {
+            console.error("Error deleting chat:", e);
+            alert("No se pudo eliminar el chat.");
+        }
+    }
+
+    // File Preview Handler
     function previewImage(event) {
         const file = event.target.files[0];
         if (file) {
@@ -687,19 +985,37 @@
         }
     }
 
+    // Clear attached image
     function clearImage() {
         currentImageBase64 = null;
         document.getElementById('image-upload').value = '';
+        document.getElementById('camera-upload').value = '';
         document.getElementById('image-preview-container').style.display = 'none';
         document.getElementById('image-preview').src = '';
     }
 
+    // Append single message to bubble timeline
     function appendMessage(text, isUser = false) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${isUser ? 'message-user' : 'message-tutor'}`;
+        // Remove welcome screen if it's there
+        if (welcomeScreen.parentNode === chatMessages) {
+            welcomeScreen.style.display = 'none';
+        }
         
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content';
+        const row = document.createElement('div');
+        row.className = `message-row ${isUser ? 'user-row' : 'tutor-row'}`;
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper';
+        
+        if (!isUser) {
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = '🤖';
+            wrapper.appendChild(avatar);
+        }
+        
+        const body = document.createElement('div');
+        body.className = 'message-body';
         
         let formattedText = "";
         try {
@@ -707,11 +1023,11 @@
         } catch (e) {
             formattedText = text.replace(/\n/g, '<br>');
         }
-            
-        contentDiv.innerHTML = formattedText;
+        body.innerHTML = formattedText;
         
+        // Render Math KaTeX formulas
         try {
-            renderMathInElement(contentDiv, {
+            renderMathInElement(body, {
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
                     {left: '$', right: '$', display: false},
@@ -722,27 +1038,29 @@
             });
         } catch(e) {}
         
-        messageDiv.appendChild(contentDiv);
-        chatMessages.appendChild(messageDiv);
+        wrapper.appendChild(body);
+        row.appendChild(wrapper);
+        chatMessages.appendChild(row);
         
-        // Scroll to bottom
+        // Auto scroll to bottom
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
+    // Submit Chat form
     async function handleChatSubmit(event) {
         if (event) event.preventDefault();
         
-        // Detener cualquier voz en curso al enviar un nuevo mensaje
+        // Cancel ongoing audio
         if (window.speechSynthesis) {
             window.speechSynthesis.cancel();
         }
         
         const message = chatInput.value.trim();
         if (!message) return;
-
-        const reqBody = { 
+        
+        const reqBody = {
             message: message,
-            history: chatHistory
+            chat_id: activeChatId
         };
         
         let msgDisplay = message;
@@ -751,18 +1069,21 @@
             msgDisplay = "📷 *(Imagen adjunta)*\n" + message;
             clearImage();
         }
-
+        
         chatInput.value = '';
         appendMessage(msgDisplay, true);
-
-        // Show typing indicator in normal chat
+        
+        // Hide welcome screen if first query
+        welcomeScreen.style.display = 'none';
+        
+        // Display loading animation
         if (!isLiveMode) {
             typingIndicator.style.display = 'flex';
             chatMessages.scrollTop = chatMessages.scrollHeight;
         } else {
             setLiveState('thinking');
         }
-
+        
         try {
             const res = await fetch('/api/chat', {
                 method: 'POST',
@@ -771,26 +1092,19 @@
             });
             const data = await res.json();
             
-            // Hide typing indicator
             if (!isLiveMode) {
                 typingIndicator.style.display = 'none';
             }
             
             appendMessage(data.response, false);
             
-            // Si la respuesta proviene de la IA, actualizamos el historial
-            if (data.mode === 'ai') {
-                chatHistory.push({ role: 'user', parts: [message] });
-                chatHistory.push({ role: 'model', parts: [data.response] });
-                
-                // Conservar solo los últimos 10 mensajes (5 pares de pregunta-respuesta)
-                if (chatHistory.length > 10) {
-                    chatHistory = chatHistory.slice(chatHistory.length - 10);
-                }
-                sessionStorage.setItem('tutorChatHistory', JSON.stringify(chatHistory));
+            // If the chat session was new, capture the generated chat_id and reload sidebar
+            if (!activeChatId && data.chat_id) {
+                activeChatId = data.chat_id;
+                loadChatsList();
             }
             
-            // Hablar respuesta
+            // Speak Live reply
             if (isLiveMode) {
                 speakLiveResponse(data.response);
             } else if (isVoiceInteraction && window.speechSynthesis) {
@@ -801,22 +1115,19 @@
                     .replace(/#/g, '');
                     
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                if (selectedVoice) {
-                    utterance.voice = selectedVoice;
-                } else {
-                    utterance.lang = 'es-CO';
-                }
+                utterance.voice = selectedVoice || null;
+                if (!selectedVoice) utterance.lang = 'es-CO';
                 utterance.rate = 1.05;
                 window.speechSynthesis.speak(utterance);
-                
                 isVoiceInteraction = false;
             }
         } catch (error) {
+            console.error("Error submitting query:", error);
             if (!isLiveMode) {
                 typingIndicator.style.display = 'none';
                 appendMessage('Lo siento, ocurrió un error al procesar tu pregunta. Intenta de nuevo por favor.', false);
             } else {
-                speakLiveResponse('Lo siento, ocurrió un error al procesar tu pregunta. Por favor intenta de nuevo.');
+                speakLiveResponse('Lo siento, ocurrió un error. Por favor intenta de nuevo.');
             }
         }
     }
@@ -826,7 +1137,7 @@
         handleChatSubmit();
     }
 
-    // --- Lógica del Micrófono (Reconocimiento y Modo David Live) ---
+    // --- Audio Transcription & David Live Fullscreen Overlay ---
     let recognition = null;
     let isRecording = false;
     let isVoiceInteraction = false;
@@ -836,9 +1147,8 @@
     const micBtn = document.getElementById('mic-btn');
     const liveModeBtn = document.getElementById('live-mode-btn');
     const liveIndicator = document.getElementById('live-indicator');
-    const tutorAvatarIcon = document.getElementById('tutor-avatar-icon');
     
-    // Elementos del Overlay Gemini Live
+    // Live Overlay elements
     const liveOverlay = document.getElementById('liveOverlay');
     const liveOrb = document.getElementById('liveOrb');
     const liveStatus = document.getElementById('liveStatus');
@@ -848,17 +1158,16 @@
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
-        recognition.lang = 'es-CO'; // Español de Colombia
+        recognition.lang = 'es-CO';
         recognition.continuous = false;
         recognition.interimResults = false;
 
         recognition.onstart = function() {
             isRecording = true;
-            micBtn.style.color = '#ef4444'; // Color rojo parpadeante cuando graba
+            micBtn.style.color = '#ef4444';
             
             if (isLiveMode) {
                 setLiveState('listening');
-                liveModeBtn.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.4)';
             } else {
                 chatInput.placeholder = 'Escuchando tu pregunta...';
             }
@@ -871,7 +1180,6 @@
             
             if (isLiveMode) {
                 captionUser.innerHTML = `Tú: "${transcript}"`;
-                // Auto submit form in live mode after a very brief pause
                 setTimeout(() => {
                     if (chatInput.value.trim()) {
                         handleChatSubmit();
@@ -881,10 +1189,8 @@
         };
 
         recognition.onerror = function(event) {
-            console.error('Error de reconocimiento de voz:', event.error);
+            console.error('Speech recognition error:', event.error);
             stopRecording();
-            
-            // En modo en vivo, reiniciamos automáticamente en caso de silencio
             if (isLiveMode && event.error === 'no-speech' && !liveSpeechActive) {
                 restartLiveListening();
             }
@@ -892,8 +1198,6 @@
 
         recognition.onend = function() {
             stopRecording();
-            
-            // Si está activo el modo en vivo y David no está hablando, reactivar micrófono
             if (isLiveMode && !liveSpeechActive) {
                 restartLiveListening();
             }
@@ -919,15 +1223,13 @@
         isRecording = false;
         micBtn.style.color = '';
         if (!isLiveMode) {
-            chatInput.placeholder = 'Pregúntame sobre cualquier área evaluada...';
+            chatInput.placeholder = 'Pregunta sobre cualquier tema escolar...';
         }
     }
 
-    // Cambia los estados visuales del orbe y descripciones del overlay
     function setLiveState(state) {
         if (!isLiveMode) return;
         
-        // Quitar clases previas
         liveOrb.className = 'live-orb';
         
         if (state === 'listening') {
@@ -949,13 +1251,12 @@
                 try {
                     recognition.start();
                 } catch (e) {
-                    console.log("Error restarting recognition:", e);
+                    console.log("Error restarting voice recognition:", e);
                 }
             }
-        }, 400);
+        }, 450);
     }
 
-    // Control de Pantalla Completa Gemini Live
     function toggleLiveMode() {
         if (!recognition) {
             alert('El reconocimiento de voz no es soportado por tu navegador. Intenta en Chrome o Safari.');
@@ -964,32 +1265,22 @@
         
         isLiveMode = !isLiveMode;
         if (isLiveMode) {
-            // Activar Modo Live
             liveModeBtn.style.color = '#34d399';
-            liveModeBtn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-            liveModeBtn.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+            liveModeBtn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+            liveModeBtn.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
             liveIndicator.style.backgroundColor = '#10b981';
-            liveIndicator.style.boxShadow = '0 0 8px #10b981';
-            liveIndicator.classList.add('live-pulse');
             
-            // Mostrar Overlay pantalla completa
             liveOverlay.style.display = 'flex';
             captionUser.innerHTML = 'Conectando...';
             captionDavid.innerHTML = '';
             
-            // Iniciar saludo
-            speakLiveResponse("Modo en vivo activado. Hola, soy tu tutor David, hablemos. Te escucho.");
-            
+            speakLiveResponse("Modo en vivo activado. Hola, soy tu tutor David, hablemos de estudio. ¿Te escucho?");
         } else {
-            // Desactivar Modo Live
             liveModeBtn.style.color = '';
             liveModeBtn.style.borderColor = '';
             liveModeBtn.style.backgroundColor = '';
-            liveIndicator.style.backgroundColor = '#94a3b8';
-            liveIndicator.style.boxShadow = 'none';
-            liveIndicator.classList.remove('live-pulse');
+            liveIndicator.style.backgroundColor = '#10b981';
             
-            // Ocultar Overlay
             liveOverlay.style.display = 'none';
             
             if (window.speechSynthesis) {
@@ -999,14 +1290,12 @@
             if (isRecording) {
                 recognition.stop();
             }
-            tutorAvatarIcon.style.animation = '';
         }
     }
     
     function speakLiveResponse(text) {
         if (!window.speechSynthesis) return;
         
-        // Detener micrófono para evitar escucharse a sí mismo
         liveSpeechActive = true;
         if (isRecording) {
             recognition.stop();
@@ -1022,24 +1311,14 @@
             .replace(/#/g, '');
             
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-        } else {
-            utterance.lang = 'es-CO';
-        }
+        utterance.voice = selectedVoice || null;
+        if (!selectedVoice) utterance.lang = 'es-CO';
         utterance.rate = 1.05;
-        
-        utterance.onstart = function() {
-            tutorAvatarIcon.style.animation = 'pulse 1.5s infinite';
-        };
         
         utterance.onend = function() {
             liveSpeechActive = false;
-            tutorAvatarIcon.style.animation = '';
             captionUser.innerHTML = 'Escuchando...';
             setLiveState('listening');
-            
-            // Si sigue en modo Live, volver a escuchar
             if (isLiveMode) {
                 restartLiveListening();
             }
@@ -1047,10 +1326,8 @@
         
         utterance.onerror = function() {
             liveSpeechActive = false;
-            tutorAvatarIcon.style.animation = '';
             captionUser.innerHTML = 'Escuchando...';
             setLiveState('listening');
-            
             if (isLiveMode) {
                 restartLiveListening();
             }
