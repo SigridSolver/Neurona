@@ -72,6 +72,23 @@ def insert_questions():
         venn_graphic_uri
     ))
 
+    # 3. Combinations Question Template
+    comb_text = "En un colegio se realiza una preselección de estudiantes para participar en las olimpiadas de matemáticas. De un grupo de {n_estudiantes} estudiantes destacados, el entrenador debe elegir a {k_seleccionados} de ellos para conformar el equipo oficial. ¿De cuántas formas diferentes se puede conformar el equipo?"
+    comb_explanation = "Para determinar de cuántas formas se puede conformar el equipo, debemos calcular el número de combinaciones de {n_estudiantes} estudiantes tomados de {k_seleccionados} en {k_seleccionados}, ya que el orden en que se seleccionan los miembros del equipo no importa."
+    
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        "Matemáticas",
+        comb_text,
+        json.dumps(["{correct_val}", "d1", "d2", "d3"]),
+        "{correct_val}",
+        comb_explanation,
+        "Intermedio",
+        None
+    ))
+
     conn.commit()
     conn.close()
     print("Preguntas paramétricas insertadas con éxito en la base de datos local.")

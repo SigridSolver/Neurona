@@ -572,6 +572,9 @@
             };
             grid.appendChild(btn);
         });
+        if (window.renderMathInElement) {
+            renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});
+        }
     }
 
     async function submitAnswer() {
@@ -595,6 +598,9 @@
         document.getElementById("feedbackCorrectAnswer").innerText = activeQuestion.correct_answer;
         document.getElementById("feedbackExplanation").innerText = activeQuestion.explanation;
         document.getElementById("duelQuestionFeedback").style.display = "block";
+        if (window.renderMathInElement) {
+            renderMathInElement(document.getElementById("duelQuestionFeedback"), {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});
+        }
         
         if (!respondingMode) {
             // Challenger saves the duel in pending state

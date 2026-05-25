@@ -170,6 +170,246 @@ def process_parametric_question(q, seed=None):
             "graphic": graphic
         }
         
+    elif "{n_estudiantes}" in text or "preselección de estudiantes" in text or "{k_seleccionados}" in text:
+        comb_options = [
+            {"n": 5, "k": 3, "ans": 10, "distractors": [15, 60, 20]},
+            {"n": 6, "k": 3, "ans": 20, "distractors": [18, 120, 30]},
+            {"n": 7, "k": 3, "ans": 35, "distractors": [21, 210, 42]},
+            {"n": 8, "k": 3, "ans": 56, "distractors": [24, 336, 70]},
+            {"n": 6, "k": 2, "ans": 15, "distractors": [12, 30, 8]},
+            {"n": 7, "k": 2, "ans": 21, "distractors": [14, 42, 18]},
+            {"n": 8, "k": 4, "ans": 70, "distractors": [32, 1680, 56]}
+        ]
+        choice = local_random.choice(comb_options)
+        n = choice["n"]
+        k = choice["k"]
+        correct_val = choice["ans"]
+        distractors = choice["distractors"]
+        
+        opts = [str(correct_val)] + [str(d) for d in distractors]
+        local_random.shuffle(opts)
+        correct_answer = str(correct_val)
+        
+        new_text = "En un colegio se realiza una preselección de estudiantes para participar en las olimpiadas de matemáticas. De un grupo de {n_estudiantes} estudiantes destacados, el entrenador debe elegir a {k_seleccionados} de ellos para conformar el equipo oficial. ¿De cuántas formas diferentes se puede conformar el equipo?".format(n_estudiantes=n, k_seleccionados=k)
+        
+        prod_n_list = [str(n - i) for i in range(k)]
+        prod_k_list = [str(k - i) for i in range(k)]
+        prod_n_str = " \\times ".join(prod_n_list)
+        prod_k_str = " \\times ".join(prod_k_list)
+        
+        new_explanation = (
+            f"Para determinar de cuántas formas se puede conformar el equipo, debemos calcular el número de combinaciones de {n} estudiantes tomados de {k} en {k}, ya que el orden en que se seleccionan los miembros del equipo no importa.\n\n"
+            "La fórmula para las combinaciones es:\n\n"
+            "$$C_k^n = \\binom{n}{k} = \\frac{n!}{k!(n-k)!}$$\n\n"
+            "Reemplazando los valores:\n\n"
+            f"$$C_{{{k}}}^{{{n}}} = \\binom{{{n}}}{{{k}}} = \\frac{{{n}!}}{{{k}!({n}-{k})!}} = \\frac{{{prod_n_str}}}{{{prod_k_str}}} = {correct_val}$$\n\n"
+            f"Por lo tanto, existen **{correct_val}** formas diferentes de conformar el equipo."
+        )
+        
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_answer,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": q.get("graphic")
+        }
+        
+    elif "{base}" in text and "{altura}" in text:
+        base_val = local_random.choice([4, 6, 8, 10, 12, 14])
+        altura_val = local_random.choice([3, 5, 7, 9, 11])
+        
+        is_triangle = "triángulo" in text.lower()
+        if is_triangle:
+            correct_val = (base_val * altura_val) / 2
+            if correct_val.is_integer():
+                correct_val = int(correct_val)
+            correct_str = str(correct_val)
+            formula_str = f"\\frac{{base \\times altura}}{{2}} = \\frac{{{base_val} \\times {altura_val}}}{{2}} = {correct_str}"
+            distractors = [
+                str(base_val * altura_val),
+                str(base_val + altura_val),
+                str(int((base_val * altura_val) / 2) + 5)
+            ]
+        else:
+            correct_val = base_val * altura_val
+            correct_str = str(correct_val)
+            formula_str = f"base \\times altura = {base_val} \\times {altura_val} = {correct_str}"
+            distractors = [
+                str(int((base_val * altura_val) / 2)),
+                str(base_val + altura_val),
+                str(correct_val + 10)
+            ]
+            
+        opts = [correct_str] + distractors
+        opts = list(set(opts))
+        while len(opts) < 4:
+            opts.append(str(local_random.randint(10, 100)))
+        local_random.shuffle(opts)
+        
+        new_text = text.format(base=base_val, altura=altura_val)
+        
+        new_explanation = "El área de la figura geométrica propuesta se calcula utilizando la fórmula estándar del área:\n\n"
+        if is_triangle:
+            new_explanation += f"$$A = \\frac{{b \\times h}}{{2}}$$\n\nReemplazando la base de {base_val} cm y la altura de {altura_val} cm:\n\n$$A = {formula_str} \\text{{ cm}}^2$$"
+        else:
+            new_explanation += f"$$A = b \\times h$$\n\nReemplazando la base de {base_val} cm y la altura de {altura_val} cm:\n\n$$A = {formula_str} \\text{{ cm}}^2$$"
+            
+        graphic = q.get("graphic")
+        if graphic and "base64," in graphic:
+            try:
+                header, encoded = graphic.split("base64,", 1)
+                decoded = base64.b64decode(encoded).decode("utf-8")
+                decoded = decoded.replace("{base}", str(base_val)).replace("{altura}", str(altura_val))
+                new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
+                graphic = header + "base64," + new_encoded
+            except Exception as e:
+                print("Error processing parametric geometry SVG:", e)
+                
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_str,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": graphic
+        }
+        
+    elif "{x_eval}" in text:
+        a = local_random.choice([2, 3, 5])
+        b = 2
+        c = local_random.choice([-1, 0, 1])
+        d = local_random.choice([5, 10, 15, 20])
+        x_eval = local_random.choice([1, 2, 3])
+        
+        exponent = x_eval + c
+        correct_val = a * (b ** exponent) + d
+        correct_str = str(correct_val)
+        
+        d1 = (a * b) ** exponent + d
+        d2 = a * (b ** x_eval) + c + d
+        d3 = correct_val + local_random.choice([10, -5, 25])
+        
+        opts = [correct_str, str(int(d1)), str(int(d2)), str(int(d3))]
+        opts = list(set(opts))
+        while len(opts) < 4:
+            opts.append(str(local_random.randint(10, 500)))
+        local_random.shuffle(opts)
+        
+        c_sign = "+" if c >= 0 else "-"
+        c_abs = abs(c)
+        new_text = text.format(
+            a=a,
+            c_sign=c_sign,
+            c_abs=c_abs,
+            d=d,
+            x_eval=x_eval
+        )
+        
+        new_explanation = (
+            f"Para evaluar la función en el punto dado, sustituimos $x = {x_eval}$ en la expresión:\n\n"
+            f"$$f({x_eval}) = {a} \\cdot 2^{{{x_eval} {c_sign} {c_abs}}} + {d}$$\n\n"
+            "Resolvemos primero la operación en el exponente:\n\n"
+            f"$$f({x_eval}) = {a} \\cdot 2^{{{exponent}}} + {d}$$\n\n"
+            f"Evaluamos la potencia $2^{{{exponent}}} = {2**exponent}$:\n\n"
+            f"$$f({x_eval}) = {a} \\cdot {2**exponent} + {d}$$\n\n"
+            f"Multiplicamos por el coeficiente $a = {a}$ y sumamos la constante $d = {d}$:\n\n"
+            f"$$f({x_eval}) = {a*2**exponent} + {d} = {correct_val}$$\n\n"
+            f"Por lo tanto, la respuesta correcta es **{correct_str}**."
+        )
+        
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_str,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": q.get("graphic")
+        }
+        
+    elif "{frec_1}" in text or "frecuencias" in text.lower() or "{val_1}" in text:
+        val_1, val_2, val_3, val_4 = 10, 20, 30, 40
+        frec_1 = local_random.randint(2, 6)
+        frec_2 = local_random.randint(3, 8)
+        frec_3 = local_random.randint(1, 5)
+        frec_4 = local_random.randint(2, 6)
+        
+        total_n = frec_1 + frec_2 + frec_3 + frec_4
+        sum_total = (val_1 * frec_1) + (val_2 * frec_2) + (val_3 * frec_3) + (val_4 * frec_4)
+        
+        mean_val = round(sum_total / total_n, 2)
+        correct_str = f"{mean_val}"
+        
+        d1 = round((val_1 + val_2 + val_3 + val_4) / 4, 2)
+        d2 = round(sum_total / (total_n + 2), 2)
+        d3 = round(mean_val + local_random.choice([-1.5, 2.3, -3.2, 1.8]), 2)
+        
+        opts = [correct_str, f"{d1}", f"{d2}", f"{d3}"]
+        opts = list(set(opts))
+        while len(opts) < 4:
+            opts.append(f"{round(local_random.uniform(15, 35), 2)}")
+        local_random.shuffle(opts)
+        
+        new_text = (
+            "La siguiente tabla muestra la distribución de puntajes obtenidos por un grupo de estudiantes en un examen:\n\n"
+            "| Puntaje ($x_i$) | Cantidad de Estudiantes ($f_i$) |\n"
+            "| :---: | :---: |\n"
+            f"| {val_1} | {frec_1} |\n"
+            f"| {val_2} | {frec_2} |\n"
+            f"| {val_3} | {frec_3} |\n"
+            f"| {val_4} | {frec_4} |\n\n"
+            "¿Cuál es el promedio (media aritmética) de los puntajes obtenidos por este grupo de estudiantes?"
+        )
+        
+        new_explanation = (
+            "Para hallar la media aritmética (promedio) de datos agrupados en una tabla de frecuencias, utilizamos la fórmula:\n\n"
+            "$$\\mu = \\frac{\\sum (x_i \\cdot f_i)}{N}$$\n\n"
+            "1. **Calcular la suma de todos los puntajes:**\n"
+            f"$$\\sum (x_i \\cdot f_i) = ({val_1} \\cdot {frec_1}) + ({val_2} \\cdot {frec_2}) + ({val_3} \\cdot {frec_3}) + ({val_4} \\cdot {frec_4})$$\n"
+            f"$$\\sum (x_i \\cdot f_i) = {val_1*frec_1} + {val_2*frec_2} + {val_3*frec_3} + {val_4*frec_4} = {sum_total}$$\n\n"
+            "2. **Calcular el total de estudiantes (N):**\n"
+            f"$$N = {frec_1} + {frec_2} + {frec_3} + {frec_4} = {total_n}$$\n\n"
+            "3. **Calcular el promedio:**\n"
+            f"$$\\mu = \\frac{{{sum_total}}}{{{total_n}}} \\approx {mean_val}$$\n\n"
+            f"Por lo tanto, la media aritmética de los puntajes es aproximadamente **{correct_str}**."
+        )
+        
+        graphic = q.get("graphic")
+        if graphic and "base64," in graphic:
+            try:
+                header, encoded = graphic.split("base64,", 1)
+                decoded = base64.b64decode(encoded).decode("utf-8")
+                decoded = (decoded
+                           .replace("{frec_1}", str(frec_1))
+                           .replace("{frec_2}", str(frec_2))
+                           .replace("{frec_3}", str(frec_3))
+                           .replace("{frec_4}", str(frec_4)))
+                for i, fr in enumerate([frec_1, frec_2, frec_3, frec_4], 1):
+                    h = fr * 20
+                    y = 180 - h
+                    decoded = decoded.replace(f"{{h_bar_{i}}}", str(h)).replace(f"{{y_bar_{i}}}", str(y))
+                new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
+                graphic = header + "base64," + new_encoded
+            except Exception as e:
+                print("Error processing parametric statistics SVG:", e)
+                
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_str,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": graphic
+        }
+        
     return q
 
 load_dotenv()
@@ -696,28 +936,49 @@ async def get_practice_questions(area: str):
             model = genai.GenerativeModel('gemini-3.1-flash-lite')
             cursor = conn.cursor()
             
-            # Generate the needed questions in a single prompt to prevent timeout
-            prompt = f"""
-            Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
-            Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {area}.
-            
-            REGLAS DE DISEÑO ICFES SABER 11:
-            1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación.
-            2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, opinión) y formula una pregunta de inferencia.
-            3. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico.
-            4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, o análisis de multiperspectivismo.
-            5. Para **Inglés**: Gramática y vocabulario de nivel A2/B1 o comprensión lectora.
-            
-            CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
-            
-            El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
-               - "area": "{area}"
-               - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
-               - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
-               - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-               - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
-               - "difficulty": "Intermedio"
-            """
+            if area == "Matemáticas":
+                prompt = f"""
+                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia para el área de Matemáticas.
+                Genera una lista de {needed} preguntas de selección múltiple originales, inéditas, altamente didácticas y visuales (con gráficos vectoriales SVG y fórmulas matemáticas en LaTeX).
+                
+                REGLAS DE DISEÑO:
+                1. Cada pregunta DEBE incluir un gráfico vectorial SVG (código XML autocontenido) en el campo "graphic".
+                2. Los gráficos SVG deben representar de manera premium conceptos matemáticos: figuras geométricas (triángulos, rectángulos, círculos), diagramas de Venn, tablas estadísticas, gráficas de barras, planos cartesianos o relaciones de funciones.
+                3. Usa un fondo oscuro estético para el SVG (por ejemplo, rect con fill="#0f172a") y líneas brillantes de alto contraste (celeste "#38bdf8", rosa "#f43f5e", verde "#10b981").
+                4. Haz que las preguntas sean PARAMÉTRICAS: usa marcadores de posición como {{base}}, {{altura}}, {{radio}}, {{x_eval}}, {{frec_1}}, {{frec_2}}, etc., tanto en el enunciado, la explicación, las opciones de respuesta como DENTRO del propio código SVG (por ejemplo, <text>base = {{base}} cm</text>).
+                5. Utiliza expresiones en LaTeX para las fórmulas matemáticas, ecuaciones y fracciones (delimitadas por $$ para bloques y $ para fórmulas en línea). Por ejemplo: $$A = \\frac{{b \\times h}}{{2}}$$.
+                6. Toda la explicación debe ser detallada y paso a paso, explicando detalladamente la justificación de la clave correcta y por qué los demás son distractores usando LaTeX.
+                
+                El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
+                   - "area": "Matemáticas"
+                   - "text": "[El enunciado de la pregunta con placeholders, ej: 'Halla el área del rectángulo de base {{base}} cm y altura {{altura}} cm.']"
+                   - "options": ["{{correct}}", "d1", "d2", "d3"]
+                   - "correct_answer": "{{correct}}"
+                   - "explanation": "[La justificación con LaTeX y placeholders]"
+                   - "difficulty": "Intermedio"
+                   - "graphic": "[El código SVG con placeholders, ej: '<svg>...{{base}}...{{altura}}...</svg>']"
+                """
+            else:
+                prompt = f"""
+                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
+                Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {area}.
+                
+                REGLAS DE DISEÑO ICFES SABER 11:
+                1. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, opinión) y formula una pregunta de inferencia.
+                2. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico.
+                3. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, o análisis de multiperspectivismo.
+                4. Para **Inglés**: Gramática y vocabulario de nivel A2/B1 o comprensión lectora.
+                
+                CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
+                
+                El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
+                   - "area": "{area}"
+                   - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
+                   - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
+                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+                   - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
+                   - "difficulty": "Intermedio"
+                """
             
             response = model.generate_content(prompt)
             text_response = response.text.strip()
@@ -728,6 +989,14 @@ async def get_practice_questions(area: str):
                 q_list = [q_list]
                 
             for q_data in q_list:
+                graphic_val = q_data.get("graphic")
+                if graphic_val and "base64," not in graphic_val and "<svg" in graphic_val:
+                    try:
+                        import base64
+                        graphic_val = "data:image/svg+xml;base64," + base64.b64encode(graphic_val.encode('utf-8')).decode('utf-8')
+                    except Exception as e:
+                        print("Error encoding generated SVG:", e)
+                        
                 cursor.execute('''
                     INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
                     VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
@@ -738,7 +1007,7 @@ async def get_practice_questions(area: str):
                     q_data["correct_answer"],
                     q_data["explanation"],
                     q_data.get("difficulty", "Intermedio"),
-                    None
+                    graphic_val
                 ))
                 new_id = cursor.fetchone()[0]
                 
@@ -750,7 +1019,7 @@ async def get_practice_questions(area: str):
                     "correct_answer": q_data["correct_answer"],
                     "explanation": q_data["explanation"],
                     "difficulty": q_data.get("difficulty", "Intermedio"),
-                    "graphic": None
+                    "graphic": graphic_val
                 })
             conn.commit()
         except Exception as e:
@@ -2479,36 +2748,79 @@ async def save_simulacro_result(request: Request, data: dict):
 
 
 @app.get("/preview", response_class=HTMLResponse)
-async def preview_temp_page(request: Request):
-    pisa_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+async def preview_temp_page(request: Request, type: str = "combinations"):
+    if type == "geometry":
+        import base64
+        rect_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
   <rect width="100%" height="100%" fill="#0f172a"/>
-  <line x1="30" y1="200" x2="290" y2="200" stroke="#94a3b8" stroke-width="2.5" />
-  <line x1="120" y1="30" x2="120" y2="200" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4" />
-  <rect x="105" y="185" width="15" height="15" fill="none" stroke="#64748b" stroke-width="1.5" />
-  <polygon points="120,200 131,40 166,42 155,200" fill="#1e293b" stroke="#38bdf8" stroke-width="3" />
-  <line x1="122" y1="170" x2="157" y2="170" stroke="#475569" stroke-width="1.5" />
-  <line x1="124" y1="140" x2="159" y2="140" stroke="#475569" stroke-width="1.5" />
-  <line x1="126" y1="110" x2="161" y2="110" stroke="#475569" stroke-width="1.5" />
-  <line x1="128" y1="80" x2="163" y2="80" stroke="#475569" stroke-width="1.5" />
-  <path d="M 120 130 A 70 70 0 0 1 125 130" fill="none" stroke="#3b82f6" stroke-width="2" />
-  <text x="110" y="125" fill="#3b82f6" font-family="sans-serif" font-size="12" font-weight="bold">{inclinacion}°</text>
-  <path d="M 175 200 A 20 20 0 0 0 153 182" fill="none" stroke="#f43f5e" stroke-width="2.5" />
-  <text x="135" y="185" fill="#f43f5e" font-family="sans-serif" font-size="16" font-weight="bold">?</text>
+  <rect x="40" y="30" width="240" height="120" fill="rgba(56, 189, 248, 0.1)" stroke="#38bdf8" stroke-width="3" />
+  <text x="160" y="175" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">base = {base} cm</text>
+  <text x="25" y="95" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle" transform="rotate(-90 25 95)">altura = {altura} cm</text>
 </svg>"""
-
-    import base64
-    pisa_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(pisa_svg.encode('utf-8')).decode('utf-8')
-    
-    q_obj = {
-        "id": 9999,
-        "area": "Matemáticas",
-        "text": "Con respecto a la vertical, la torre se ha inclinado {inclinacion}° como se muestra en la gráfica. ¿Cuánto mide el otro ángulo (indicado con el signo de interrogación)?",
-        "options": ["{inclinacion}°", "{correct}°", "90°", "180°"],
-        "correct_answer": "{correct}°",
-        "explanation": "La línea vertical de referencia es perpendicular al suelo, por lo que forma un ángulo recto de 90°. Como la inclinación de la torre es de {inclinacion}° respecto a la vertical, el ángulo interno correspondiente entre la torre y la superficie disminuye en la misma cantidad: 90° - {inclinacion}° = {correct}°.",
-        "difficulty": "Fácil",
-        "graphic": pisa_graphic_uri
-    }
+        graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(rect_svg.encode('utf-8')).decode('utf-8')
+        q_obj = {
+            "id": 9997,
+            "area": "Matemáticas",
+            "text": "Determine el área del rectángulo mostrado en la figura si su base es de {base} cm y su altura es de {altura} cm.",
+            "options": ["{correct}", "d1", "d2", "d3"],
+            "correct_answer": "{correct}",
+            "explanation": "",
+            "difficulty": "Fácil",
+            "graphic": graphic_uri
+        }
+    elif type == "algebra":
+        q_obj = {
+            "id": 9996,
+            "area": "Matemáticas",
+            "text": "Dada la función exponencial f(x) = {a} \\cdot 2^{{x {c_sign} {c_abs}}} + {d}, determine su valor cuando x = {x_eval}.",
+            "options": ["{correct}", "d1", "d2", "d3"],
+            "correct_answer": "{correct}",
+            "explanation": "",
+            "difficulty": "Intermedio",
+            "graphic": None
+        }
+    elif type == "statistics":
+        import base64
+        chart_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+  <rect width="100%" height="100%" fill="#0f172a"/>
+  <line x1="40" y1="20" x2="40" y2="180" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="40" y1="180" x2="300" y2="180" stroke="#94a3b8" stroke-width="2"/>
+  <rect x="60" y="{y_bar_1}" width="30" height="{h_bar_1}" fill="#f43f5e" rx="3"/>
+  <rect x="120" y="{y_bar_2}" width="30" height="{h_bar_2}" fill="#3b82f6" rx="3"/>
+  <rect x="180" y="{y_bar_3}" width="30" height="{h_bar_3}" fill="#10b981" rx="3"/>
+  <rect x="240" y="{y_bar_4}" width="30" height="{h_bar_4}" fill="#f59e0b" rx="3"/>
+  <text x="75" y="195" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">10 pts</text>
+  <text x="135" y="195" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">20 pts</text>
+  <text x="195" y="195" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">30 pts</text>
+  <text x="255" y="195" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">40 pts</text>
+  <text x="75" y="{y_bar_1}-5" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_1}</text>
+  <text x="135" y="{y_bar_2}-5" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_2}</text>
+  <text x="195" y="{y_bar_3}-5" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_3}</text>
+  <text x="255" y="{y_bar_4}-5" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_4}</text>
+</svg>"""
+        graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(chart_svg.encode('utf-8')).decode('utf-8')
+        q_obj = {
+            "id": 9995,
+            "area": "Matemáticas",
+            "text": "La distribución de frecuencias es: {frec_1}, {frec_2}, {frec_3}, {frec_4}",
+            "options": ["{correct}", "d1", "d2", "d3"],
+            "correct_answer": "{correct}",
+            "explanation": "",
+            "difficulty": "Intermedio",
+            "graphic": graphic_uri
+        }
+    else:
+        q_obj = {
+            "id": 9998,
+            "area": "Matemáticas",
+            "text": "En un colegio se realiza una preselección de estudiantes para participar en las olimpiadas de matemáticas. De un grupo de {n_estudiantes} estudiantes destacados, el entrenador debe elegir a {k_seleccionados} de ellos para conformar el equipo oficial. ¿De cuántas formas diferentes se puede conformar el equipo?",
+            "options": ["{correct_val}", "d1", "d2", "d3"],
+            "correct_answer": "{correct_val}",
+            "explanation": "",
+            "difficulty": "Intermedio",
+            "graphic": None
+        }
+        
     q_resolved = process_parametric_question(q_obj)
     
     return templates.TemplateResponse(

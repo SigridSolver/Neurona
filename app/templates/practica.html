@@ -283,6 +283,9 @@
             btn.onclick = () => handleAnswer(btn, opt, q.correct_answer, q.explanation);
             container.appendChild(btn);
         });
+        if (window.renderMathInElement) {
+            renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});
+        }
     }
     
     function handleAnswer(btn, selected, correct, explanation) {
@@ -303,6 +306,9 @@
         
         document.getElementById('explanation-text').innerText = explanation;
         document.getElementById('explanation-box').style.display = 'block';
+        if (window.renderMathInElement) {
+            renderMathInElement(document.getElementById('explanation-box'), {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});
+        }
     }
     
     document.getElementById('next-btn').addEventListener('click', () => {
