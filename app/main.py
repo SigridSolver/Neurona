@@ -497,10 +497,11 @@ async def chat_api(request: Request, body: ChatRequest):
         
     user_msg = body.message
     
-    # Check if Gemini is configured
+    # Check if Gemini is configured (only from environment)
     api_key = os.getenv("GEMINI_API_KEY")
     if api_key:
         try:
+            genai.configure(api_key=api_key)
             conn = get_db()
             diagnostic = conn.execute("SELECT * FROM diagnostic_results WHERE user_id = %s ORDER BY date DESC LIMIT 1", (user["id"],)).fetchone()
             conn.close()
@@ -532,19 +533,12 @@ async def chat_api(request: Request, body: ChatRequest):
                 f"Usa ejemplos sencillos y fomenta el pensamiento crítico del estudiante.{user_context}"
             )
             
-            model = genai.GenerativeModel(
-                model_name='gemini-2.5-flash',
-                system_instruction=system_instruction
-            )
-            
             # Format history for Gemini API
             gemini_history = []
             for h in body.history:
                 # The google-generativeai API requires parts to be a list of strings for simple text
                 gemini_history.append({"role": h.role, "parts": h.parts})
                 
-            chat = model.start_chat(history=gemini_history)
-            
             user_content = [user_msg]
             if body.image_base64:
                 b64_str = body.image_base64
@@ -554,11 +548,27 @@ async def chat_api(request: Request, body: ChatRequest):
                 img = Image.open(io.BytesIO(img_data))
                 user_content.append(img)
                 
-            response = chat.send_message(user_content)
+            # Smart fallback between Gemini models
+            try:
+                model = genai.GenerativeModel(
+                    model_name='gemini-2.5-flash',
+                    system_instruction=system_instruction
+                )
+                chat = model.start_chat(history=gemini_history)
+                response = chat.send_message(user_content)
+            except Exception as e_model:
+                print("Failed with gemini-2.5-flash, trying gemini-1.5-flash fallback:", e_model)
+                model = genai.GenerativeModel(
+                    model_name='gemini-1.5-flash',
+                    system_instruction=system_instruction
+                )
+                chat = model.start_chat(history=gemini_history)
+                response = chat.send_message(user_content)
+                
             return {"response": response.text, "mode": "ai"}
         except Exception as e:
             print("Gemini API Error:", e)
-            # Fallback to local agent on Gemini API error
+            # Fallback to local search if API fails completely
             pass
             
     # LOCAL AGENT FALLBACK (Keyword-based search in database)

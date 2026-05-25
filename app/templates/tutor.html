@@ -299,6 +299,201 @@
         border-color: var(--accent);
         transform: translateY(-2px);
     }
+
+    /* Live Overlay Styles (Gemini Live Experience) */
+    .live-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+        z-index: 2000;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4rem 2rem;
+        color: white;
+        animation: fadeInOverlay 0.4s ease-out;
+    }
+
+    @keyframes fadeInOverlay {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .live-header {
+        text-align: center;
+        margin-top: 1rem;
+    }
+
+    .live-header h2 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #a78bfa, #60a5fa, #ec4899);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+
+    .live-status {
+        color: #94a3b8;
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .live-orb-container {
+        position: relative;
+        width: 250px;
+        height: 250px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .live-orb {
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #8b5cf6, #3b82f6);
+        box-shadow: 0 0 50px rgba(139, 92, 246, 0.5), 
+                    inset 0 0 25px rgba(255, 255, 255, 0.2);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        z-index: 2;
+    }
+
+    /* Dynamic outer waves */
+    .live-wave {
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        border: 2px solid rgba(139, 92, 246, 0.3);
+        animation: waveRipple 2.5s infinite linear;
+        opacity: 0;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .live-wave:nth-child(2) {
+        animation-delay: 0.8s;
+    }
+
+    .live-wave:nth-child(3) {
+        animation-delay: 1.6s;
+    }
+
+    @keyframes waveRipple {
+        0% { transform: scale(1); opacity: 0.8; }
+        100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    /* Orb states */
+    .orb-listening {
+        background: radial-gradient(circle at 30% 30%, #10b981, #3b82f6);
+        box-shadow: 0 0 60px rgba(16, 185, 129, 0.6),
+                    inset 0 0 25px rgba(255, 255, 255, 0.2);
+        animation: pulseOrb 1.5s infinite ease-in-out;
+    }
+    
+    .orb-thinking {
+        background: radial-gradient(circle at 30% 30%, #ec4899, #8b5cf6);
+        box-shadow: 0 0 70px rgba(236, 72, 153, 0.7),
+                    inset 0 0 25px rgba(255, 255, 255, 0.2);
+        animation: rotateOrb 1.2s infinite linear;
+    }
+
+    .orb-speaking {
+        background: radial-gradient(circle at 30% 30%, #f59e0b, #ec4899);
+        box-shadow: 0 0 80px rgba(245, 158, 11, 0.7),
+                    inset 0 0 25px rgba(255, 255, 255, 0.2);
+        animation: speakOrb 0.5s infinite ease-in-out alternate;
+    }
+
+    @keyframes pulseOrb {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.06); }
+        100% { transform: scale(1); }
+    }
+
+    @keyframes speakOrb {
+        0% { transform: scale(1.02); }
+        100% { transform: scale(1.14); }
+    }
+
+    @keyframes rotateOrb {
+        0% { transform: rotate(0deg) scale(1.03); }
+        100% { transform: rotate(360deg) scale(1.03); }
+    }
+
+    .live-captions {
+        max-width: 600px;
+        width: 90%;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        min-height: 90px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 1.25rem 1.5rem;
+        border-radius: var(--border-radius);
+        backdrop-filter: blur(12px);
+    }
+
+    .caption-user {
+        color: #94a3b8;
+        font-size: 0.95rem;
+        font-style: italic;
+    }
+
+    .caption-david {
+        color: #f8fafc;
+        font-size: 1.15rem;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    .live-btn-hangup {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background-color: #ef4444;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+        transition: var(--transition);
+    }
+
+    .live-btn-hangup:hover {
+        transform: scale(1.1);
+        background-color: #dc2626;
+        box-shadow: 0 15px 25px rgba(239, 68, 68, 0.5);
+    }
+
+    /* Pulse for live button */
+    .live-pulse {
+        animation: liveIndicatorPulse 1.5s infinite;
+    }
+
+    @keyframes liveIndicatorPulse {
+        0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1.1); opacity: 0.8; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
 </style>
 {% endblock %}
 
@@ -331,14 +526,24 @@
 
     <!-- Chat Area -->
     <div class="chat-container">
-        <div class="chat-header">
-            <div class="tutor-avatar">🤖</div>
+        <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="tutor-avatar" id="tutor-avatar-icon">🤖</div>
+                <div>
+                    <h4 style="margin:0;">Tutor David</h4>
+                    <span class="text-muted" style="font-size:0.8rem; display:flex; align-items:center; gap:5px;">
+                        <span style="width:8px; height:8px; background-color:var(--success); border-radius:50%; display:inline-block;"></span>
+                        Especialista en Saber 11
+                    </span>
+                </div>
+            </div>
+            
             <div>
-                <h4 style="margin:0;">Tutor David</h4>
-                <span class="text-muted" style="font-size:0.8rem; display:flex; align-items:center; gap:5px;">
-                    <span style="width:8px; height:8px; background-color:var(--success); border-radius:50%; display:inline-block;"></span>
-                    Especialista en Saber 11
-                </span>
+                <!-- David Live Voice Toggle -->
+                <button type="button" id="live-mode-btn" class="pill-btn" onclick="toggleLiveMode()" title="Activar conversación en vivo (Manos libres)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); width: auto; padding: 0 0.85rem; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; border-radius: 20px; height: 36px; color: var(--text-muted);">
+                    <span id="live-indicator" style="width: 8px; height: 8px; background-color: #94a3b8; border-radius: 50%; display: inline-block;"></span>
+                    David Live
+                </button>
             </div>
         </div>
 
@@ -387,6 +592,35 @@
         </div>
     </div>
 </div>
+
+<!-- Gemini Live full-screen Overlay -->
+<div id="liveOverlay" class="live-overlay">
+    <div class="live-header">
+        <h2>David Live</h2>
+        <div class="live-status" id="liveStatus">
+            <span style="width:10px; height:10px; background-color:#10b981; border-radius:50%; display:inline-block;" class="live-pulse"></span>
+            Conectado
+        </div>
+    </div>
+    
+    <div class="live-orb-container">
+        <div class="live-wave"></div>
+        <div class="live-wave"></div>
+        <div class="live-wave"></div>
+        <div id="liveOrb" class="live-orb"></div>
+    </div>
+    
+    <div class="live-captions">
+        <div id="captionUser" class="caption-user">Escuchando...</div>
+        <div id="captionDavid" class="caption-david"></div>
+    </div>
+    
+    <div class="live-footer">
+        <button class="live-btn-hangup" onclick="toggleLiveMode()" title="Finalizar Sesión Live">
+            📞
+        </button>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -396,10 +630,7 @@
     const typingIndicator = document.getElementById('typing-indicator');
     
     // Almacena el contexto de la conversación
-    let chatHistory = JSON.parse(sessionStorage.getItem('tutorChatHistory')) || [];
-    let currentImageBase64 = null;
-
-    window.addEventListener('load', () => {
+    let chatHistory = JSON.parse(sessionStorage.getItem('t    window.addEventListener('load', () => {
         if (chatHistory.length > 0) {
             document.getElementById('chat-messages').innerHTML = '';
             chatHistory.forEach(msg => {
@@ -465,7 +696,7 @@
     }
 
     async function handleChatSubmit(event) {
-        event.preventDefault();
+        if (event) event.preventDefault();
         
         // Detener cualquier voz en curso al enviar un nuevo mensaje
         if (window.speechSynthesis) {
@@ -490,9 +721,13 @@
         chatInput.value = '';
         appendMessage(msgDisplay, true);
 
-        // Show typing indicator
-        typingIndicator.style.display = 'flex';
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        // Show typing indicator in normal chat
+        if (!isLiveMode) {
+            typingIndicator.style.display = 'flex';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } else {
+            setLiveState('thinking');
+        }
 
         try {
             const res = await fetch('/api/chat', {
@@ -503,7 +738,9 @@
             const data = await res.json();
             
             // Hide typing indicator
-            typingIndicator.style.display = 'none';
+            if (!isLiveMode) {
+                typingIndicator.style.display = 'none';
+            }
             
             appendMessage(data.response, false);
             
@@ -517,39 +754,58 @@
                     chatHistory = chatHistory.slice(chatHistory.length - 10);
                 }
                 sessionStorage.setItem('tutorChatHistory', JSON.stringify(chatHistory));
-                
-                // Voice Synthesis for Gemini Live behavior
-                if (isVoiceInteraction && window.speechSynthesis) {
-                    let cleanText = data.response
-                        .replace(/\*\*(.*?)\*\*/g, '$1')
-                        .replace(/\*(.*?)\*/g, '$1')
-                        .replace(/`/g, '')
-                        .replace(/#/g, '');
-                        
-                    const utterance = new SpeechSynthesisUtterance(cleanText);
-                    utterance.lang = 'es-CO';
-                    utterance.rate = 1.05;
-                    window.speechSynthesis.speak(utterance);
+            }
+            
+            // Hablar respuesta
+            if (isLiveMode) {
+                speakLiveResponse(data.response);
+            } else if (isVoiceInteraction && window.speechSynthesis) {
+                let cleanText = data.response
+                    .replace(/\*\*(.*?)\*\*/g, '$1')
+                    .replace(/\*(.*?)\*/g, '$1')
+                    .replace(/`/g, '')
+                    .replace(/#/g, '');
                     
-                    isVoiceInteraction = false;
-                }
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'es-CO';
+                utterance.rate = 1.05;
+                window.speechSynthesis.speak(utterance);
+                
+                isVoiceInteraction = false;
             }
         } catch (error) {
-            typingIndicator.style.display = 'none';
-            appendMessage('Lo siento, ocurrió un error al procesar tu pregunta. Intenta de nuevo por favor.', false);
+            if (!isLiveMode) {
+                typingIndicator.style.display = 'none';
+                appendMessage('Lo siento, ocurrió un error al procesar tu pregunta. Intenta de nuevo por favor.', false);
+            } else {
+                speakLiveResponse('Lo siento, ocurrió un error al procesar tu pregunta. Por favor intenta de nuevo.');
+            }
         }
     }
 
     function askSuggestion(question) {
         chatInput.value = question;
-        document.getElementById('chat-form').dispatchEvent(new Event('submit', { cancelable: true }));
+        handleChatSubmit();
     }
 
-    let isVoiceInteraction = false;
-    // --- Lógica del Micrófono (Reconocimiento de Voz) ---
+    // --- Lógica del Micrófono (Reconocimiento y Modo David Live) ---
     let recognition = null;
     let isRecording = false;
+    let isVoiceInteraction = false;
+    let isLiveMode = false;
+    let liveSpeechActive = false;
+    
     const micBtn = document.getElementById('mic-btn');
+    const liveModeBtn = document.getElementById('live-mode-btn');
+    const liveIndicator = document.getElementById('live-indicator');
+    const tutorAvatarIcon = document.getElementById('tutor-avatar-icon');
+    
+    // Elementos del Overlay Gemini Live
+    const liveOverlay = document.getElementById('liveOverlay');
+    const liveOrb = document.getElementById('liveOrb');
+    const liveStatus = document.getElementById('liveStatus');
+    const captionUser = document.getElementById('captionUser');
+    const captionDavid = document.getElementById('captionDavid');
 
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -561,22 +817,48 @@
         recognition.onstart = function() {
             isRecording = true;
             micBtn.style.color = '#ef4444'; // Color rojo parpadeante cuando graba
-            chatInput.placeholder = 'Escuchando tu pregunta...';
+            
+            if (isLiveMode) {
+                setLiveState('listening');
+                liveModeBtn.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.4)';
+            } else {
+                chatInput.placeholder = 'Escuchando tu pregunta...';
+            }
         };
 
         recognition.onresult = function(event) {
             const transcript = event.results[0][0].transcript;
-            chatInput.value += (chatInput.value ? ' ' : '') + transcript;
+            chatInput.value = transcript;
             isVoiceInteraction = true;
+            
+            if (isLiveMode) {
+                captionUser.innerHTML = `Tú: "${transcript}"`;
+                // Auto submit form in live mode after a very brief pause
+                setTimeout(() => {
+                    if (chatInput.value.trim()) {
+                        handleChatSubmit();
+                    }
+                }, 100);
+            }
         };
 
         recognition.onerror = function(event) {
             console.error('Error de reconocimiento de voz:', event.error);
             stopRecording();
+            
+            // En modo en vivo, reiniciamos automáticamente en caso de silencio
+            if (isLiveMode && event.error === 'no-speech' && !liveSpeechActive) {
+                restartLiveListening();
+            }
         };
 
         recognition.onend = function() {
             stopRecording();
+            
+            // Si está activo el modo en vivo y David no está hablando, reactivar micrófono
+            if (isLiveMode && !liveSpeechActive) {
+                restartLiveListening();
+            }
         };
     }
 
@@ -588,6 +870,9 @@
         if (isRecording) {
             recognition.stop();
         } else {
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
             recognition.start();
         }
     }
@@ -595,7 +880,141 @@
     function stopRecording() {
         isRecording = false;
         micBtn.style.color = '';
-        chatInput.placeholder = 'Pregúntame sobre cualquier área evaluada...';
+        if (!isLiveMode) {
+            chatInput.placeholder = 'Pregúntame sobre cualquier área evaluada...';
+        }
+    }
+
+    // Cambia los estados visuales del orbe y descripciones del overlay
+    function setLiveState(state) {
+        if (!isLiveMode) return;
+        
+        // Quitar clases previas
+        liveOrb.className = 'live-orb';
+        
+        if (state === 'listening') {
+            liveOrb.classList.add('orb-listening');
+            liveStatus.innerHTML = '<span style="width:10px; height:10px; background-color:#10b981; border-radius:50%; display:inline-block;" class="live-pulse"></span>Escuchando...';
+        } else if (state === 'thinking') {
+            liveOrb.classList.add('orb-thinking');
+            liveStatus.innerHTML = '<span style="width:10px; height:10px; background-color:#ec4899; border-radius:50%; display:inline-block;"></span>David está pensando...';
+            captionDavid.innerHTML = '';
+        } else if (state === 'speaking') {
+            liveOrb.classList.add('orb-speaking');
+            liveStatus.innerHTML = '<span style="width:10px; height:10px; background-color:#f59e0b; border-radius:50%; display:inline-block;"></span>David está hablando...';
+        }
+    }
+
+    function restartLiveListening() {
+        setTimeout(() => {
+            if (isLiveMode && !liveSpeechActive && !isRecording) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log("Error restarting recognition:", e);
+                }
+            }
+        }, 400);
+    }
+
+    // Control de Pantalla Completa Gemini Live
+    function toggleLiveMode() {
+        if (!recognition) {
+            alert('El reconocimiento de voz no es soportado por tu navegador. Intenta en Chrome o Safari.');
+            return;
+        }
+        
+        isLiveMode = !isLiveMode;
+        if (isLiveMode) {
+            // Activar Modo Live
+            liveModeBtn.style.color = '#34d399';
+            liveModeBtn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            liveModeBtn.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+            liveIndicator.style.backgroundColor = '#10b981';
+            liveIndicator.style.boxShadow = '0 0 8px #10b981';
+            liveIndicator.classList.add('live-pulse');
+            
+            // Mostrar Overlay pantalla completa
+            liveOverlay.style.display = 'flex';
+            captionUser.innerHTML = 'Conectando...';
+            captionDavid.innerHTML = '';
+            
+            // Iniciar saludo
+            speakLiveResponse("Modo en vivo activado. Hola, soy tu tutor David, hablemos. Te escucho.");
+            
+        } else {
+            // Desactivar Modo Live
+            liveModeBtn.style.color = '';
+            liveModeBtn.style.borderColor = '';
+            liveModeBtn.style.backgroundColor = '';
+            liveIndicator.style.backgroundColor = '#94a3b8';
+            liveIndicator.style.boxShadow = 'none';
+            liveIndicator.classList.remove('live-pulse');
+            
+            // Ocultar Overlay
+            liveOverlay.style.display = 'none';
+            
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            liveSpeechActive = false;
+            if (isRecording) {
+                recognition.stop();
+            }
+            tutorAvatarIcon.style.animation = '';
+        }
+    }
+    
+    function speakLiveResponse(text) {
+        if (!window.speechSynthesis) return;
+        
+        // Detener micrófono para evitar escucharse a sí mismo
+        liveSpeechActive = true;
+        if (isRecording) {
+            recognition.stop();
+        }
+        
+        setLiveState('speaking');
+        captionDavid.innerHTML = text;
+        
+        let cleanText = text
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/\*(.*?)\*/g, '$1')
+            .replace(/`/g, '')
+            .replace(/#/g, '');
+            
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'es-CO';
+        utterance.rate = 1.05;
+        
+        utterance.onstart = function() {
+            tutorAvatarIcon.style.animation = 'pulse 1.5s infinite';
+        };
+        
+        utterance.onend = function() {
+            liveSpeechActive = false;
+            tutorAvatarIcon.style.animation = '';
+            captionUser.innerHTML = 'Escuchando...';
+            setLiveState('listening');
+            
+            // Si sigue en modo Live, volver a escuchar
+            if (isLiveMode) {
+                restartLiveListening();
+            }
+        };
+        
+        utterance.onerror = function() {
+            liveSpeechActive = false;
+            tutorAvatarIcon.style.animation = '';
+            captionUser.innerHTML = 'Escuchando...';
+            setLiveState('listening');
+            
+            if (isLiveMode) {
+                restartLiveListening();
+            }
+        };
+        
+        window.speechSynthesis.speak(utterance);
     }
 </script>
 {% endblock %}

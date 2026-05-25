@@ -51,7 +51,13 @@ def init_db():
     ''')
     
     # Migración de columnas de racha y perfil si no existen en la base de datos previa
-    for column, col_type in [("streak", "INTEGER DEFAULT 0"), ("last_active_date", "TEXT"), ("bio", "TEXT DEFAULT ''"), ("avatar_color", "TEXT DEFAULT '#3b82f6'"), ("badges", "TEXT DEFAULT '[]'")]:
+    for column, col_type in [
+        ("streak", "INTEGER DEFAULT 0"),
+        ("last_active_date", "TEXT"),
+        ("bio", "TEXT DEFAULT ''"),
+        ("avatar_color", "TEXT DEFAULT '#3b82f6'"),
+        ("badges", "TEXT DEFAULT '[]'")
+    ]:
         cursor.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column} {col_type}")
     
     # Diagnostic Results Table
