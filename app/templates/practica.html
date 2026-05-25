@@ -122,12 +122,20 @@
     
     <!-- Quiz View -->
     <div id="quiz-view" class="setup-view card">
-        <div style="display:flex; justify-content:space-between; margin-bottom: 2rem; color: var(--text-muted);">
-            <span id="quiz-area-label" style="font-weight:bold; color:var(--accent);">Matemáticas</span>
+        <div style="display:flex; justify-content:space-between; margin-bottom: 2rem; color: var(--text-muted); align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="quiz-area-label" style="font-weight:bold; color:var(--accent);">Matemáticas</span>
+                <span id="bulb-tip-btn" style="cursor: pointer; font-size: 1.25rem; display: flex; align-items: center;" title="Consejo de estudio">💡</span>
+            </div>
             <span id="quiz-progress">Pregunta 1 de 5</span>
         </div>
         
         <h3 id="question-text" class="mb-4" style="line-height: 1.5;"></h3>
+        
+        <!-- Hint Box -->
+        <div id="hint-box" style="display: none; background: rgba(59, 130, 246, 0.08); border-left: 4px solid var(--accent); padding: 1rem; border-radius: 0 var(--border-radius) var(--border-radius) 0; margin-bottom: 1.5rem; font-size: 0.95rem; color: #93c5fd; animation: fadeIn 0.3s ease;">
+            <strong>💡 Tip de David:</strong> <span id="hint-text"></span>
+        </div>
         
         <!-- Graphic Container -->
         <div id="graphic-container" class="mb-4" style="text-align: center; display: none; width: 100%;"></div>
@@ -160,6 +168,10 @@
 
 {% block scripts %}
 <script>
+    const hasSimulacro = {{ 'true' if has_simulacro else 'false' }};
+    const eligibleForTips = {{ 'true' if eligible_for_tips else 'false' }};
+    const maxScore = {{ max_score or 0 }};
+
     let questions = [];
     let currentQIndex = 0;
     let score = 0;
@@ -171,6 +183,52 @@
     const quizView = document.getElementById('quiz-view');
     const resultView = document.getElementById('result-view');
     
+    // Setup bulb button properties
+    const bulbBtn = document.getElementById('bulb-tip-btn');
+    if (bulbBtn) {
+        if (eligibleForTips) {
+            bulbBtn.style.opacity = '1';
+            bulbBtn.style.cursor = 'pointer';
+            bulbBtn.onclick = () => showStudyTip();
+        } else {
+            bulbBtn.style.opacity = '0.35';
+            bulbBtn.style.cursor = 'not-allowed';
+            bulbBtn.onclick = () => {
+                if (!hasSimulacro) {
+                    alert("💡 Tip de David: Realiza el simulacro completo y supera los 250 puntos globales para desbloquear las ayudas y consejos de estudio.");
+                } else {
+                    alert(`💡 Tip de David: Tu puntaje del Simulacro fue de ${maxScore} puntos. Supera los 250 puntos globales para desbloquear las ayudas y consejos de estudio.`);
+                }
+            };
+        }
+    }
+
+    async function showStudyTip() {
+        if (questions.length === 0) return;
+        const q = questions[currentQIndex];
+        const hintBox = document.getElementById('hint-box');
+        const hintText = document.getElementById('hint-text');
+        
+        if (hintBox.style.display === 'block') {
+            hintBox.style.display = 'none';
+            return;
+        }
+        
+        bulbBtn.style.pointerEvents = 'none';
+        bulbBtn.innerHTML = '⏳';
+        try {
+            const res = await fetch(`/api/questions/${q.id}/hint`);
+            const data = await res.json();
+            hintText.innerText = data.hint;
+            hintBox.style.display = 'block';
+        } catch (e) {
+            console.error("Error fetching hint:", e);
+        } finally {
+            bulbBtn.innerHTML = '💡';
+            bulbBtn.style.pointerEvents = 'auto';
+        }
+    }
+
     document.getElementById('start-btn').addEventListener('click', async () => {
         selectedArea = document.getElementById('area-select').value;
         selectedDifficulty = document.getElementById('difficulty-select').value;
@@ -215,6 +273,7 @@
         const container = document.getElementById('options-container');
         container.innerHTML = '';
         
+        document.getElementById('hint-box').style.display = 'none';
         document.getElementById('explanation-box').style.display = 'none';
         
         q.options.forEach(opt => {

@@ -435,7 +435,100 @@ async def practica_page(request: Request):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse(request=request, name="practica.html")
+        
+    conn = get_db()
+    diagnostic = conn.execute("SELECT * FROM diagnostic_results WHERE user_id = %s ORDER BY date DESC LIMIT 1", (user["id"],)).fetchone()
+    
+    has_simulacro = False
+    eligible_for_tips = False
+    max_score = 0
+    if diagnostic:
+        has_simulacro = True
+        weighted_sum = (
+            diagnostic["score_math"] * 3 +
+            diagnostic["score_reading"] * 3 +
+            diagnostic["score_science"] * 3 +
+            diagnostic["score_social"] * 3 +
+            diagnostic["score_english"] * 1
+        )
+        max_score = round((weighted_sum / 13) * 5)
+        if max_score > 250:
+            eligible_for_tips = True
+            
+    conn.close()
+    
+    return templates.TemplateResponse(
+        request=request, 
+        name="practica.html",
+        context={
+            "user": user,
+            "has_simulacro": has_simulacro,
+            "eligible_for_tips": eligible_for_tips,
+            "max_score": max_score
+        }
+    )
+
+@app.get("/api/questions/{question_id}/hint")
+async def get_question_hint(question_id: int, request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+        
+    conn = get_db()
+    try:
+        # Check eligibility
+        diagnostic = conn.execute("SELECT * FROM diagnostic_results WHERE user_id = %s ORDER BY date DESC LIMIT 1", (user["id"],)).fetchone()
+        eligible = False
+        if diagnostic:
+            weighted_sum = (
+                diagnostic["score_math"] * 3 +
+                diagnostic["score_reading"] * 3 +
+                diagnostic["score_science"] * 3 +
+                diagnostic["score_social"] * 3 +
+                diagnostic["score_english"] * 1
+            )
+            score = round((weighted_sum / 13) * 5)
+            if score > 250:
+                eligible = True
+                
+        if not eligible:
+            raise HTTPException(status_code=403, detail="No elegible para recibir tips de estudio.")
+            
+        # Fetch question
+        q = conn.execute("SELECT area, text, options, correct_answer, explanation FROM questions WHERE id = %s", (question_id,)).fetchone()
+        if not q:
+            raise HTTPException(status_code=404, detail="Pregunta no encontrada.")
+            
+        # Call Gemini for a smart hint
+        api_key = os.getenv("GEMINI_API_KEY")
+        hint_text = ""
+        if api_key:
+            try:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-3.1-flash-lite')
+                prompt = f"""
+                Eres un tutor académico experto para el examen Saber 11 en Colombia.
+                Para la siguiente pregunta de {q['area']}:
+                Enunciado: {q['text']}
+                Opciones: {q['options']}
+                Respuesta Correcta: {q['correct_answer']}
+                
+                Genera una AYUDA o TIP de estudio muy breve y pedagógico (máximo 2 líneas o 30 palabras) para que el estudiante pueda resolverla por sí mismo.
+                REGLA CRÍTICA: NO menciones cuál es la respuesta correcta ni reveles la clave. Da un consejo de descarte o concepto clave. Responde en español de forma motivadora y amigable.
+                """
+                response = model.generate_content(prompt)
+                hint_text = response.text.strip()
+            except Exception as e:
+                print("Error generating hint with Gemini:", e)
+                
+        if not hint_text:
+            # Fallback hint
+            hint_text = f"Tip de {q['area']}: Recuerda analizar con cuidado los descartes lógicos del enunciado y justificar tu respuesta con base en la teoría del área."
+            
+        return {"hint": hint_text}
+    finally:
+        conn.close()
+
 
 @app.get("/api/questions/{area}")
 async def get_practice_questions(area: str):
@@ -1346,7 +1439,25 @@ async def duels_page(request: Request):
     except Exception as e:
         print("Error checking expired duels:", e)
         
-    # 1.5 Fetch resolved duels for notifications
+    # 1.5 Fetch diagnostic / simulacro results for study tips eligibility
+    diagnostic = conn.execute("SELECT * FROM diagnostic_results WHERE user_id = %s ORDER BY date DESC LIMIT 1", (user["id"],)).fetchone()
+    has_simulacro = False
+    eligible_for_tips = False
+    max_score = 0
+    if diagnostic:
+        has_simulacro = True
+        weighted_sum = (
+            diagnostic["score_math"] * 3 +
+            diagnostic["score_reading"] * 3 +
+            diagnostic["score_science"] * 3 +
+            diagnostic["score_social"] * 3 +
+            diagnostic["score_english"] * 1
+        )
+        max_score = round((weighted_sum / 13) * 5)
+        if max_score > 250:
+            eligible_for_tips = True
+
+    # 1.6 Fetch resolved duels for notifications
     notif_rows = conn.execute('''
         SELECT d.id, d.area, d.challenger_score, d.opponent_score, u.name as opponent_name
         FROM tutor_duels d
@@ -1514,7 +1625,10 @@ async def duels_page(request: Request):
             "completed": completed_duels,
             "leaderboard": leaderboard_sorted,
             "notifications": notifications,
-            "total_completed": total_completed
+            "total_completed": total_completed,
+            "has_simulacro": has_simulacro,
+            "eligible_for_tips": eligible_for_tips,
+            "max_score": max_score
         }
     )
 

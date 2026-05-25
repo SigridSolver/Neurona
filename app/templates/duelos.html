@@ -240,11 +240,19 @@
             <!-- SCREEN 3: Active Quiz (1 Question only) -->
             <div class="quiz-screen" id="quizScreen">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-                    <span id="quizAreaLabel" class="area-badge">Matemáticas</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span id="quizAreaLabel" class="area-badge">Matemáticas</span>
+                        <span id="duel-bulb-btn" style="cursor: pointer; font-size: 1.25rem; display: flex; align-items: center;" title="Consejo de estudio">💡</span>
+                    </div>
                     <span style="font-weight:700; color:var(--text-muted);" id="quizModeLabel">Tu Turno</span>
                 </div>
                 
                 <h3 id="questionText" style="font-size: 1.2rem; line-height: 1.5; margin-bottom: 1rem;"></h3>
+                
+                <!-- Hint Box -->
+                <div id="duel-hint-box" style="display: none; background: rgba(59, 130, 246, 0.08); border-left: 4px solid var(--accent); padding: 1rem; border-radius: 0 var(--border-radius) var(--border-radius) 0; margin-bottom: 1.5rem; font-size: 0.95rem; color: #93c5fd; animation: fadeIn 0.3s ease;">
+                    <strong>💡 Tip de David:</strong> <span id="duel-hint-text"></span>
+                </div>
                 
                 <div class="options-grid" id="optionsGrid">
                     <!-- Loaded dynamically -->
@@ -396,6 +404,10 @@
 
 {% block scripts %}
 <script>
+    const hasSimulacro = {{ 'true' if has_simulacro else 'false' }};
+    const eligibleForTips = {{ 'true' if eligible_for_tips else 'false' }};
+    const maxScore = {{ max_score or 0 }};
+
     let selectedOpponentId = null;
     let selectedOpponentName = "";
     let selectedOpponentColor = "";
@@ -404,6 +416,58 @@
     let selectedOptionText = null;
     let activeDuelId = null;
     let respondingMode = false;
+
+    // Configure the bulb button
+    document.addEventListener("DOMContentLoaded", () => {
+        const bulbBtn = document.getElementById('duel-bulb-btn');
+        if (bulbBtn) {
+            if (eligibleForTips) {
+                bulbBtn.style.opacity = '1';
+                bulbBtn.style.cursor = 'pointer';
+                bulbBtn.onclick = () => showDuelTip();
+            } else {
+                bulbBtn.style.opacity = '0.35';
+                bulbBtn.style.cursor = 'not-allowed';
+                bulbBtn.onclick = () => {
+                    if (!hasSimulacro) {
+                        alert("💡 Tip de David: Realiza el simulacro completo y supera los 250 puntos globales para desbloquear las ayudas y consejos de estudio.");
+                    } else {
+                        alert(`💡 Tip de David: Tu puntaje del Simulacro fue de ${maxScore} puntos. Supera los 250 puntos globales para desbloquear las ayudas y consejos de estudio.`);
+                    }
+                };
+            }
+        }
+    });
+
+    async function showDuelTip() {
+        if (!activeQuestion) return;
+        const hintBox = document.getElementById('duel-hint-box');
+        const hintText = document.getElementById('duel-hint-text');
+        const bulbBtn = document.getElementById('duel-bulb-btn');
+        
+        if (hintBox.style.display === 'block') {
+            hintBox.style.display = 'none';
+            return;
+        }
+        
+        if (bulbBtn) {
+            bulbBtn.style.pointerEvents = 'none';
+            bulbBtn.innerHTML = '⏳';
+        }
+        try {
+            const res = await fetch(`/api/questions/${activeQuestion.id}/hint`);
+            const data = await res.json();
+            hintText.innerText = data.hint;
+            hintBox.style.display = 'block';
+        } catch (e) {
+            console.error("Error fetching hint:", e);
+        } finally {
+            if (bulbBtn) {
+                bulbBtn.innerHTML = '💡';
+                bulbBtn.style.pointerEvents = 'auto';
+            }
+        }
+    }
 
     function switchScreen(screenId) {
         document.querySelectorAll(".setup-screen, .matching-screen, .quiz-screen, .result-screen").forEach(s => {
@@ -489,6 +553,7 @@
         document.getElementById("quizAreaLabel").innerText = area;
         document.getElementById("quizModeLabel").innerText = respondingMode ? "Respondiendo reto" : "Enviando reto";
         
+        document.getElementById("duel-hint-box").style.display = "none";
         document.getElementById("questionText").innerText = activeQuestion.text;
         document.getElementById("submitDuelBtn").disabled = true;
         

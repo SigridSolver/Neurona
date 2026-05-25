@@ -2,11 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Vista Previa de Pregunta - Rotación 90°</title>
+  <title>Vista Previa de Pregunta - Relaciones Comerciales</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
   <style>
     :root {
       --bg-main: #0a0f1c;
@@ -39,7 +36,7 @@
       border-radius: var(--border-radius);
       padding: 2.5rem;
       border: 1px solid rgba(255, 255, 255, 0.08);
-      max-width: 850px;
+      max-width: 800px;
       width: 100%;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
@@ -77,75 +74,97 @@
       margin-bottom: 1.5rem;
     }
 
-    .diagram-row {
+    /* Table styling */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .data-table th {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      font-weight: 700;
+      padding: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .data-table td {
+      padding: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.01);
+      font-style: italic;
+    }
+
+    .data-table tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .options-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
       margin: 1.5rem 0;
     }
 
-    @media (max-width: 768px) {
-      .diagram-row {
+    @media (max-width: 600px) {
+      .options-grid {
         grid-template-columns: 1fr;
       }
     }
 
-    .diagram-box {
+    .option-card {
       background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 12px;
-      padding: 0.75rem;
-      text-align: center;
-    }
-
-    .diagram-title {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      margin-top: 0.5rem;
-    }
-
-    .options-list {
+      padding: 1.25rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
-      margin-bottom: 1.5rem;
     }
 
-    .option-item {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 12px;
-      padding: 1rem 1.25rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      transition: all 0.3s ease;
-      font-size: 0.95rem;
-    }
-
-    .option-item:hover {
-      background: rgba(59, 130, 246, 0.08);
+    .option-card:hover {
+      background: rgba(59, 130, 246, 0.05);
       border-color: var(--accent);
-      transform: translateX(4px);
+      transform: translateY(-2px);
     }
 
-    .option-letter {
-      background: rgba(255, 255, 255, 0.08);
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
+    .option-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #60a5fa;
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #60a5fa;
-      font-size: 0.9rem;
+      gap: 8px;
+    }
+
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    .mini-table th {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      padding: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.8rem;
+    }
+
+    .mini-table td {
+      padding: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.01);
     }
 
     .explanation-box {
-      margin-top: 1.5rem;
+      margin-top: 2rem;
       padding: 1.25rem;
       background: rgba(16, 185, 129, 0.08);
       border: 1px solid rgba(16, 185, 129, 0.2);
@@ -161,233 +180,155 @@
   <div class="practice-card">
     <div class="question-header">
       <span class="area-badge">Matemáticas</span>
-      <span class="difficulty-badge">Dificultad: Intermedio (Saber 11)</span>
+      <span class="difficulty-badge">Dificultad: Intermedio</span>
     </div>
 
     <div class="question-text">
-      Un profesor les asigna a tres estudiantes tres figuras distintas, y a cada uno le pide que rote la figura recibida 90° en el sentido en que giran las manecillas del reloj respecto al origen del sistema de coordenadas. La gráfica muestra las figuras recibidas por cada estudiante (sombreadas) y la figura obtenida (en blanco).
+      La tabla muestra las relaciones de comercio, venta y compra de productos entre varios países.
     </div>
 
-    <!-- Graph Diagrams -->
-    <div class="diagram-row">
+    <!-- Main Data Table -->
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>País</th>
+          <th>Vende productos a:</th>
+          <th>Compra productos de:</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight: bold; font-style: normal; color: #fff;">P</td>
+          <td>P, T</td>
+          <td>S, V, P, W</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; font-style: normal; color: #fff;">Q</td>
+          <td>U, Q, T, R</td>
+          <td>V, Q</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; font-style: normal; color: #fff;">R</td>
+          <td>T, R</td>
+          <td>R, V, W, Q</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; font-style: normal; color: #fff;">S</td>
+          <td>P, U, T, S</td>
+          <td>S, V</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="question-text" style="font-weight: 600; margin-top: 1.5rem;">
+      De acuerdo con la información presentada, ¿cuál es la tabla que muestra las relaciones comerciales del país W?
+    </div>
+
+    <!-- Options Grid -->
+    <div class="options-grid">
       
-      <!-- Estudiante I -->
-      <div class="diagram-box">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="100%" height="auto">
-          <!-- Grid Lines -->
-          <g stroke="rgba(255,255,255,0.08)" stroke-width="1">
-            <line x1="20" y1="20" x2="20" y2="200" />
-            <line x1="38" y1="20" x2="38" y2="200" />
-            <line x1="56" y1="20" x2="56" y2="200" />
-            <line x1="74" y1="20" x2="74" y2="200" />
-            <line x1="92" y1="20" x2="92" y2="200" />
-            <line x1="128" y1="20" x2="128" y2="200" />
-            <line x1="146" y1="20" x2="146" y2="200" />
-            <line x1="164" y1="20" x2="164" y2="200" />
-            <line x1="182" y1="20" x2="182" y2="200" />
-            <line x1="200" y1="20" x2="200" y2="200" />
-
-            <line x1="20" y1="20" x2="200" y2="20" />
-            <line x1="20" y1="38" x2="200" y2="38" />
-            <line x1="20" y1="56" x2="200" y2="56" />
-            <line x1="20" y1="74" x2="200" y2="74" />
-            <line x1="20" y1="92" x2="200" y2="92" />
-            <line x1="20" y1="128" x2="200" y2="128" />
-            <line x1="20" y1="146" x2="200" y2="146" />
-            <line x1="20" y1="164" x2="200" y2="164" />
-            <line x1="20" y1="182" x2="200" y2="182" />
-            <line x1="20" y1="200" x2="200" y2="200" />
-          </g>
-          
-          <!-- Axis -->
-          <line x1="10" y1="110" x2="210" y2="110" stroke="#94a3b8" stroke-width="2" />
-          <line x1="110" y1="10" x2="110" y2="210" stroke="#94a3b8" stroke-width="2" />
-          <text x="212" y="114" fill="#94a3b8" font-size="10" font-weight="bold">x</text>
-          <text x="114" y="14" fill="#94a3b8" font-size="10" font-weight="bold">y</text>
-          
-          <!-- Shaded Figure (Cyan) -->
-          <polygon points="74,146 128,146 128,164 74,164" fill="rgba(6,182,212,0.4)" stroke="#06b6d4" stroke-width="1.5" />
-          <circle cx="74" cy="146" r="3" fill="#000" />
-          <circle cx="128" cy="146" r="3" fill="#000" />
-          <circle cx="128" cy="164" r="3" fill="#000" />
-          <circle cx="74" cy="164" r="3" fill="#000" />
-
-          <!-- Rotated Figure (White Outline) -->
-          <polygon points="56,74 74,74 74,128 56,128" fill="rgba(255,255,255,0.1)" stroke="#ffffff" stroke-width="1.5" />
-          <circle cx="56" cy="74" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-          <circle cx="74" cy="74" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-          <circle cx="74" cy="128" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-          <circle cx="56" cy="128" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-        </svg>
-        <div class="diagram-title">Estudiante I</div>
+      <!-- Option A -->
+      <div class="option-card">
+        <div class="option-title">
+          <span style="background: rgba(255,255,255,0.08); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">A</span>
+        </div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Vende productos a:</th>
+              <th>Compra productos de:</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ninguno</td>
+              <td>Ninguno</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- Estudiante II -->
-      <div class="diagram-box">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="100%" height="auto">
-          <!-- Grid Lines -->
-          <g stroke="rgba(255,255,255,0.08)" stroke-width="1">
-            <line x1="20" y1="20" x2="20" y2="200" />
-            <line x1="38" y1="20" x2="38" y2="200" />
-            <line x1="56" y1="20" x2="56" y2="200" />
-            <line x1="74" y1="20" x2="74" y2="200" />
-            <line x1="92" y1="20" x2="92" y2="200" />
-            <line x1="128" y1="20" x2="128" y2="200" />
-            <line x1="146" y1="20" x2="146" y2="200" />
-            <line x1="164" y1="20" x2="164" y2="200" />
-            <line x1="182" y1="20" x2="182" y2="200" />
-            <line x1="200" y1="20" x2="200" y2="200" />
-
-            <line x1="20" y1="20" x2="200" y2="20" />
-            <line x1="20" y1="38" x2="200" y2="38" />
-            <line x1="20" y1="56" x2="200" y2="56" />
-            <line x1="20" y1="74" x2="200" y2="74" />
-            <line x1="20" y1="92" x2="200" y2="92" />
-            <line x1="20" y1="128" x2="200" y2="128" />
-            <line x1="20" y1="146" x2="200" y2="146" />
-            <line x1="20" y1="164" x2="200" y2="164" />
-            <line x1="20" y1="182" x2="200" y2="182" />
-            <line x1="20" y1="200" x2="200" y2="200" />
-          </g>
-          
-          <!-- Axis -->
-          <line x1="10" y1="110" x2="210" y2="110" stroke="#94a3b8" stroke-width="2" />
-          <line x1="110" y1="10" x2="110" y2="210" stroke="#94a3b8" stroke-width="2" />
-          <text x="212" y="114" fill="#94a3b8" font-size="10" font-weight="bold">x</text>
-          <text x="114" y="14" fill="#94a3b8" font-size="10" font-weight="bold">y</text>
-          
-          <!-- Shaded Figure (Cyan) -->
-          <polygon points="110,38 110,56 146,128 146,74" fill="rgba(6,182,212,0.4)" stroke="#06b6d4" stroke-width="1.5" />
-          <circle cx="110" cy="38" r="3" fill="#000" />
-          <circle cx="110" cy="56" r="3" fill="#000" />
-          <circle cx="146" cy="128" r="3" fill="#000" />
-          <circle cx="146" cy="74" r="3" fill="#000" />
-
-          <!-- Rotated Figure (White Outline) -->
-          <polygon points="182,110 164,110 128,146 146,146" fill="rgba(255,255,255,0.1)" stroke="#ffffff" stroke-width="1.5" />
-          <circle cx="182" cy="110" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-          <circle cx="164" cy="110" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-          <circle cx="128" cy="146" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-          <circle cx="146" cy="146" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-        </svg>
-        <div class="diagram-title">Estudiante II</div>
+      <!-- Option B -->
+      <div class="option-card">
+        <div class="option-title">
+          <span style="background: rgba(255,255,255,0.08); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">B</span>
+        </div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Vende productos a:</th>
+              <th>Compra productos de:</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ninguno</td>
+              <td>P, R</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- Estudiante III -->
-      <div class="diagram-box">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="100%" height="auto">
-          <!-- Grid Lines -->
-          <g stroke="rgba(255,255,255,0.08)" stroke-width="1">
-            <line x1="20" y1="20" x2="20" y2="200" />
-            <line x1="38" y1="20" x2="38" y2="200" />
-            <line x1="56" y1="20" x2="56" y2="200" />
-            <line x1="74" y1="20" x2="74" y2="200" />
-            <line x1="92" y1="20" x2="92" y2="200" />
-            <line x1="128" y1="20" x2="128" y2="200" />
-            <line x1="146" y1="20" x2="146" y2="200" />
-            <line x1="164" y1="20" x2="164" y2="200" />
-            <line x1="182" y1="20" x2="182" y2="200" />
-            <line x1="200" y1="20" x2="200" y2="200" />
+      <!-- Option C -->
+      <div class="option-card">
+        <div class="option-title">
+          <span style="background: rgba(255,255,255,0.08); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">C</span>
+        </div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Vende productos a:</th>
+              <th>Compra productos de:</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>P, R</td>
+              <td>Ninguno</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-            <line x1="20" y1="20" x2="200" y2="20" />
-            <line x1="20" y1="38" x2="200" y2="38" />
-            <line x1="20" y1="56" x2="200" y2="56" />
-            <line x1="20" y1="74" x2="200" y2="74" />
-            <line x1="20" y1="92" x2="200" y2="92" />
-            <line x1="20" y1="128" x2="200" y2="128" />
-            <line x1="20" y1="146" x2="200" y2="146" />
-            <line x1="20" y1="164" x2="200" y2="164" />
-            <line x1="20" y1="182" x2="200" y2="182" />
-            <line x1="20" y1="200" x2="200" y2="200" />
-          </g>
-          
-          <!-- Axis -->
-          <line x1="10" y1="110" x2="210" y2="110" stroke="#94a3b8" stroke-width="2" />
-          <line x1="110" y1="10" x2="110" y2="210" stroke="#94a3b8" stroke-width="2" />
-          <text x="212" y="114" fill="#94a3b8" font-size="10" font-weight="bold">x</text>
-          <text x="114" y="14" fill="#94a3b8" font-size="10" font-weight="bold">y</text>
-          
-          <!-- Shaded Figure (Cyan) -->
-          <polygon points="92,92 92,56 74,38 56,56" fill="rgba(6,182,212,0.4)" stroke="#06b6d4" stroke-width="1.5" />
-          <circle cx="92" cy="92" r="3" fill="#000" />
-          <circle cx="92" cy="56" r="3" fill="#000" />
-          <circle cx="74" cy="38" r="3" fill="#000" />
-          <circle cx="56" cy="56" r="3" fill="#000" />
+      <!-- Option D -->
+      <div class="option-card">
+        <div class="option-title">
+          <span style="background: rgba(255,255,255,0.08); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">D</span>
+        </div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Vende productos a:</th>
+              <th>Compra productos de:</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>R, V, Q</td>
+              <td>T, R</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-          <!-- Rotated Figure (White Outline) -->
-          <polygon points="128,92 155,65 155,42 128,42" fill="rgba(255,255,255,0.1)" stroke="#ffffff" stroke-width="1.5" />
-          <circle cx="128" cy="92" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-          <circle cx="155" cy="65" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-          <circle cx="155" cy="42" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-          <circle cx="128" cy="42" r="3" fill="#000" stroke="#fff" stroke-width="0.5" />
-        </svg>
-        <div class="diagram-title">Estudiante III</div>
-      </div>
-    </div>
-
-    <div class="question-text" style="font-weight: 700; margin-top: 1.5rem;">
-      ¿Cuáles estudiantes hicieron correctamente el trabajo asignado?
-    </div>
-
-    <!-- Options List -->
-    <div class="options-list">
-      <div class="option-item">
-        <span class="option-letter">A</span>
-        <span>I y II solamente.</span>
-      </div>
-      <div class="option-item">
-        <span class="option-letter">B</span>
-        <span>II y III solamente.</span>
-      </div>
-      <div class="option-item">
-        <span class="option-letter">C</span>
-        <span>I y III solamente.</span>
-      </div>
-      <div class="option-item">
-        <span class="option-letter">D</span>
-        <span>I, II y III.</span>
-      </div>
     </div>
 
     <!-- Explanation Box -->
-    <div class="explanation-box" id="expBox">
-      <strong>✓ Respuesta correcta: A (I y II solamente)</strong><br><br>
-      La rotación de $90^\circ$ en sentido horario (manecillas del reloj) respecto al origen $(0,0)$ sigue la regla matemática de transformación de coordenadas:
-      $$(x, y) \rightarrow (y, -x)$$
+    <div class="explanation-box">
+      <strong>✓ Respuesta correcta: C (Vende productos a: P, R | Compra productos de: Ninguno)</strong><br><br>
+      Para determinar las relaciones comerciales del país $W$, analicemos la tabla principal por separado:<br><br>
       
-      Evaluemos cada caso utilizando sus vértices principales:<br><br>
+      1. **¿A quién le vende productos el país W?**<br>
+      Que el país $W$ le venda a otros países significa que esos otros países **compran** productos de $W$. Si revisamos la columna *"Compra productos de:"*, vemos que:
+      * El país $P$ compra de: $S, V, P, \mathbf{W}$ (por lo tanto, $W$ le vende a $P$).
+      * El país $R$ compra de: $R, V, \mathbf{W}, Q$ (por lo tanto, $W$ le vende a $R$).
+      * De este modo, $W$ vende productos a: $\mathbf{P, R}$.<br><br>
       
-      * **Estudiante I**:
-        * El rectángulo sombreado (azul) tiene vértices en $(-2, -2)$, $(1, -2)$, $(1, -3)$ y $(-2, -3)$.
-        * Aplicando $(x, y) \rightarrow (y, -x)$ obtenemos:
-          $$(-2, -2) \rightarrow (-2, 2)$$
-          $$(1, -2) \rightarrow (-2, -1)$$
-          $$(1, -3) \rightarrow (-3, -1)$$
-          $$(-2, -3) \rightarrow (-3, 2)$$
-        * Estos puntos corresponden exactamente a las esquinas del rectángulo blanco obtenido. Por lo tanto, el **Estudiante I es correcto**.<br><br>
-        
-      * **Estudiante II**:
-        * El paralelogramo sombreado tiene vértices en $(0, 3)$, $(0, 4)$, $(2, 2)$ y $(2, 1)$.
-        * Aplicando la rotación:
-          $$(0, 4) \rightarrow (4, 0)$$
-          $$(0, 3) \rightarrow (3, 0)$$
-          $$(2, 1) \rightarrow (1, -2)$$
-          $$(2, 2) \rightarrow (2, -2)$$
-        * Estos son exactamente los vértices de la figura blanca. Por lo tanto, el **Estudiante II es correcto**.<br><br>
-        
-      * **Estudiante III**:
-        * La figura sombreada tiene un vértice en $(-1, 1)$, que al rotarse $90^\circ$ horario debería terminar en $(1, 1)$, lo cual coincide.
-        * Sin embargo, el vértice superior en $(-2, 4)$ debería rotar a $(4, 2)$. La figura blanca dibujada por el estudiante tiene un vértice superior en $(2.5, 3.8)$, lo cual distorsiona la figura y no es una rotación rígida. Por lo tanto, el **Estudiante III es incorrecto**.
+      2. **¿De quién compra productos el país W?**<br>
+      Que el país $W$ le compre a otros países significa que esos otros países le **venden** productos a $W$. Si revisamos la columna *"Vende productos a:"* para todos los países ($P, Q, R, S$), ninguno de ellos lista al país $W$. Por tanto, $W$ no realiza compras registradas.
+      * De este modo, $W$ compra productos de: $\mathbf{Ninguno}$.
     </div>
   </div>
 
-  <script>
-    renderMathInElement(document.body, {
-      delimiters: [
-        {left: '$$', right: '$$', display: true},
-        {left: '$', right: '$', display: false}
-      ]
-    });
-  </script>
 </body>
 </html>
