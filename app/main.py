@@ -357,14 +357,8 @@ def process_parametric_question(q, seed=None):
         local_random.shuffle(opts)
         
         new_text = (
-            "La siguiente tabla muestra la distribución de puntajes obtenidos por un grupo de estudiantes en un examen:\n\n"
-            "| Puntaje ($x_i$) | Cantidad de Estudiantes ($f_i$) |\n"
-            "| :---: | :---: |\n"
-            f"| {val_1} | {frec_1} |\n"
-            f"| {val_2} | {frec_2} |\n"
-            f"| {val_3} | {frec_3} |\n"
-            f"| {val_4} | {frec_4} |\n\n"
-            "¿Cuál es el promedio (media aritmética) de los puntajes obtenidos por este grupo de estudiantes?"
+            "La gráfica de barras representa la distribución de puntajes obtenidos por un grupo de estudiantes en un examen de matemáticas.\n\n"
+            "Con base en la información suministrada en la gráfica, ¿cuál es el promedio (media aritmética) de los puntajes obtenidos por este grupo de estudiantes?"
         )
         
         new_explanation = (
