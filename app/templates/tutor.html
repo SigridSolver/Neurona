@@ -178,31 +178,80 @@
     }
 
     .chat-input-area {
-        padding: 1.25rem 1.5rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        background-color: rgba(15, 23, 42, 0.5);
+        padding: 1.5rem;
+        background-color: transparent;
+        border-top: none;
     }
 
-    .chat-input-form {
+    .pill-input-container {
         display: flex;
-        gap: 1rem;
+        align-items: center;
+        background-color: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 30px;
+        padding: 0.4rem 0.6rem;
+        transition: all 0.3s ease;
+    }
+
+    .pill-input-container:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        background-color: rgba(15, 23, 42, 0.9);
+    }
+
+    .pill-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.2rem;
+        cursor: pointer;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s, background-color 0.2s;
+    }
+
+    .pill-btn:hover {
+        color: white;
+        background-color: rgba(255,255,255,0.1);
     }
 
     .chat-input {
         flex: 1;
-        background-color: rgba(10, 15, 28, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: transparent;
+        border: none;
         color: var(--text-main);
-        padding: 0.85rem 1.25rem;
-        border-radius: var(--border-radius);
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
         font-family: var(--font-family);
-        transition: var(--transition);
     }
 
     .chat-input:focus {
-        border-color: var(--accent);
         outline: none;
-        box-shadow: 0 0 10px var(--accent-glow);
+        box-shadow: none;
+    }
+
+    .submit-btn {
+        background-color: var(--accent);
+        border: none;
+        color: white;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 0.5rem;
+        transition: background-color 0.2s;
+    }
+
+    .submit-btn:hover {
+        background-color: var(--accent-hover);
     }
 
     .typing-indicator {
@@ -321,17 +370,19 @@
 
         <!-- Input Area -->
         <div class="chat-input-area">
-            <form id="chat-form" class="chat-input-form" onsubmit="handleChatSubmit(event)">
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('image-upload').click()" style="padding: 0 0.8rem; font-size: 1.2rem; background-color: rgba(30, 41, 59, 0.8);" title="Adjuntar imagen">📎</button>
-                <input type="file" id="image-upload" accept="image/*" style="display:none" onchange="previewImage(event)">
-                
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('camera-upload').click()" style="padding: 0 0.8rem; font-size: 1.2rem; background-color: rgba(30, 41, 59, 0.8); margin-left: 0.5rem;" title="Tomar foto">📷</button>
-                <input type="file" id="camera-upload" accept="image/*" capture="environment" style="display:none" onchange="previewImage(event)">
-                
-                <button type="button" id="mic-btn" class="btn btn-secondary" onclick="toggleRecording()" style="padding: 0 0.8rem; font-size: 1.2rem; background-color: rgba(30, 41, 59, 0.8); margin-left: 0.5rem;" title="Usar micrófono">🎤</button>
-                
-                <input type="text" id="chat-input" class="chat-input" placeholder="Pregúntame sobre cualquier área evaluada..." required autocomplete="off" style="margin-left: 0.5rem;">
-                <button type="submit" class="btn btn-primary" style="margin-left: 0.5rem;">Preguntar</button>
+            <form id="chat-form" onsubmit="handleChatSubmit(event)">
+                <div class="pill-input-container">
+                    <button type="button" class="pill-btn" onclick="document.getElementById('image-upload').click()" title="Adjuntar imagen">📎</button>
+                    <input type="file" id="image-upload" accept="image/*" style="display:none" onchange="previewImage(event)">
+                    
+                    <button type="button" class="pill-btn" onclick="document.getElementById('camera-upload').click()" title="Tomar foto">📷</button>
+                    <input type="file" id="camera-upload" accept="image/*" capture="environment" style="display:none" onchange="previewImage(event)">
+                    
+                    <input type="text" id="chat-input" class="chat-input" placeholder="Pregúntame sobre cualquier área evaluada..." required autocomplete="off">
+                    
+                    <button type="button" id="mic-btn" class="pill-btn" onclick="toggleRecording()" title="Usar micrófono (Respuesta por voz)">🎤</button>
+                    <button type="submit" class="submit-btn" title="Enviar">➤</button>
+                </div>
             </form>
         </div>
     </div>
@@ -415,6 +466,12 @@
 
     async function handleChatSubmit(event) {
         event.preventDefault();
+        
+        // Detener cualquier voz en curso al enviar un nuevo mensaje
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+        
         const message = chatInput.value.trim();
         if (!message) return;
 
@@ -460,6 +517,22 @@
                     chatHistory = chatHistory.slice(chatHistory.length - 10);
                 }
                 sessionStorage.setItem('tutorChatHistory', JSON.stringify(chatHistory));
+                
+                // Voice Synthesis for Gemini Live behavior
+                if (isVoiceInteraction && window.speechSynthesis) {
+                    let cleanText = data.response
+                        .replace(/\*\*(.*?)\*\*/g, '$1')
+                        .replace(/\*(.*?)\*/g, '$1')
+                        .replace(/`/g, '')
+                        .replace(/#/g, '');
+                        
+                    const utterance = new SpeechSynthesisUtterance(cleanText);
+                    utterance.lang = 'es-CO';
+                    utterance.rate = 1.05;
+                    window.speechSynthesis.speak(utterance);
+                    
+                    isVoiceInteraction = false;
+                }
             }
         } catch (error) {
             typingIndicator.style.display = 'none';
@@ -472,6 +545,7 @@
         document.getElementById('chat-form').dispatchEvent(new Event('submit', { cancelable: true }));
     }
 
+    let isVoiceInteraction = false;
     // --- Lógica del Micrófono (Reconocimiento de Voz) ---
     let recognition = null;
     let isRecording = false;
@@ -492,8 +566,8 @@
 
         recognition.onresult = function(event) {
             const transcript = event.results[0][0].transcript;
-            // Agregar contexto educativo si se usa voz
             chatInput.value += (chatInput.value ? ' ' : '') + transcript;
+            isVoiceInteraction = true;
         };
 
         recognition.onerror = function(event) {
