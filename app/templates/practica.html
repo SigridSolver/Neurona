@@ -98,7 +98,6 @@
                 <option value="Sociales y Ciudadanas">Sociales y Ciudadanas</option>
                 <option value="Ciencias Naturales">Ciencias Naturales</option>
                 <option value="Inglés">Inglés</option>
-                <option value="Área General">Área General</option>
             </select>
         </div>
         
@@ -198,7 +197,7 @@
         const q = questions[currentQIndex];
         document.getElementById('quiz-progress').innerText = `Pregunta ${currentQIndex + 1} de ${questions.length}`;
         let textContent = q.text;
-        const imgRegex = /(\/static\/images\/recortes\/[^\s]+\.(?:png|jpg|jpeg))/g;
+        const imgRegex = /(\/static\/images\/recortes\/.*?\.(?:png|jpg|jpeg))/g;
         textContent = textContent.replace(imgRegex, '<br><img src="$1" style="max-width: 100%; border-radius: 8px; margin-top: 1rem;"><br>');
         textContent = textContent.replace(/\n/g, '<br>');
         document.getElementById('question-text').innerHTML = textContent;
