@@ -470,7 +470,7 @@ async def get_practice_questions(area: str):
     if needed > 0 and api_key:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-2.5-flash')
+            model = genai.GenerativeModel('gemini-1.5-flash')
             cursor = conn.cursor()
             
             # Generate the needed questions in a single prompt to prevent timeout
@@ -619,7 +619,7 @@ async def generate_question_route(request: Request, body: QuestionGenerateReques
     
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         text_response = response.text.strip()
         text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
@@ -833,15 +833,15 @@ async def chat_api(request: Request, body: ChatRequest):
             # Smart fallback between Gemini models
             try:
                 model = genai.GenerativeModel(
-                    model_name='gemini-2.5-flash',
+                    model_name='gemini-1.5-flash',
                     system_instruction=system_instruction
                 )
                 chat = model.start_chat(history=gemini_history)
                 response = chat.send_message(user_content)
             except Exception as e_model:
-                print("Failed with gemini-2.5-flash, trying gemini-1.5-flash fallback:", e_model)
+                print("Failed with gemini-1.5-flash, trying gemini-2.0-flash fallback:", e_model)
                 model = genai.GenerativeModel(
-                    model_name='gemini-1.5-flash',
+                    model_name='gemini-2.0-flash',
                     system_instruction=system_instruction
                 )
                 chat = model.start_chat(history=gemini_history)
@@ -1117,7 +1117,7 @@ def simulate_tutor_response(post_id: int, content: str, area: str):
                 f"Responde de manera concisa, clara y didáctica (máximo 3-4 líneas). "
                 f"Explica el concepto o cómo resolver la duda, y motiva al estudiante. Usa un tono amigable, emojis y responde en español."
             )
-            model = genai.GenerativeModel(model_name='gemini-2.5-flash', system_instruction=system_instruction)
+            model = genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=system_instruction)
             response = model.generate_content(content)
             response_text = response.text.strip()
         except Exception:
@@ -1490,6 +1490,13 @@ async def duels_page(request: Request):
                 leaderboard[d["opponent_id"]]["wins"] += 1
                 
     leaderboard_sorted = sorted(leaderboard.values(), key=lambda x: (x["wins"], x["points"]), reverse=True)[:5]
+    
+    # Count of total challenges completed
+    total_completed = conn.execute(
+        "SELECT COUNT(*) FROM tutor_duels WHERE (challenger_id = %s OR opponent_id = %s) AND status = 'resolved'",
+        (user["id"], user["id"])
+    ).fetchone()[0]
+    
     conn.close()
     
     return templates.TemplateResponse(
@@ -1502,7 +1509,8 @@ async def duels_page(request: Request):
             "outgoing": outgoing_challenges,
             "completed": completed_duels,
             "leaderboard": leaderboard_sorted,
-            "notifications": notifications
+            "notifications": notifications,
+            "total_completed": total_completed
         }
     )
 
@@ -1546,7 +1554,7 @@ async def start_duel(request: Request, body: dict):
         if api_key:
             try:
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 prompt = f"""
                 Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
                 Genera 1 pregunta de selección múltiple original, inédita y de alta calidad para el área de {area}.
@@ -1682,6 +1690,9 @@ async def save_duel_result(request: Request, body: dict):
         VALUES (%s, %s, %s, %s, %s, NULL, 'pending') RETURNING id
     ''', (user["id"], opponent_id, area, question_id, score))
     duel_id = cursor.fetchone()[0]
+    
+    # 1 point incentive for sending the challenge
+    cursor.execute("UPDATE users SET duel_points = COALESCE(duel_points, 0) + 1 WHERE id = %s", (user["id"],))
     conn.commit()
     conn.close()
     
@@ -1690,6 +1701,30 @@ async def save_duel_result(request: Request, body: dict):
         "duel_id": duel_id,
         "message": "Desafío enviado correctamente"
     }
+
+@app.get("/api/notifications/count")
+async def get_notifications_count(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return {"count": 0}
+    conn = get_db()
+    try:
+        incoming = conn.execute(
+            "SELECT COUNT(*) FROM tutor_duels WHERE opponent_id = %s AND status = 'pending'",
+            (user["id"],)
+        ).fetchone()[0]
+        
+        completed = conn.execute(
+            "SELECT COUNT(*) FROM tutor_duels WHERE challenger_id = %s AND status = 'resolved' AND challenger_notified = FALSE",
+            (user["id"],)
+        ).fetchone()[0]
+        
+        return {"count": incoming + completed}
+    except Exception as e:
+        print("Error getting notifications count:", e)
+        return {"count": 0}
+    finally:
+        conn.close()
 
 @app.get("/api/duelos/load/{duel_id}")
 async def load_pending_duel(duel_id: int, request: Request):
@@ -1786,9 +1821,8 @@ async def respond_to_duel(request: Request, body: dict):
             badges.append("Duelo Ganado")
             cursor.execute("UPDATE users SET badges = %s WHERE id = %s", (json.dumps(badges), user["id"]))
     else:
-        # Tie
-        cursor.execute("UPDATE users SET duel_points = COALESCE(duel_points, 0) + 2 WHERE id = %s", (user["id"],))
-        cursor.execute("UPDATE users SET duel_points = COALESCE(duel_points, 0) + 2 WHERE id = %s", (duel["challenger_id"],))
+        # Tie: 0 points awarded to match losing/tie 0 points requirement
+        pass
         
     conn.commit()
 
@@ -1877,7 +1911,7 @@ async def learn_page(request: Request, area: str = "Todas"):
         if api_key:
             try:
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 target_area = area if area != "Todas" else random.choice(["Matemáticas", "Lectura Crítica", "Ciencias Naturales", "Sociales y Ciudadanas", "Inglés"])
                 
@@ -2050,7 +2084,7 @@ async def get_simulacro_questions():
             if api_key:
                 try:
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     cursor = conn.cursor()
                     
                     prompt = f"""

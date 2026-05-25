@@ -56,6 +56,26 @@
                     nav.classList.toggle('active');
                 });
             }
+            
+            {% if request.session.get('user_id') or user %}
+            // Fetch notifications count and update tab title
+            async function checkNotificationsCount() {
+                try {
+                    const res = await fetch('/api/notifications/count');
+                    const data = await res.json();
+                    const originalTitle = document.title.replace(/^(!|\(\d+\))\s*/, '');
+                    if (data.count > 0) {
+                        document.title = `(!) ${originalTitle}`;
+                    } else {
+                        document.title = originalTitle;
+                    }
+                } catch (e) {
+                    console.log("Error checking notifications:", e);
+                }
+            }
+            checkNotificationsCount();
+            setInterval(checkNotificationsCount, 60000);
+            {% endif %}
         });
 
         if ('serviceWorker' in navigator) {

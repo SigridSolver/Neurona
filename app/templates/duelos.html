@@ -201,6 +201,10 @@
                 <h2 class="text-center">⚔️ Desafíos 1v1</h2>
                 <p class="text-muted text-center mb-4">Elige un área de estudio. La aplicación buscará un oponente (priorizando estudiantes en línea) y generará una pregunta de estudio.</p>
                 
+                <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: var(--border-radius); padding: 0.75rem 1rem; margin-bottom: 1.5rem; text-align: center;">
+                    <span style="font-size: 0.9rem; color: #cbd5e1;">Tus Desafíos Completados: <strong style="color: var(--accent); font-size: 1.1rem;">{{ total_completed }}</strong></span>
+                </div>
+                
                 <div class="form-group">
                     <label class="form-label">Selecciona el Área del Desafío</label>
                     <select id="duelAreaSelect" class="form-control">
@@ -256,6 +260,13 @@
                 
                 <div class="matching-display" style="margin: 1.5rem 0;" id="resultMatchContainer">
                     <!-- Dynamic comparison shown here -->
+                </div>
+                
+                <div id="duelQuestionFeedback" style="display:none; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:var(--border-radius); padding:1.25rem; margin:1.5rem 0; text-align:left;">
+                    <h4 style="margin-bottom:0.75rem; color:#fff;" id="feedbackStatus">Tu Respuesta: Correcta</h4>
+                    <p style="margin-bottom:0.5rem;"><strong style="color:var(--text-muted);">Pregunta:</strong> <span id="feedbackQuestionText"></span></p>
+                    <p style="margin-bottom:0.5rem;"><strong style="color:var(--text-muted);">Respuesta Correcta:</strong> <span id="feedbackCorrectAnswer" style="color:#10b981; font-weight:700;"></span></p>
+                    <p style="margin-bottom:0;"><strong style="color:var(--text-muted);">Explicación:</strong> <span id="feedbackExplanation" class="text-muted" style="font-size:0.9rem;"></span></p>
                 </div>
                 
                 <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
@@ -506,6 +517,20 @@
         document.getElementById("matchingTitle").innerText = "Procesando...";
         document.getElementById("matchingSubtitle").innerText = "Guardando tu respuesta...";
         
+        // Populate question feedback details
+        const statusEl = document.getElementById("feedbackStatus");
+        if (isCorrect) {
+            statusEl.innerHTML = "🎯 ¡Tu respuesta fue Correcta! (+5 pts si ganas)";
+            statusEl.style.color = "#10b981";
+        } else {
+            statusEl.innerHTML = "❌ Tu respuesta fue Incorrecta (0 pts)";
+            statusEl.style.color = "#ef4444";
+        }
+        document.getElementById("feedbackQuestionText").innerText = activeQuestion.text;
+        document.getElementById("feedbackCorrectAnswer").innerText = activeQuestion.correct_answer;
+        document.getElementById("feedbackExplanation").innerText = activeQuestion.explanation;
+        document.getElementById("duelQuestionFeedback").style.display = "block";
+        
         if (!respondingMode) {
             // Challenger saves the duel in pending state
             try {
@@ -554,6 +579,7 @@
                         statusTitle.innerText = "🎉 ¡Ganaste el Duelo! 🎉";
                         statusTitle.style.color = "#10b981";
                         descText.innerText = `¡Felicitaciones! Respondiste correctamente y derrotaste a ${selectedOpponentName}.`;
+                        statusEl.innerHTML = "🎯 ¡Tu respuesta fue Correcta! (+5 pts ganados)";
                     } else if (data.winner === "challenger") {
                         statusTitle.innerText = "😢 Perdiste el Duelo 😢";
                         statusTitle.style.color = "#ef4444";
@@ -562,6 +588,9 @@
                         statusTitle.innerText = "🤝 ¡Empate cerrado! 🤝";
                         statusTitle.style.color = "#fbbf24";
                         descText.innerText = `Ambos acertaron (o ambos fallaron) la pregunta de estudio.`;
+                        if (isCorrect) {
+                            statusEl.innerHTML = "🎯 ¡Tu respuesta fue Correcta! (0 pts por empate)";
+                        }
                     }
                     
                     document.getElementById("resultMatchContainer").innerHTML = `
