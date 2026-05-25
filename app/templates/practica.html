@@ -258,6 +258,7 @@
         let textContent = q.text;
         const imgRegex = /(\/static\/images\/recortes\/.*?\.(?:png|jpg|jpeg))/g;
         textContent = textContent.replace(imgRegex, '<br><img src="$1" style="max-width: 100%; border-radius: 8px; margin-top: 1rem;"><br>');
+        textContent = textContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         textContent = textContent.replace(/\n/g, '<br>');
         document.getElementById('question-text').innerHTML = textContent;
         
