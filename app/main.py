@@ -473,6 +473,304 @@ def process_parametric_question(q, seed=None):
             "graphic": graphic
         }
         
+    elif "{sector_1}" in text or "gráfica circular" in text.lower() or "gráfica de torta" in text.lower():
+        # PIE CHART / CIRCULAR GRAPH QUESTION
+        sector_1 = local_random.randint(15, 35)
+        sector_2 = local_random.randint(15, 30)
+        sector_3 = local_random.randint(10, 25)
+        sector_4 = 100 - sector_1 - sector_2 - sector_3
+        if sector_4 < 5:
+            sector_4 = 10
+            sector_3 = 100 - sector_1 - sector_2 - sector_4
+
+        labels = ["Matemáticas", "Español", "Ciencias", "Sociales"]
+        values = [sector_1, sector_2, sector_3, sector_4]
+        total_students = local_random.choice([80, 100, 120, 150, 200])
+        
+        ask_idx = local_random.randint(0, 3)
+        correct_val = round(values[ask_idx] * total_students / 100)
+        correct_str = str(correct_val)
+        
+        d1 = str(round(values[(ask_idx + 1) % 4] * total_students / 100))
+        d2 = str(values[ask_idx])
+        d3 = str(correct_val + local_random.choice([5, -3, 8, -7]))
+        
+        opts = list(set([correct_str, d1, d2, d3]))
+        while len(opts) < 4:
+            opts.append(str(local_random.randint(10, total_students)))
+        local_random.shuffle(opts)
+        
+        import math
+        angles = []
+        cumulative = 0
+        colors_pie = ["#38bdf8", "#f43f5e", "#10b981", "#fbbf24"]
+        svg_paths = ""
+        legend_items = ""
+        for i, v in enumerate(values):
+            start_angle = cumulative * 3.6
+            sweep = v * 3.6
+            cumulative += v
+            
+            start_rad = math.radians(start_angle - 90)
+            end_rad = math.radians(start_angle + sweep - 90)
+            
+            cx, cy, r = 120, 120, 95
+            x1 = cx + r * math.cos(start_rad)
+            y1 = cy + r * math.sin(start_rad)
+            x2 = cx + r * math.cos(end_rad)
+            y2 = cy + r * math.sin(end_rad)
+            
+            large_arc = 1 if sweep > 180 else 0
+            
+            svg_paths += f'<path d="M{cx},{cy} L{x1:.1f},{y1:.1f} A{r},{r} 0 {large_arc},1 {x2:.1f},{y2:.1f} Z" fill="{colors_pie[i]}" stroke="#0f172a" stroke-width="2"/>\n'
+            
+            mid_rad = math.radians(start_angle + sweep / 2 - 90)
+            tx = cx + (r * 0.6) * math.cos(mid_rad)
+            ty = cy + (r * 0.6) * math.sin(mid_rad)
+            svg_paths += f'<text x="{tx:.1f}" y="{ty:.1f}" fill="white" font-size="12" font-weight="bold" text-anchor="middle" dominant-baseline="middle">{v}%</text>\n'
+            
+            ly = 15 + i * 22
+            legend_items += f'<rect x="260" y="{ly}" width="14" height="14" rx="3" fill="{colors_pie[i]}"/>\n'
+            legend_items += f'<text x="280" y="{ly + 12}" fill="#cbd5e1" font-size="11" font-family="Inter, sans-serif">{labels[i]} ({v}%)</text>\n'
+        
+        pie_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260">
+  <rect width="100%" height="100%" rx="12" fill="#0f172a"/>
+  <text x="200" y="252" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter, sans-serif">Asignaturas preferidas por los estudiantes</text>
+  {svg_paths}
+  {legend_items}
+</svg>'''
+        
+        import base64 as b64mod
+        graphic = "data:image/svg+xml;base64," + b64mod.b64encode(pie_svg.encode("utf-8")).decode("utf-8")
+        
+        new_text = f"La siguiente gráfica circular muestra la distribución porcentual de las asignaturas preferidas por un grupo de {total_students} estudiantes.\n\n¿Cuántos estudiantes prefieren {labels[ask_idx]}?"
+        
+        new_explanation = (
+            f"La gráfica circular muestra que **{labels[ask_idx]}** representa el **{values[ask_idx]}%** del total de estudiantes.\n\n"
+            f"Para calcular el número de estudiantes que prefieren esta asignatura, aplicamos la regla de tres:\n\n"
+            f"$$\\text{{Estudiantes}} = \\frac{{\\text{{Porcentaje}} \\times \\text{{Total}}}}{{100}} = \\frac{{{values[ask_idx]} \\times {total_students}}}{{100}} = {correct_val}$$\n\n"
+            f"Por lo tanto, **{correct_val}** estudiantes prefieren {labels[ask_idx]}."
+        )
+        
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_str,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": graphic
+        }
+    
+    elif "{a_cuad}" in text or "ecuación cuadrática" in text.lower() or "ecuación de segundo grado" in text.lower():
+        # QUADRATIC EQUATION QUESTION
+        a_c = local_random.choice([1, 2, 3])
+        r1 = local_random.choice([-4, -3, -2, -1, 1, 2, 3, 4, 5])
+        r2 = local_random.choice([-3, -2, -1, 1, 2, 3, 4])
+        while r2 == r1:
+            r2 = local_random.choice([-3, -2, -1, 1, 2, 3, 4])
+        
+        b_c = -a_c * (r1 + r2)
+        c_c = a_c * r1 * r2
+        discriminant = b_c**2 - 4*a_c*c_c
+        
+        sum_roots = r1 + r2
+        correct_str = str(sum_roots)
+        
+        d1 = str(r1 * r2)
+        d2 = str(sum_roots + local_random.choice([1, -1, 2]))
+        d3 = str(-sum_roots)
+        
+        opts = list(set([correct_str, d1, d2, d3]))
+        while len(opts) < 4:
+            opts.append(str(local_random.randint(-10, 10)))
+        local_random.shuffle(opts)
+        
+        b_sign = "+" if b_c >= 0 else "-"
+        c_sign = "+" if c_c >= 0 else "-"
+        a_str = "" if a_c == 1 else str(a_c)
+        
+        new_text = f"Dada la ecuación cuadrática:\n\n$${a_str}x^2 {b_sign} {abs(b_c)}x {c_sign} {abs(c_c)} = 0$$\n\n¿Cuál es la suma de las raíces de esta ecuación?"
+        
+        new_explanation = (
+            f"Para una ecuación cuadrática de la forma $ax^2 + bx + c = 0$, la suma de las raíces está dada por la relación de Vieta:\n\n"
+            f"$$x_1 + x_2 = -\\frac{{b}}{{a}}$$\n\n"
+            f"En nuestra ecuación, $a = {a_c}$ y $b = {b_c}$. Sustituyendo:\n\n"
+            f"$$x_1 + x_2 = -\\frac{{{b_c}}}{{{a_c}}} = {sum_roots}$$\n\n"
+            f"Verificación: Las raíces son $x_1 = {r1}$ y $x_2 = {r2}$.\n\n"
+            f"$$x_1 + x_2 = {r1} + {'' if r2 < 0 else ''}{r2} = {sum_roots}$$\n\n"
+            f"Por lo tanto, la suma de las raíces es **{sum_roots}**."
+        )
+        
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_str,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": q.get("graphic")
+        }
+    
+    elif "{num_1}" in text or "fracción" in text.lower() or "fracciones" in text.lower():
+        # FRACTIONS QUESTION
+        num_1 = local_random.randint(1, 7)
+        den_1 = local_random.choice([2, 3, 4, 5, 6, 8])
+        num_2 = local_random.randint(1, 7)
+        den_2 = local_random.choice([2, 3, 4, 5, 6, 8])
+        while den_2 == den_1:
+            den_2 = local_random.choice([2, 3, 4, 5, 6, 8])
+        
+        op = local_random.choice(["suma", "resta"])
+        
+        result_num = num_1 * den_2 + num_2 * den_1 if op == "suma" else num_1 * den_2 - num_2 * den_1
+        result_den = den_1 * den_2
+        
+        g = gcd(abs(result_num), result_den)
+        simp_num = result_num // g
+        simp_den = result_den // g
+        
+        if simp_den < 0:
+            simp_num = -simp_num
+            simp_den = -simp_den
+        
+        correct_str = f"{simp_num}/{simp_den}"
+        
+        d1_n = simp_num + local_random.choice([1, -1, 2])
+        d1 = f"{d1_n}/{simp_den}"
+        d2 = f"{num_1 + num_2}/{den_1 + den_2}"
+        d3_n = simp_num * 2
+        d3_d = simp_den
+        d3_g = gcd(abs(d3_n), abs(d3_d))
+        d3 = f"{d3_n // d3_g}/{d3_d // d3_g}"
+        
+        opts = list(set([correct_str, d1, d2, d3]))
+        while len(opts) < 4:
+            rn = local_random.randint(1, 15)
+            rd = local_random.randint(2, 12)
+            rg = gcd(rn, rd)
+            opts.append(f"{rn // rg}/{rd // rg}")
+            opts = list(set(opts))
+        local_random.shuffle(opts)
+        
+        op_symbol = "+" if op == "suma" else "-"
+        op_word = "la suma" if op == "suma" else "la resta"
+        
+        new_text = f"Calcule {op_word} de las siguientes fracciones:\n\n$$\\frac{{{num_1}}}{{{den_1}}} {op_symbol} \\frac{{{num_2}}}{{{den_2}}}$$"
+        
+        cross_1 = num_1 * den_2
+        cross_2 = num_2 * den_1
+        
+        new_explanation = (
+            f"Para {op_word} de fracciones con diferente denominador, primero hallamos el denominador común:\n\n"
+            f"$$\\frac{{{num_1}}}{{{den_1}}} {op_symbol} \\frac{{{num_2}}}{{{den_2}}} = \\frac{{{num_1} \\times {den_2}}}{{{den_1} \\times {den_2}}} {op_symbol} \\frac{{{num_2} \\times {den_1}}}{{{den_2} \\times {den_1}}}$$\n\n"
+            f"$$= \\frac{{{cross_1}}}{{{result_den}}} {op_symbol} \\frac{{{cross_2}}}{{{result_den}}} = \\frac{{{cross_1} {op_symbol} {cross_2}}}{{{result_den}}} = \\frac{{{result_num}}}{{{result_den}}}$$\n\n"
+            f"Simplificando por el MCD ({g}):\n\n"
+            f"$$= \\frac{{{simp_num}}}{{{simp_den}}}$$\n\n"
+            f"La respuesta correcta es **{correct_str}**."
+        )
+        
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_str,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": q.get("graphic")
+        }
+    
+    elif "{dato_1}" in text or "mediana" in text.lower() or "moda de" in text.lower():
+        # STATISTICAL DATA TABLE - MEDIAN/MODE QUESTION
+        n_data = local_random.choice([7, 9, 11])
+        data_set = sorted([local_random.randint(2, 30) for _ in range(n_data)])
+        
+        ask_type = local_random.choice(["mediana", "moda"])
+        
+        if ask_type == "moda":
+            mode_val = local_random.choice(data_set)
+            extra_copies = local_random.randint(1, 2)
+            for _ in range(extra_copies):
+                data_set.append(mode_val)
+            data_set.sort()
+            
+            from collections import Counter
+            freq = Counter(data_set)
+            mode_val = freq.most_common(1)[0][0]
+            correct_str = str(mode_val)
+        else:
+            mid = len(data_set) // 2
+            median_val = data_set[mid]
+            correct_str = str(median_val)
+        
+        d1 = str(data_set[0])
+        d2 = str(data_set[-1])
+        d3 = str(round(sum(data_set) / len(data_set), 1))
+        
+        opts = list(set([correct_str, d1, d2, d3]))
+        while len(opts) < 4:
+            opts.append(str(local_random.choice(data_set) + local_random.choice([1, -1, 2])))
+            opts = list(set(opts))
+        local_random.shuffle(opts)
+        
+        data_str = ", ".join(str(d) for d in data_set)
+        
+        # Build an SVG table for the data
+        cols = len(data_set)
+        cell_w = max(35, 320 // cols)
+        table_w = cell_w * cols + 20
+        svg_table = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {table_w} 90" width="{table_w}" height="90">
+  <rect width="100%" height="100%" rx="10" fill="#0f172a"/>
+  <text x="{table_w // 2}" y="18" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="Inter, sans-serif">Conjunto de datos ordenados</text>'''
+        
+        for i, d in enumerate(data_set):
+            x = 10 + i * cell_w
+            svg_table += f'\n  <rect x="{x}" y="28" width="{cell_w - 2}" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>'
+            svg_table += f'\n  <text x="{x + cell_w // 2}" y="45" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">{d}</text>'
+            svg_table += f'\n  <text x="{x + cell_w // 2}" y="74" fill="#64748b" font-size="9" text-anchor="middle" font-family="Inter, sans-serif">x{chr(8321 + i) if i < 9 else "₊"}</text>'
+        
+        svg_table += '\n</svg>'
+        
+        import base64 as b64mod
+        graphic = "data:image/svg+xml;base64," + b64mod.b64encode(svg_table.encode("utf-8")).decode("utf-8")
+        
+        if ask_type == "mediana":
+            new_text = f"El siguiente conjunto de datos ordenados representa las calificaciones obtenidas por un grupo de {len(data_set)} estudiantes en un examen.\n\n¿Cuál es la **mediana** de este conjunto de datos?"
+            mid = len(data_set) // 2
+            new_explanation = (
+                f"La **mediana** es el valor central de un conjunto de datos ordenados.\n\n"
+                f"El conjunto tiene **{len(data_set)}** datos (impar), por lo tanto la mediana es el dato en la posición:\n\n"
+                f"$$\\text{{Posición}} = \\frac{{n+1}}{{2}} = \\frac{{{len(data_set)}+1}}{{2}} = {(len(data_set) + 1) // 2}$$\n\n"
+                f"Los datos ordenados son: ${data_str}$\n\n"
+                f"El valor en la posición {(len(data_set) + 1) // 2} es **{data_set[mid]}**.\n\n"
+                f"Por lo tanto, la mediana es **{correct_str}**."
+            )
+        else:
+            from collections import Counter
+            freq = Counter(data_set)
+            mode_count = freq[mode_val]
+            new_text = f"El siguiente conjunto de datos representa las calificaciones obtenidas por un grupo de {len(data_set)} estudiantes.\n\n¿Cuál es la **moda** de este conjunto de datos?"
+            new_explanation = (
+                f"La **moda** es el dato que más se repite en un conjunto de datos.\n\n"
+                f"Los datos son: ${data_str}$\n\n"
+                f"Analizando las frecuencias, el valor **{mode_val}** aparece **{mode_count} veces**, siendo el dato con mayor frecuencia.\n\n"
+                f"Por lo tanto, la moda es **{correct_str}**."
+            )
+        
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_str,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": graphic
+        }
+        
     return q
 
 load_dotenv()
@@ -1002,24 +1300,73 @@ async def get_practice_questions(area: str):
             if area == "Matemáticas":
                 prompt = f"""
                 Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia para el área de Matemáticas.
-                Genera una lista de {needed} preguntas de selección múltiple originales, inéditas, altamente didácticas y visuales (con gráficos vectoriales SVG y fórmulas matemáticas en LaTeX).
+                Genera una lista de {needed} preguntas de selección múltiple originales, inéditas, altamente didácticas y visuales.
                 
-                REGLAS DE DISEÑO:
-                1. Cada pregunta DEBE incluir un gráfico vectorial SVG (código XML autocontenido) en el campo "graphic".
-                2. Los gráficos SVG deben representar de manera premium conceptos matemáticos: figuras geométricas (triángulos, rectángulos, círculos), diagramas de Venn, tablas estadísticas, gráficas de barras, planos cartesianos o relaciones de funciones.
-                3. Usa un fondo oscuro estético para el SVG (por ejemplo, rect con fill="#0f172a") y líneas brillantes de alto contraste (celeste "#38bdf8", rosa "#f43f5e", verde "#10b981").
-                4. Haz que las preguntas sean PARAMÉTRICAS: usa marcadores de posición como {{base}}, {{altura}}, {{radio}}, {{x_eval}}, {{frec_1}}, {{frec_2}}, etc., tanto en el enunciado, la explicación, las opciones de respuesta como DENTRO del propio código SVG (por ejemplo, <text>base = {{base}} cm</text>).
-                5. Utiliza expresiones en LaTeX para las fórmulas matemáticas, ecuaciones y fracciones (delimitadas por $$ para bloques y $ para fórmulas en línea). Por ejemplo: $$A = \\frac{{b \\times h}}{{2}}$$.
-                6. Toda la explicación debe ser detallada y paso a paso, explicando detalladamente la justificación de la clave correcta y por qué los demás son distractores usando LaTeX.
+                IMPORTANTE: Cada pregunta DEBE ser de una CATEGORÍA DIFERENTE. Selecciona aleatoriamente entre estas categorías:
+                
+                CATEGORÍA 1 - GRÁFICA CIRCULAR (TORTA):
+                - Palabra clave en el enunciado: "gráfica circular" o "gráfica de torta"
+                - Contexto: distribución porcentual de datos (asignaturas, deportes, preferencias)
+                - SVG: Gráfico de pastel con sectores de colores (#38bdf8, #f43f5e, #10b981, #fbbf24), fondo oscuro (#0f172a), porcentajes dentro de cada sector, y leyenda lateral
+                - Pregunta: calcular la cantidad real a partir de un porcentaje dado
+                
+                CATEGORÍA 2 - GRÁFICA DE BARRAS / HISTOGRAMA:
+                - Palabra clave: "frecuencias" o incluir placeholders {{{{frec_1}}}}, {{{{frec_2}}}}, {{{{frec_3}}}}, {{{{frec_4}}}}
+                - SVG: Barras verticales con etiquetas de valor, ejes X/Y, colores vibrantes
+                - Pregunta: calcular media aritmética, rango o total
+                
+                CATEGORÍA 3 - DIAGRAMA DE VENN:
+                - Palabra clave: "diagrama de Venn" e incluir placeholders {{{{futbol_solo}}}}, {{{{baloncesto_solo}}}}, {{{{ambos}}}}, {{{{ninguno}}}}
+                - SVG: Dos círculos superpuestos con valores en cada región, fondo oscuro
+                - Pregunta: probabilidad de un evento específico
+                
+                CATEGORÍA 4 - PLANO CARTESIANO:
+                - Palabra clave: "plano cartesiano" e incluir placeholders {{{{a}}}}, {{{{b}}}}, {{{{x2_svg}}}}, {{{{y2_svg}}}}
+                - SVG: Ejes coordenados con una recta trazada, puntos marcados
+                - Pregunta: calcular pendiente, intercepto o distancia
+                
+                CATEGORÍA 5 - GEOMETRÍA (Triángulos, Rectángulos):
+                - Incluir placeholders {{{{base}}}}, {{{{altura}}}} en el enunciado
+                - SVG: Figura geométrica con cotas/medidas, fondo oscuro
+                - Pregunta: calcular área o perímetro
+                
+                CATEGORÍA 6 - ECUACIÓN CUADRÁTICA:
+                - Palabra clave: "ecuación cuadrática" o "ecuación de segundo grado"
+                - Enunciado con fórmula LaTeX: $$ax^2 + bx + c = 0$$
+                - Pregunta: suma de raíces, discriminante o soluciones
+                
+                CATEGORÍA 7 - FRACCIONES:
+                - Palabra clave: "fracciones" en el enunciado
+                - Enunciado con fórmula LaTeX: $$\\\\frac{{a}}{{b}} + \\\\frac{{c}}{{d}}$$
+                - Pregunta: resultado de la operación simplificado
+                
+                CATEGORÍA 8 - TABLA DE DATOS (Mediana/Moda):
+                - Palabra clave: "mediana" o "moda de" en el enunciado
+                - Incluir placeholder {{{{dato_1}}}} en texto
+                - SVG: Tabla con celdas estilizadas mostrando datos ordenados
+                - Pregunta: calcular mediana o moda
+                
+                CATEGORÍA 9 - FUNCIONES EXPONENCIALES:
+                - Incluir placeholder {{{{x_eval}}}} en el enunciado
+                - Enunciado: evaluar función $f(x) = a \\\\cdot 2^{{x+c}} + d$
+                - Pregunta: calcular $f(x)$ para un valor dado
+                
+                REGLAS GENERALES:
+                1. Si la categoría requiere SVG, INCLUYE el código SVG completo en "graphic". Usa fondo oscuro (fill="#0f172a"), bordes redondeados, colores brillantes (#38bdf8, #f43f5e, #10b981).
+                2. Si la categoría es algebraica (ecuaciones, fracciones, exponenciales), el campo "graphic" puede ser null pero la explicación DEBE usar LaTeX extenso.
+                3. Las explicaciones deben ser paso a paso, detalladas, usando $$fórmulas$$ en LaTeX.
+                4. Usa **negritas** (markdown) para resaltar conceptos clave.
+                5. CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
+                6. VARÍA las categorías: no repitas la misma categoría en múltiples preguntas.
                 
                 El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
                    - "area": "Matemáticas"
-                   - "text": "[El enunciado de la pregunta con placeholders, ej: 'Halla el área del rectángulo de base {{base}} cm y altura {{altura}} cm.']"
-                   - "options": ["{{correct}}", "d1", "d2", "d3"]
-                   - "correct_answer": "{{correct}}"
-                   - "explanation": "[La justificación con LaTeX y placeholders]"
+                   - "text": "[El enunciado con las palabras clave de la categoría]"
+                   - "options": ["Opción A", "Opción B", "Opción C", "Opción D"]
+                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+                   - "explanation": "[Justificación detallada paso a paso con LaTeX]"
                    - "difficulty": "Intermedio"
-                   - "graphic": "[El código SVG con placeholders, ej: '<svg>...{{base}}...{{altura}}...</svg>']"
+                   - "graphic": "[Código SVG completo o null si es algebraica]"
                 """
             else:
                 prompt = f"""

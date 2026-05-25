@@ -594,9 +594,15 @@
             statusEl.innerHTML = "❌ Tu respuesta fue Incorrecta (0 pts)";
             statusEl.style.color = "#ef4444";
         }
-        document.getElementById("feedbackQuestionText").innerText = activeQuestion.text;
+        function formatExplanation(text) {
+            if (!text) return '';
+            let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\n/g, '<br>');
+            return html;
+        }
+        document.getElementById("feedbackQuestionText").innerHTML = formatExplanation(activeQuestion.text);
         document.getElementById("feedbackCorrectAnswer").innerText = activeQuestion.correct_answer;
-        document.getElementById("feedbackExplanation").innerText = activeQuestion.explanation;
+        document.getElementById("feedbackExplanation").innerHTML = formatExplanation(activeQuestion.explanation);
         document.getElementById("duelQuestionFeedback").style.display = "block";
         if (window.renderMathInElement) {
             renderMathInElement(document.getElementById("duelQuestionFeedback"), {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});

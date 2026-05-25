@@ -1,9 +1,22 @@
-import sqlite3
 import json
 import base64
+import os
+import psycopg2
+import psycopg2.extras
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def get_db():
+    url = os.getenv("DATABASE_URL")
+    if url:
+        conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+        return conn
+    else:
+        raise Exception("DATABASE_URL not found in .env")
 
 def insert_questions():
-    conn = sqlite3.connect('saber11.db')
+    conn = get_db()
     cursor = conn.cursor()
 
     # 1. Pisa Tower Question Template
@@ -18,31 +31,28 @@ def insert_questions():
   <line x1="126" y1="110" x2="161" y2="110" stroke="#475569" stroke-width="1.5" />
   <line x1="128" y1="80" x2="163" y2="80" stroke="#475569" stroke-width="1.5" />
   <path d="M 120 130 A 70 70 0 0 1 125 130" fill="none" stroke="#3b82f6" stroke-width="2" />
-  <text x="110" y="125" fill="#3b82f6" font-family="sans-serif" font-size="12" font-weight="bold">{inclinacion}°</text>
+  <text x="110" y="125" fill="#3b82f6" font-family="sans-serif" font-size="12" font-weight="bold">{inclinacion}deg</text>
   <path d="M 175 200 A 20 20 0 0 0 153 182" fill="none" stroke="#f43f5e" stroke-width="2.5" />
   <text x="135" y="185" fill="#f43f5e" font-family="sans-serif" font-size="16" font-weight="bold">?</text>
 </svg>"""
-
     pisa_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(pisa_svg.encode('utf-8')).decode('utf-8')
-    pisa_text = "Con respecto a la vertical, la torre se ha inclinado {inclinacion}° como se muestra en la gráfica. ¿Cuánto mide el otro ángulo (indicado con el signo de interrogación)?"
-    pisa_explanation = "La línea vertical de referencia es perpendicular al suelo, por lo que forma un ángulo recto de 90°. Como la inclinación de la torre es de {inclinacion}° respecto a la vertical, el ángulo interno correspondiente entre la torre y la superficie disminuye en la misma cantidad: 90° - {inclinacion}° = {correct}°."
-
     cursor.execute('''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     ''', (
         "Matemáticas",
-        pisa_text,
-        json.dumps(["{inclinacion}°", "{correct}°", "90°", "180°"]), # Placeholders
+        "Con respecto a la vertical, la torre se ha inclinado {inclinacion}° como se muestra en la gráfica. ¿Cuánto mide el otro ángulo (indicado con el signo de interrogación)?",
+        json.dumps(["{inclinacion}°", "{correct}°", "90°", "180°"]),
         "{correct}°",
-        pisa_explanation,
+        "Procesado dinámicamente.",
         "Fácil",
         pisa_graphic_uri
     ))
+    print("  ✓ Torre de Pisa")
 
     # 2. Venn Diagram Question Template
-    venn_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="400" height="220" style="background:#0f172a; border-radius:12px; padding:10px; max-width: 450px; border: 1px solid rgba(255, 255, 255, 0.1);">
-  <rect width="100%" height="100%" fill="#0f172a"/>
+    venn_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="400" height="220">
+  <rect width="100%" height="100%" fill="#0f172a" rx="12"/>
   <rect x="10" y="10" width="380" height="200" fill="none" stroke="#475569" stroke-width="2" rx="8"/>
   <text x="360" y="35" fill="#94a3b8" font-family="sans-serif" font-size="14" font-weight="bold">U</text>
   <circle cx="160" cy="110" r="70" fill="rgba(59, 130, 246, 0.15)" stroke="#3b82f6" stroke-width="2.5"/>
@@ -54,44 +64,215 @@ def insert_questions():
   <text x="270" y="115" fill="#f8fafc" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">{baloncesto_solo}</text>
   <text x="340" y="180" fill="#f8fafc" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">{ninguno}</text>
 </svg>"""
-
     venn_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(venn_svg.encode('utf-8')).decode('utf-8')
-    venn_text = "El siguiente diagrama de Venn representa la distribución de un grupo de estudiantes según sus preferencias deportivas entre Fútbol (F) y Baloncesto (B). Si se selecciona un estudiante al azar dentro del grupo, ¿cuál es la probabilidad de que prefiera únicamente Baloncesto?"
-    venn_explanation = "Para hallar la probabilidad, sumamos los estudiantes del diagrama: {futbol_solo} (F) + {ambos} (F y B) + {baloncesto_solo} (B) + {ninguno} = {total} en total. Los que prefieren únicamente Baloncesto son {baloncesto_solo}, por lo que la probabilidad es {baloncesto_solo}/{total}, que simplificada equivale a {correct_frac}."
-
     cursor.execute('''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     ''', (
         "Matemáticas",
-        venn_text,
-        json.dumps(["{correct_frac}", "d1", "d2", "d3"]), # Placeholders
+        "El siguiente diagrama de Venn representa la distribución de un grupo de estudiantes según sus preferencias deportivas entre Fútbol (F) y Baloncesto (B). Si se selecciona un estudiante al azar dentro del grupo, ¿cuál es la probabilidad de que prefiera únicamente Baloncesto?",
+        json.dumps(["{correct_frac}", "d1", "d2", "d3"]),
         "{correct_frac}",
-        venn_explanation,
+        "Procesado dinámicamente.",
         "Intermedio",
         venn_graphic_uri
     ))
+    print("  ✓ Diagrama de Venn")
 
     # 3. Combinations Question Template
-    comb_text = "En un colegio se realiza una preselección de estudiantes para participar en las olimpiadas de matemáticas. De un grupo de {n_estudiantes} estudiantes destacados, el entrenador debe elegir a {k_seleccionados} de ellos para conformar el equipo oficial. ¿De cuántas formas diferentes se puede conformar el equipo?"
-    comb_explanation = "Para determinar de cuántas formas se puede conformar el equipo, debemos calcular el número de combinaciones de {n_estudiantes} estudiantes tomados de {k_seleccionados} en {k_seleccionados}, ya que el orden en que se seleccionan los miembros del equipo no importa."
-    
     cursor.execute('''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     ''', (
         "Matemáticas",
-        comb_text,
+        "En un colegio se realiza una preselección de estudiantes para participar en las olimpiadas de matemáticas. De un grupo de {n_estudiantes} estudiantes destacados, el entrenador debe elegir a {k_seleccionados} de ellos para conformar el equipo oficial. ¿De cuántas formas diferentes se puede conformar el equipo?",
         json.dumps(["{correct_val}", "d1", "d2", "d3"]),
         "{correct_val}",
-        comb_explanation,
+        "Procesado dinámicamente.",
         "Intermedio",
         None
     ))
+    print("  ✓ Combinaciones")
+
+    # 4. Pie Chart Question Template
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        "Matemáticas",
+        "La siguiente gráfica circular muestra la distribución porcentual de las asignaturas preferidas por un grupo de estudiantes. ¿Cuántos estudiantes prefieren la asignatura indicada?",
+        json.dumps(["d1", "d2", "d3", "d4"]),
+        "d1",
+        "Procesado dinámicamente.",
+        "Intermedio",
+        None
+    ))
+    print("  ✓ Gráfica Circular")
+
+    # 5. Quadratic Equation Question Template
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        "Matemáticas",
+        "Dada la ecuación cuadrática que se muestra a continuación, ¿cuál es la suma de las raíces de esta ecuación?",
+        json.dumps(["d1", "d2", "d3", "d4"]),
+        "d1",
+        "Procesado dinámicamente.",
+        "Intermedio",
+        None
+    ))
+    print("  ✓ Ecuación Cuadrática")
+
+    # 6. Fractions Question Template
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        "Matemáticas",
+        "Calcule la suma de las siguientes fracciones y simplifique el resultado.",
+        json.dumps(["d1", "d2", "d3", "d4"]),
+        "d1",
+        "Procesado dinámicamente.",
+        "Básico",
+        None
+    ))
+    print("  ✓ Fracciones")
+
+    # 7. Median Question Template
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        "Matemáticas",
+        "El siguiente conjunto de datos ordenados representa las calificaciones obtenidas por un grupo de estudiantes en un examen. ¿Cuál es la mediana de este conjunto de datos?",
+        json.dumps(["d1", "d2", "d3", "d4"]),
+        "d1",
+        "Procesado dinámicamente.",
+        "Intermedio",
+        None
+    ))
+    print("  ✓ Mediana")
+
+    # 8. Mode Question Template
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        "Matemáticas",
+        "El siguiente conjunto de datos representa los puntajes de un grupo de estudiantes. ¿Cuál es la moda de este conjunto de datos?",
+        json.dumps(["d1", "d2", "d3", "d4"]),
+        "d1",
+        "Procesado dinámicamente.",
+        "Básico",
+        None
+    ))
+    print("  ✓ Moda")
+
+    # 9. Exponential Function Question Template
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        "Matemáticas",
+        "Dada la función exponencial $f(x) = {a} \\cdot 2^{x {c_sign} {c_abs}} + {d}$, evalúe $f({x_eval})$.",
+        json.dumps(["d1", "d2", "d3", "d4"]),
+        "d1",
+        "Procesado dinámicamente.",
+        "Avanzado",
+        None
+    ))
+    print("  ✓ Función Exponencial")
+
+    # 10. Triangle Area Question Template
+    tri_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <rect width="100%" height="100%" rx="12" fill="#0f172a"/>
+  <polygon points="50,200 270,200 270,60" fill="rgba(56, 189, 248, 0.1)" stroke="#38bdf8" stroke-width="2.5"/>
+  <line x1="270" y1="200" x2="270" y2="60" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <text x="160" y="220" fill="#38bdf8" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="middle">{base} cm</text>
+  <text x="285" y="135" fill="#f43f5e" font-family="Inter, sans-serif" font-size="14" font-weight="bold" text-anchor="start">{altura} cm</text>
+  <rect x="258" y="188" width="12" height="12" fill="none" stroke="#64748b" stroke-width="1.5"/>
+</svg>"""
+    tri_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(tri_svg.encode('utf-8')).decode('utf-8')
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        "Matemáticas",
+        "Halla el área del triángulo rectángulo que tiene una base de {base} cm y una altura de {altura} cm.",
+        json.dumps(["d1", "d2", "d3", "d4"]),
+        "d1",
+        "Procesado dinámicamente.",
+        "Básico",
+        tri_graphic_uri
+    ))
+    print("  ✓ Triángulo (Geometría)")
+
+    # 11. Bar Chart Question Template
+    bar_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220">
+  <rect width="100%" height="100%" rx="12" fill="#0f172a"/>
+  <text x="160" y="20" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="Inter, sans-serif">Distribución de puntajes</text>
+  <line x1="40" y1="30" x2="40" y2="190" stroke="#475569" stroke-width="1.5"/>
+  <line x1="40" y1="190" x2="300" y2="190" stroke="#475569" stroke-width="1.5"/>
+  <rect x="55" y="{y_bar_1}" width="50" height="{h_bar_1}" rx="4" fill="#38bdf8"/>
+  <text x="80" y="{y_txt_1}" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">{frec_1}</text>
+  <text x="80" y="205" fill="#94a3b8" font-size="10" text-anchor="middle">10</text>
+  <rect x="120" y="{y_bar_2}" width="50" height="{h_bar_2}" rx="4" fill="#f43f5e"/>
+  <text x="145" y="{y_txt_2}" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">{frec_2}</text>
+  <text x="145" y="205" fill="#94a3b8" font-size="10" text-anchor="middle">20</text>
+  <rect x="185" y="{y_bar_3}" width="50" height="{h_bar_3}" rx="4" fill="#10b981"/>
+  <text x="210" y="{y_txt_3}" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">{frec_3}</text>
+  <text x="210" y="205" fill="#94a3b8" font-size="10" text-anchor="middle">30</text>
+  <rect x="250" y="{y_bar_4}" width="50" height="{h_bar_4}" rx="4" fill="#fbbf24"/>
+  <text x="275" y="{y_txt_4}" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">{frec_4}</text>
+  <text x="275" y="205" fill="#94a3b8" font-size="10" text-anchor="middle">40</text>
+</svg>"""
+    bar_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(bar_svg.encode('utf-8')).decode('utf-8')
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        "Matemáticas",
+        "La gráfica de barras representa la distribución de puntajes obtenidos por un grupo de estudiantes en un examen de matemáticas. Con base en las frecuencias suministradas, ¿cuál es el promedio (media aritmética) de los puntajes?",
+        json.dumps(["d1", "d2", "d3", "d4"]),
+        "d1",
+        "Procesado dinámicamente.",
+        "Intermedio",
+        bar_graphic_uri
+    ))
+    print("  ✓ Gráfica de Barras")
+
+    # 12. Cartesian Plane / Slope Question Template
+    slope_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <rect width="100%" height="100%" rx="12" fill="#0f172a"/>
+  <line x1="50" y1="30" x2="50" y2="210" stroke="#475569" stroke-width="1.5"/>
+  <line x1="30" y1="150" x2="290" y2="150" stroke="#475569" stroke-width="1.5"/>
+  <text x="55" y="25" fill="#94a3b8" font-size="11" font-family="Inter, sans-serif">y</text>
+  <text x="293" y="147" fill="#94a3b8" font-size="11" font-family="Inter, sans-serif">x</text>
+  <text x="42" y="163" fill="#94a3b8" font-size="10" font-family="Inter, sans-serif">0</text>
+  <line x1="50" y1="150" x2="{x2_svg}" y2="{y2_svg}" stroke="#38bdf8" stroke-width="2.5"/>
+  <circle cx="50" cy="150" r="4" fill="#f43f5e"/>
+  <circle cx="{x2_svg}" cy="{y2_svg}" r="4" fill="#10b981"/>
+  <text x="{x2_lbl_svg}" y="{y2_lbl_svg}" fill="#10b981" font-size="12" font-family="Inter, sans-serif" font-weight="bold">P({a},{b})</text>
+</svg>"""
+    slope_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(slope_svg.encode('utf-8')).decode('utf-8')
+    cursor.execute('''
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (
+        "Matemáticas",
+        "La imagen representa una recta en el plano cartesiano que pasa por el origen y por el punto P. ¿Cuál es el valor de la pendiente de esta recta?",
+        json.dumps(["d1", "d2", "d3", "d4"]),
+        "d1",
+        "Procesado dinámicamente.",
+        "Intermedio",
+        slope_graphic_uri
+    ))
+    print("  ✓ Plano Cartesiano (Pendiente)")
 
     conn.commit()
     conn.close()
-    print("Preguntas paramétricas insertadas con éxito en la base de datos local.")
+    print("\n✅ 12 preguntas paramétricas insertadas con éxito en PostgreSQL.")
 
 if __name__ == '__main__':
     insert_questions()

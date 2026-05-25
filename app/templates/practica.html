@@ -288,6 +288,15 @@
         }
     }
     
+    function formatExplanation(text) {
+        if (!text) return '';
+        // Convert markdown bold **text** to <strong>text</strong>
+        let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Convert newlines to <br>
+        html = html.replace(/\n/g, '<br>');
+        return html;
+    }
+
     function handleAnswer(btn, selected, correct, explanation) {
         // Disable all buttons
         const buttons = document.querySelectorAll('.option-btn');
@@ -304,7 +313,7 @@
             btn.classList.add('wrong');
         }
         
-        document.getElementById('explanation-text').innerText = explanation;
+        document.getElementById('explanation-text').innerHTML = formatExplanation(explanation);
         document.getElementById('explanation-box').style.display = 'block';
         if (window.renderMathInElement) {
             renderMathInElement(document.getElementById('explanation-box'), {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});
