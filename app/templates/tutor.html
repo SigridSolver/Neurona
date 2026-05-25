@@ -633,6 +633,37 @@
     let chatHistory = JSON.parse(sessionStorage.getItem('tutorChatHistory')) || [];
     let currentImageBase64 = null;
 
+    // --- Configuración de Voz Masculina ---
+    let selectedVoice = null;
+    function getMaleSpanishVoice() {
+        if (!window.speechSynthesis) return null;
+        const voices = window.speechSynthesis.getVoices();
+        
+        // Find Spanish voices
+        const spanishVoices = voices.filter(v => v.lang.startsWith('es'));
+        if (spanishVoices.length === 0) return null;
+        
+        // Look for typical male voice names in Spanish
+        const maleNames = ['jorge', 'david', 'julio', 'heriberto', 'alvaro', 'diego', 'jorge', 'male', 'hombre', 'natural', 'yago', 'miguel', 'antonio'];
+        for (const name of maleNames) {
+            const found = spanishVoices.find(v => v.name.toLowerCase().includes(name));
+            if (found) return found;
+        }
+        
+        // Fallback to any voice with a name that doesn't sound clearly female
+        const femaleNames = ['sabina', 'helena', 'monica', 'paulin', 'sandra', 'maria', 'rosa', 'hilda', 'dalia'];
+        const fallbackMale = spanishVoices.find(v => !femaleNames.some(f => v.name.toLowerCase().includes(f)));
+        
+        return fallbackMale || spanishVoices[0];
+    }
+
+    if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = function() {
+            selectedVoice = getMaleSpanishVoice();
+        };
+        selectedVoice = getMaleSpanishVoice();
+    }
+
     window.addEventListener('load', () => {
         if (chatHistory.length > 0) {
             document.getElementById('chat-messages').innerHTML = '';
@@ -770,7 +801,11 @@
                     .replace(/#/g, '');
                     
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.lang = 'es-CO';
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                } else {
+                    utterance.lang = 'es-CO';
+                }
                 utterance.rate = 1.05;
                 window.speechSynthesis.speak(utterance);
                 
@@ -987,7 +1022,11 @@
             .replace(/#/g, '');
             
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = 'es-CO';
+        if (selectedVoice) {
+            utterance.voice = selectedVoice;
+        } else {
+            utterance.lang = 'es-CO';
+        }
         utterance.rate = 1.05;
         
         utterance.onstart = function() {

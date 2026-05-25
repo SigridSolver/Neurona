@@ -568,8 +568,10 @@ async def chat_api(request: Request, body: ChatRequest):
             return {"response": response.text, "mode": "ai"}
         except Exception as e:
             print("Gemini API Error:", e)
-            # Fallback to local search if API fails completely
-            pass
+            return {
+                "response": f"Hola. La consulta a la API de Gemini falló con el siguiente error: `{str(e)}`. Por favor, verifica la clave API en tus variables de entorno de Render.com (GEMINI_API_KEY).",
+                "mode": "local"
+            }
             
     # LOCAL AGENT FALLBACK (Keyword-based search in database)
     keywords = {
