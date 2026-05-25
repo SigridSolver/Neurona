@@ -508,28 +508,24 @@ async def generate_question_route(request: Request, body: QuestionGenerateReques
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY no configurada en las variables de entorno")
     
-    conn = get_db()
-    chunk = conn.execute(
-        "SELECT content FROM knowledge_base WHERE area = %s ORDER BY RANDOM() LIMIT 1",
-        (body.area,)
-    ).fetchone()
-    conn.close()
-    
-    context_str = ""
-    if chunk:
-        context_str = f"\n\nContexto extraído de lecturas reales:\n\"\"\"{chunk['content']}\"\"\""
-        
     prompt = f"""
     Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
-    Genera 1 pregunta de selección múltiple con 4 opciones únicas para el área de {body.area}.
-    {context_str}
+    Genera 1 pregunta de selección múltiple original, inédita y de alta calidad para el área de {body.area}.
+    No te bases en ningún cuadernillo específico. Crea el escenario, problema o texto de forma 100% autónoma.
     
-    REGLAS DE DISEÑO ICFES:
-    1. Debe evaluar una competencia oficial (ej. Uso comprensivo del conocimiento científico, Razonamiento cuantitativo, Lectura crítica, etc.).
-    2. La respuesta correcta debe ser indiscutible y las otras tres opciones (distractores) deben ser verosímiles y representar malinterpretaciones comunes.
-    3. El formato de salida DEBE ser estrictamente un objeto JSON en español, sin envolverlo en bloques markdown (sin ```json) y con las siguientes llaves:
+    REGLAS DE DISEÑO ICFES SABER 11:
+    1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación (ej. álgebra, geometría, probabilidad, estadística o razonamiento cuantitativo).
+    2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, columna de opinión o texto discontinuo descriptivo) y formula una pregunta de inferencia o análisis sobre él.
+    3. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico donde se evalúe indagación o explicación de fenómenos.
+    4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, mecanismo de participación o análisis de multiperspectivismo donde haya diferentes puntos de vista en juego.
+    5. Para **Inglés**: Genera un ejercicio enfocado en comprensión lectora o gramática y vocabulario de nivel A2/B1.
+    
+    ESTRUCTURA DE RESPUESTA REQUERIDA:
+    La respuesta correcta debe ser indiscutible y las otras tres opciones (distractores) deben representar errores conceptuales o interpretativos comunes y verosímiles.
+    
+    El formato de salida DEBE ser estrictamente un objeto JSON en español, sin envolverlo en bloques markdown (sin ```json) y con las siguientes llaves:
        - "area": "{body.area}"
-       - "text": "[El enunciado de la pregunta]"
+       - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
        - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
        - "correct_answer": "[Debe ser idéntica a una de las opciones]"
        - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
