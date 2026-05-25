@@ -630,7 +630,10 @@
     const typingIndicator = document.getElementById('typing-indicator');
     
     // Almacena el contexto de la conversación
-    let chatHistory = JSON.parse(sessionStorage.getItem('t    window.addEventListener('load', () => {
+    let chatHistory = JSON.parse(sessionStorage.getItem('tutorChatHistory')) || [];
+    let currentImageBase64 = null;
+
+    window.addEventListener('load', () => {
         if (chatHistory.length > 0) {
             document.getElementById('chat-messages').innerHTML = '';
             chatHistory.forEach(msg => {

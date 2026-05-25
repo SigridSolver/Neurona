@@ -204,7 +204,7 @@
         
         const graphicContainer = document.getElementById('graphic-container');
         if (q.graphic) {
-            graphicContainer.innerHTML = q.graphic;
+            graphicContainer.innerHTML = `<img src="${q.graphic}" style="max-width: 100%; border-radius: 8px; margin-top: 1rem;">`;
             graphicContainer.style.display = 'block';
         } else {
             graphicContainer.innerHTML = '';
