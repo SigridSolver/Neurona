@@ -408,6 +408,71 @@ def process_parametric_question(q, seed=None):
             "graphic": graphic
         }
         
+    elif "{slope}" in text or "plano cartesiano" in text.lower() or "{x2_svg}" in text:
+        choices = [
+            {"a": 3, "b": 2, "slope_str": "2/3", "distractors": ["3/2", "-2/3", "1/2"]},
+            {"a": 4, "b": 3, "slope_str": "3/4", "distractors": ["4/3", "-3/4", "1/3"]},
+            {"a": 5, "b": 2, "slope_str": "2/5", "distractors": ["5/2", "-2/5", "1/5"]},
+            {"a": 4, "b": 1, "slope_str": "1/4", "distractors": ["4", "-1/4", "1/2"]},
+            {"a": 5, "b": 3, "slope_str": "3/5", "distractors": ["5/3", "-3/5", "2/5"]}
+        ]
+        choice = local_random.choice(choices)
+        a = choice["a"]
+        b = choice["b"]
+        correct_val = choice["slope_str"]
+        distractors = choice["distractors"]
+        
+        opts = [correct_val] + distractors
+        local_random.shuffle(opts)
+        correct_str = correct_val
+        
+        x2_svg = 50 + a * 30
+        y2_svg = 150 - b * 30
+        x2_lbl_svg = x2_svg + 8
+        y2_lbl_svg = y2_svg - 8
+        
+        new_text = (
+            "La imagen representa una recta en el plano cartesiano que pasa por el origen $(0,0)$ y por el punto $P$.\n\n"
+            "¿Cuál es el valor de la pendiente de esta recta?"
+        )
+        
+        new_explanation = (
+            "La pendiente $m$ de una recta que pasa por dos puntos $(x_1, y_1)$ y $(x_2, y_2)$ se calcula mediante la fórmula:\n\n"
+            "$$m = \\frac{y_2 - y_1}{x_2 - x_1}$$\n\n"
+            f"En este caso, la recta pasa por el origen $(0, 0)$ y por el punto $P({a}, {b})$. "
+            f"Sustituyendo las coordenadas correspondientes:\n\n"
+            f"$$m = \\frac{{{b} - 0}}{{{a} - 0}} = \\frac{{{b}}}{{{a}}}$$\n\n"
+            f"Por lo tanto, la pendiente de la recta es **{correct_str}**."
+        )
+        
+        graphic = q.get("graphic")
+        if graphic and "base64," in graphic:
+            try:
+                header, encoded = graphic.split("base64,", 1)
+                decoded = base64.b64decode(encoded).decode("utf-8")
+                decoded = (decoded
+                           .replace("{a}", str(a))
+                           .replace("{b}", str(b))
+                           .replace("{x2_svg}", str(x2_svg))
+                           .replace("{y2_svg}", str(y2_svg))
+                           .replace("{x2_lbl_svg}", str(x2_lbl_svg))
+                           .replace("{y2_lbl_svg}", str(y2_lbl_svg)))
+                new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
+                graphic = header + "base64," + new_encoded
+            except Exception as e:
+                print("Error processing parametric coordinate plane SVG:", e)
+                
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_str,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": graphic
+        }
+        
     return q
 
 load_dotenv()
@@ -2803,6 +2868,48 @@ async def preview_temp_page(request: Request, type: str = "combinations"):
             "text": "La distribución de frecuencias es: {frec_1}, {frec_2}, {frec_3}, {frec_4}",
             "options": ["{correct}", "d1", "d2", "d3"],
             "correct_answer": "{correct}",
+            "explanation": "",
+            "difficulty": "Intermedio",
+            "graphic": graphic_uri
+        }
+    elif type == "slope":
+        import base64
+        slope_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" width="240" height="200">
+  <rect width="100%" height="100%" fill="#0f172a"/>
+  <line x1="50" y1="30" x2="50" y2="150" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="80" y1="30" x2="80" y2="150" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="110" y1="30" x2="110" y2="150" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="140" y1="30" x2="140" y2="150" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="170" y1="30" x2="170" y2="150" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="200" y1="30" x2="200" y2="150" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="50" y1="30" x2="200" y2="30" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="50" y1="60" x2="200" y2="60" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="50" y1="90" x2="200" y2="90" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="50" y1="120" x2="200" y2="120" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="50" y1="150" x2="200" y2="150" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+  <line x1="50" y1="15" x2="50" y2="165" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="35" y1="150" x2="215" y2="150" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="50" y1="150" x2="{x2_svg}" y2="{y2_svg}" stroke="#38bdf8" stroke-width="3"/>
+  <circle cx="{x2_svg}" cy="{y2_svg}" r="5" fill="#f43f5e"/>
+  <text x="{x2_lbl_svg}" y="{y2_lbl_svg}" fill="#f8fafc" font-family="sans-serif" font-size="10" font-weight="bold">P({a},{b})</text>
+  <text x="45" y="162" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="end">0</text>
+  <text x="80" y="162" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="middle">1</text>
+  <text x="110" y="162" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="middle">2</text>
+  <text x="140" y="162" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="middle">3</text>
+  <text x="170" y="162" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="middle">4</text>
+  <text x="200" y="162" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="middle">5</text>
+  <text x="45" y="123" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="end">1</text>
+  <text x="45" y="93" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="end">2</text>
+  <text x="45" y="63" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="end">3</text>
+  <text x="45" y="33" fill="#94a3b8" font-family="sans-serif" font-size="8" text-anchor="end">4</text>
+</svg>"""
+        graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(slope_svg.encode('utf-8')).decode('utf-8')
+        q_obj = {
+            "id": 9994,
+            "area": "Matemáticas",
+            "text": "La imagen representa una recta en el plano cartesiano que pasa por el origen (0,0) y por el punto P.",
+            "options": ["{slope}", "d1", "d2", "d3"],
+            "correct_answer": "{slope}",
             "explanation": "",
             "difficulty": "Intermedio",
             "graphic": graphic_uri
