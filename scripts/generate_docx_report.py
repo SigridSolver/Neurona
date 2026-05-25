@@ -215,10 +215,42 @@ def create_report():
     p_i3.runs[0].font.name = 'Arial'
     p_i3.add_run("La base de datos local almacena y clasifica preguntas reales y simuladas de nivel institucional, permitiendo al colegio contar con un banco digital auditable de alto nivel académico.").font.name = 'Arial'
 
+    # Section 6
+    style_heading("6. Conclusiones del Proyecto", level=1)
+    add_p("El proyecto representa un cambio de paradigma en la forma en que los estudiantes abordan la preparación de pruebas estandarizadas de alta relevancia en Colombia. La fusión de gamificación y acompañamiento inteligente no solo optimiza el rendimiento académico, sino que también fomenta hábitos de estudio saludables, regulares y colaborativos.")
+    add_p("Al condicionar las ayudas avanzadas (💡) a un rendimiento mínimo en simulacros, se introduce un incentivo directo al esfuerzo sostenido, estimulando al estudiante a mejorar progresivamente y a utilizar los simulacros como verdaderos termómetros de su preparación.")
+
+    # Section 7
+    style_heading("7. Futuras Mejoras y Evolución del Sistema", level=1)
+    add_p("Para alinearse con las directrices de evaluación institucional y las políticas de mejoramiento continuo del ICFES, se contemplan las siguientes líneas de evolución y escalado para la plataforma:")
+
+    p_f1 = doc.add_paragraph(style='List Bullet')
+    p_f1.paragraph_format.space_after = Pt(3)
+    p_f1.add_run("Módulo de Gestión Docente (Panel de Tutores): ").bold = True
+    p_f1.runs[0].font.name = 'Arial'
+    p_f1.add_run("Incorporación de un entorno administrativo para que los profesores puedan realizar un seguimiento focalizado de los alumnos, diseñar cuestionarios personalizados, asignar tareas libres o exámenes específicos para un grupo, y analizar reportes grupales e individuales de debilidades de aprendizaje.").font.name = 'Arial'
+
+    p_f2 = doc.add_paragraph(style='List Bullet')
+    p_f2.paragraph_format.space_after = Pt(3)
+    p_f2.add_run("Diversificación de Pruebas de Estado (Saber Multigrado): ").bold = True
+    p_f2.runs[0].font.name = 'Arial'
+    p_f2.add_run("Ampliación del banco de preguntas y adaptabilidad del sistema para cubrir todo el espectro de evaluación del ICFES, incluyendo pruebas de educación básica (Saber 3°, Saber 5°, Saber 9°) y educación superior (Saber Pro y Saber TyT), estructurando un historial de aprendizaje transversal.").font.name = 'Arial'
+
+    p_f3 = doc.add_paragraph(style='List Bullet')
+    p_f3.paragraph_format.space_after = Pt(3)
+    p_f3.add_run("Nuevas Áreas Interactivas y Cultura General: ").bold = True
+    p_f3.runs[0].font.name = 'Arial'
+    p_f3.add_run("Integración de módulos adicionales para evaluar cultura general, competencias blandas, quizzes en áreas artísticas, tecnológicas y éticas, ampliando el impacto pedagógico de la plataforma más allá del currículo evaluativo tradicional.").font.name = 'Arial'
+
     # Save
     filename = "Resumen_Ejecutivo_Proyecto_Saber11.docx"
-    doc.save(filename)
-    print(f"Documento guardado exitosamente como {filename}")
+    try:
+        doc.save(filename)
+        print(f"Documento guardado exitosamente como {filename}")
+    except PermissionError:
+        alt_filename = "Resumen_Ejecutivo_Proyecto_Saber11_Actualizado.docx"
+        doc.save(alt_filename)
+        print(f"Documento guardado exitosamente como {alt_filename} (el original estaba abierto).")
 
 if __name__ == '__main__':
     create_report()
