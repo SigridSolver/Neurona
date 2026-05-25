@@ -387,7 +387,11 @@ def process_parametric_question(q, seed=None):
                 for i, fr in enumerate([frec_1, frec_2, frec_3, frec_4], 1):
                     h = fr * 20
                     y = 180 - h
-                    decoded = decoded.replace(f"{{h_bar_{i}}}", str(h)).replace(f"{{y_bar_{i}}}", str(y))
+                    y_txt = y - 5
+                    decoded = (decoded
+                               .replace(f"{{h_bar_{i}}}", str(h))
+                               .replace(f"{{y_bar_{i}}}", str(y))
+                               .replace(f"{{y_txt_{i}}}", str(y_txt)))
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
                 graphic = header + "base64," + new_encoded
             except Exception as e:
@@ -2787,10 +2791,10 @@ async def preview_temp_page(request: Request, type: str = "combinations"):
   <text x="135" y="195" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">20 pts</text>
   <text x="195" y="195" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">30 pts</text>
   <text x="255" y="195" fill="#94a3b8" font-family="sans-serif" font-size="10" text-anchor="middle">40 pts</text>
-  <text x="75" y="{y_bar_1}-5" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_1}</text>
-  <text x="135" y="{y_bar_2}-5" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_2}</text>
-  <text x="195" y="{y_bar_3}-5" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_3}</text>
-  <text x="255" y="{y_bar_4}-5" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_4}</text>
+  <text x="75" y="{y_txt_1}" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_1}</text>
+  <text x="135" y="{y_txt_2}" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_2}</text>
+  <text x="195" y="{y_txt_3}" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_3}</text>
+  <text x="255" y="{y_txt_4}" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">{frec_4}</text>
 </svg>"""
         graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(chart_svg.encode('utf-8')).decode('utf-8')
         q_obj = {
