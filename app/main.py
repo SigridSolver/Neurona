@@ -428,16 +428,13 @@ async def get_practice_questions(area: str):
         "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 5",
         (area,)
     ).fetchall()
-    conn.close()
     
     questions = []
     for r in rows:
         try:
             opts = json.loads(r["options"])
-            random.shuffle(opts)
         except Exception:
             opts = [r["correct_answer"], "Opción B", "Opción C", "Opción D"]
-            random.shuffle(opts)
             
         questions.append({
             "id": r["id"],
@@ -450,11 +447,79 @@ async def get_practice_questions(area: str):
             "graphic": r["graphic"]
         })
         
-    # Fallback to simulated questions if none found
-    if not questions:
-        for i in range(5):
+    needed = 5 - len(questions)
+    api_key = os.getenv("GEMINI_API_KEY")
+    
+    if needed > 0 and api_key:
+        try:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            cursor = conn.cursor()
+            
+            for _ in range(needed):
+                prompt = f"""
+                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
+                Genera 1 pregunta de selección múltiple original, inédita y de alta calidad para el área de {area}.
+                
+                REGLAS DE DISEÑO ICFES SABER 11:
+                1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación (ej. álgebra, geometría, probabilidad, estadística o razonamiento cuantitativo).
+                2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, columna de opinión o texto discontinuo descriptivo) y formula una pregunta de inferencia o análisis sobre él.
+                3. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico donde se evalúe indagación o explicación de fenómenos.
+                4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, mecanismo de participación o análisis de multiperspectivismo donde haya diferentes puntos de vista en juego.
+                5. Para **Inglés**: Genera un ejercicio enfocado en comprensión lectora o gramática y vocabulario de nivel A2/B1.
+                
+                ESTRUCTURA DE RESPUESTA REQUERIDA:
+                La respuesta correcta debe ser indiscutible y las otras tres opciones (distractores) deben representar errores conceptuales o interpretativos comunes y verosímiles.
+                
+                El formato de salida DEBE ser estrictamente un objeto JSON en español, sin envolverlo en bloques markdown (sin ```json) y con las siguientes llaves:
+                   - "area": "{area}"
+                   - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
+                   - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
+                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+                   - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
+                   - "difficulty": "[Básico, Intermedio, Avanzado]"
+                """
+                
+                response = model.generate_content(prompt)
+                text_response = response.text.strip()
+                text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
+                q_data = json.loads(text_response)
+                
+                cursor.execute('''
+                    INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+                ''', (
+                    area,
+                    q_data["text"],
+                    json.dumps(q_data["options"], ensure_ascii=False),
+                    q_data["correct_answer"],
+                    q_data["explanation"],
+                    q_data["difficulty"],
+                    None
+                ))
+                new_id = cursor.fetchone()[0]
+                conn.commit()
+                
+                questions.append({
+                    "id": new_id,
+                    "area": area,
+                    "text": q_data["text"],
+                    "options": q_data["options"],
+                    "correct_answer": q_data["correct_answer"],
+                    "explanation": q_data["explanation"],
+                    "difficulty": q_data["difficulty"],
+                    "graphic": None
+                })
+        except Exception as e:
+            print("Error generating dynamic question with Gemini:", e)
+            
+    conn.close()
+    
+    # Fallback if still less than 5
+    if len(questions) < 5:
+        for i in range(5 - len(questions)):
             questions.append({
-                "id": i + 1,
+                "id": i + 1000,
                 "area": area,
                 "text": f"Pregunta de práctica {i+1} basada en {area}. ¿Cuál es la opción correcta?",
                 "options": ["Opción Correcta", "Opción B", "Opción C", "Opción D"],

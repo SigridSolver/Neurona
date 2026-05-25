@@ -274,9 +274,22 @@ def init_db():
 
         conn.commit()
 
-    # Fix 'Área General' migration to 'Matemáticas'
-    cursor.execute("UPDATE questions SET area = 'Matemáticas' WHERE area = 'Área General'")
-    conn.commit()
+    # Seed initial questions if none exist
+    q_count = cursor.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
+    if q_count == 0:
+        cursor.execute('''
+            INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            "Matemáticas",
+            "Un pequeño conjunto cerrado tiene cinco casas formando un pentágono como se ve en la figura. Las casas están representadas por círculos.\n\nEn el conjunto viven los señores Gómez, Hernández, López, Pérez y Vélez. Todas las casas del conjunto tienen una cantidad diferente de pisos. El señor Pérez lamenta que su casa sea considerada, según la ley, un edificio por tener cinco pisos, aunque también se alegra de tener la casa más alta del conjunto y no estar \"a la sombra de los demás\". ¿Cuál es el total de pisos construidos en el conjunto?",
+            json.dumps(["9", "15", "20", "25"], ensure_ascii=False),
+            "15",
+            "Dado que el conjunto cuenta con $5$ casas y cada una posee un número diferente de pisos, y sabiendo que la casa más alta (perteneciente al señor Pérez) tiene exactamente $5$ pisos, las alturas de las casas corresponden a los números enteros del $1$ al $5$ (es decir, una casa de $1$ piso, una de $2$, una de $3$, una de $4$, y la del señor Pérez de $5$).\n\nAl sumar la cantidad de pisos de las cinco viviendas obtenemos:\n\n$$1 + 2 + 3 + 4 + 5 = 15$$\n\nPor ende, el total de pisos construidos en el conjunto cerrado es de 15, lo que valida la opción B.",
+            "Intermedio",
+            "/static/images/preguntas/pentagono_casas.svg"
+        ))
+        conn.commit()
 
     conn.close()
 
