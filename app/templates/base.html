@@ -13,9 +13,13 @@
 </head>
 <body>
     <nav class="navbar">
-        <div class="container">
+        <div class="container" style="position: relative; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <a href="/" class="navbar-brand">David Saber 11</a>
-            <div class="navbar-nav">
+            <!-- Hamburger Icon -->
+            <div class="hamburger" id="hamburger-menu" style="cursor: pointer; font-size: 1.8rem; color: white; display: none;">
+                ☰
+            </div>
+            <div class="navbar-nav" id="navbar-nav">
                 {% if request.session.get('user_id') or user %}
                     <a href="/dashboard">Dashboard</a>
                     <a href="/comunidad">Comunidad</a>
@@ -43,6 +47,16 @@
     </footer>
     
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const hamburger = document.getElementById('hamburger-menu');
+            const nav = document.getElementById('navbar-nav');
+            if (hamburger) {
+                hamburger.addEventListener('click', () => {
+                    nav.classList.toggle('active');
+                });
+            }
+        });
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/static/sw.js')
