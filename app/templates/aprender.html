@@ -85,28 +85,26 @@
     }
 
     .card-text {
-        font-size: 1.1rem;
-        line-height: 1.6;
+        font-size: 0.95rem;
+        line-height: 1.55;
         color: #e2e8f0;
-    }
-
-    .card-back .card-text {
-        text-align: left;
-        white-space: pre-line;
-        font-size: 1rem;
         overflow-y: auto;
-        max-height: 250px;
-        padding-right: 5px;
+        max-height: 220px;
+        width: 100%;
+        padding-right: 8px;
+        text-align: left;
     }
 
     /* Custom scrollbar for card text if needed */
-    .card-back .card-text::-webkit-scrollbar {
-        width: 4px;
+    .card-text::-webkit-scrollbar {
+        width: 5px;
     }
-    .card-back .card-text::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,0.1);
-        border-radius: 2px;
+    .card-text::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 3px;
     }
+
+
 
     .controls-row {
         display: flex;

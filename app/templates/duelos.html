@@ -199,10 +199,10 @@
             <!-- SCREEN 1: Setup Duelo -->
             <div class="setup-screen active" id="setupScreen">
                 <h2 class="text-center">⚔️ Desafíos 1v1</h2>
-                <p class="text-muted text-center mb-4">Elige un área de estudio, responde 1 pregunta y envía el reto a un compañero.</p>
+                <p class="text-muted text-center mb-4">Elige un área de estudio. La aplicación buscará un oponente (priorizando estudiantes en línea) y generará una pregunta de estudio.</p>
                 
                 <div class="form-group">
-                    <label class="form-label">1. Selecciona el Área del Desafío</label>
+                    <label class="form-label">Selecciona el Área del Desafío</label>
                     <select id="duelAreaSelect" class="form-control">
                         <option value="Matemáticas">📐 Matemáticas</option>
                         <option value="Lectura Crítica">📚 Lectura Crítica</option>
@@ -212,30 +212,7 @@
                     </select>
                 </div>
                 
-                <div class="form-group" style="margin-top: 1.5rem;">
-                    <label class="form-label">2. Elige tu Oponente</label>
-                    <div class="opponent-grid" id="opponentGrid">
-                        {% for op in opponents %}
-                        <div class="opponent-item {% if loop.first %}selected{% endif %}" data-id="{{ op.id }}" data-name="{{ op.name }}" data-color="{{ op.avatar_color }}" onclick="selectOpponent(this)">
-                            <div style="width: 32px; height: 32px; border-radius: 50%; background: {{ op.avatar_color }}; display:flex; align-items:center; justify-content:center; font-weight:bold; color:white; font-size:0.85rem;">
-                                {{ op.name[0] | upper }}
-                            </div>
-                            <div>
-                                <strong style="display:block; font-size:0.9rem;">{{ op.name }}</strong>
-                                <span class="text-muted" style="font-size:0.75rem;">🔥 Racha: {{ op.streak }}</span>
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="text-muted" style="grid-column: 1/-1; text-align:center; padding:1rem;">No hay otros estudiantes registrados para retar.</div>
-                        {% endfor %}
-                    </div>
-                </div>
-                
-                {% if opponents %}
                 <button class="btn btn-primary mt-4" onclick="startDuelSetup()" style="width: 100%;">Comenzar Desafío</button>
-                {% else %}
-                <button class="btn btn-secondary mt-4" disabled style="width: 100%;">Comenzar Desafío</button>
-                {% endif %}
             </div>
 
             <!-- SCREEN 2: Matching Loader -->
@@ -288,6 +265,31 @@
             </div>
 
         </div>
+
+        <!-- Notifications of finished duels -->
+        {% if notifications %}
+        <div class="challenges-section" style="margin-top: 2rem; border-color: var(--success); background: rgba(16, 185, 129, 0.05);">
+            <h3 style="color: var(--success);">🔔 Desafíos Finalizados</h3>
+            <p class="text-muted mb-3" style="font-size: 0.85rem;">Resultados recientes de tus retos enviados:</p>
+            {% for n in notifications %}
+            <div class="challenge-row" style="border-color: rgba(16, 185, 129, 0.2); background: rgba(0, 0, 0, 0.1);">
+                <div>
+                    Tu duelo contra <strong style="color:var(--accent);">{{ n.opponent_name }}</strong> en <strong>{{ n.area }}</strong> ha finalizado.
+                    <div style="font-size: 0.9rem; margin-top: 0.25rem;">
+                        Resultado: 
+                        {% if n.challenger_score > n.opponent_score %}
+                            <span style="color: var(--success); font-weight: 700;">¡Ganaste! 🎉 (Tú: {{ n.challenger_score }} - Él/Ella: {{ n.opponent_score }})</span>
+                        {% elif n.opponent_score > n.challenger_score %}
+                            <span style="color: var(--danger); font-weight: 700;">Perdiste (Tú: {{ n.challenger_score }} - Él/Ella: {{ n.opponent_score }})</span>
+                        {% else %}
+                            <span style="color: var(--warning); font-weight: 700;">Empate 🤝 (Ambos: {{ n.challenger_score }})</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <!-- Challenges notification board -->
         <div class="challenges-section" style="margin-top: 2rem;">
@@ -357,12 +359,22 @@
                 <div class="rank-item">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span class="rank-position {% if loop.index <= 3 %}pos-{{ loop.index }}{% endif %}">{{ loop.index }}</span>
-                        <div style="width:28px; height:28px; border-radius:50%; background:{{ player.avatar_color }}; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem; font-weight:bold;">
+                        <div style="width:28px; height:28px; border-radius:50%; background:{{ player.avatar_color }}; display:flex; align-items:center; justify-content:center; color:white; font-size:0.8rem; font-weight:bold; flex-shrink:0;">
                             {{ player.name[0] | upper }}
                         </div>
-                        <span style="font-weight:600; font-size:0.9rem;">{{ player.name }}</span>
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <span style="font-weight:600; font-size:0.9rem;">{{ player.name }}</span>
+                            <span style="font-size:0.75rem; color:var(--text-muted);">Nivel {{ player.level }} | {{ player.wins }} victorias</span>
+                            {% if player.badges %}
+                            <div style="display:flex; gap:3px; flex-wrap:wrap; margin-top:2px;">
+                                {% for b in player.badges %}
+                                <span style="font-size:0.6rem; background:rgba(255,255,255,0.05); padding:1px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); color: #a78bfa;">{{ b }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
-                    <span style="font-weight:700; color:var(--accent); font-size:0.9rem;">{{ player.wins }} victorias</span>
+                    <span style="font-weight:700; color:var(--accent); font-size:0.9rem; flex-shrink:0;">{{ player.points_compact }} pts</span>
                 </div>
                 {% endfor %}
             </div>
@@ -382,23 +394,6 @@
     let activeDuelId = null;
     let respondingMode = false;
 
-    document.addEventListener("DOMContentLoaded", () => {
-        const initialSelected = document.querySelector(".opponent-item.selected");
-        if (initialSelected) {
-            selectedOpponentId = initialSelected.getAttribute("data-id");
-            selectedOpponentName = initialSelected.getAttribute("data-name");
-            selectedOpponentColor = initialSelected.getAttribute("data-color");
-        }
-    });
-
-    function selectOpponent(element) {
-        document.querySelectorAll(".opponent-item").forEach(item => item.classList.remove("selected"));
-        element.classList.add("selected");
-        selectedOpponentId = element.getAttribute("data-id");
-        selectedOpponentName = element.getAttribute("data-name");
-        selectedOpponentColor = element.getAttribute("data-color");
-    }
-
     function switchScreen(screenId) {
         document.querySelectorAll(".setup-screen, .matching-screen, .quiz-screen, .result-screen").forEach(s => {
             s.classList.remove("active");
@@ -410,10 +405,8 @@
     async function startDuelSetup() {
         const area = document.getElementById("duelAreaSelect").value;
         
-        const opponentAvatar = document.getElementById("opponentMatchAvatar");
-        opponentAvatar.innerText = selectedOpponentName.charAt(0).toUpperCase();
-        opponentAvatar.style.backgroundColor = selectedOpponentColor;
-        
+        document.getElementById("matchingTitle").innerText = "Buscando oponente...";
+        document.getElementById("matchingSubtitle").innerText = "Buscando oponente aleatorio (priorizando usuarios en línea)...";
         switchScreen("matchingScreen");
         respondingMode = false;
         
@@ -422,12 +415,25 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    area: area,
-                    opponent_id: selectedOpponentId
+                    area: area
                 })
             });
             const data = await res.json();
+            
+            if (data.detail) {
+                alert(data.detail);
+                location.reload();
+                return;
+            }
+            
             activeQuestion = data.question;
+            selectedOpponentId = data.opponent.id;
+            selectedOpponentName = data.opponent.name;
+            selectedOpponentColor = data.opponent.avatar_color;
+            
+            const opponentAvatar = document.getElementById("opponentMatchAvatar");
+            opponentAvatar.innerText = selectedOpponentName.charAt(0).toUpperCase();
+            opponentAvatar.style.backgroundColor = selectedOpponentColor;
             
             setTimeout(() => {
                 startQuiz(area);

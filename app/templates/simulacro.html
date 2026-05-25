@@ -6,7 +6,7 @@
 <style>
     .simulacro-layout {
         display: grid;
-        grid-template-columns: 280px 1fr;
+        grid-template-columns: 300px 1fr;
         gap: 2rem;
         margin: 2rem auto;
         align-items: start;
@@ -30,7 +30,7 @@
     }
 
     .timer-display {
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 800;
         color: #ef4444;
         font-family: monospace;
@@ -42,14 +42,25 @@
     /* Question Navigation Grid */
     .nav-grid {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0.5rem;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 0.4rem;
         margin-top: 1rem;
+        max-height: 280px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+
+    .nav-grid::-webkit-scrollbar {
+        width: 4px;
+    }
+    .nav-grid::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
     }
 
     .nav-num-btn {
         aspect-ratio: 1;
-        border-radius: 8px;
+        border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         background: rgba(255, 255, 255, 0.02);
         color: var(--text-muted);
@@ -59,7 +70,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
     }
 
     .nav-num-btn:hover {
@@ -83,7 +94,7 @@
 
     /* Question Layout */
     .question-box {
-        min-height: 350px;
+        min-height: 380px;
         display: flex;
         flex-direction: column;
     }
@@ -175,18 +186,17 @@
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 12px;
-        padding: 1rem 1.25rem;
-        margin-bottom: 0.75rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        padding: 1.25rem;
+        margin-bottom: 0.85rem;
     }
 
-    .area-score-fill {
-        height: 8px;
+    .performance-badge {
+        font-size: 0.8rem;
+        padding: 2px 8px;
         border-radius: 4px;
-        background: var(--accent);
-        margin-top: 0.5rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        border: 1px solid;
     }
 
     /* Loader View */
@@ -217,20 +227,20 @@
 
     <!-- VIEW 1: Instructions & Setup -->
     <div id="setupView" class="card" style="margin: 2rem auto; max-width: 750px; padding: 2.5rem;">
-        <h2 class="text-center mb-3">⏱️ Simulacro Completo ICFES Saber 11</h2>
+        <h2 class="text-center mb-3">⏱️ Simulacro Oficial ICFES Saber 11</h2>
         <p class="text-muted text-center mb-4" style="line-height: 1.6; font-size: 1.05rem;">
-            Prepárate bajo condiciones reales. Este simulacro contiene <strong>25 preguntas</strong> (5 de cada área evaluada por el ICFES) y un tiempo límite de <strong>45 minutos</strong>. Tus resultados se guardarán automáticamente en tu perfil para actualizar tu diagnóstico de desempeño general.
+            Prepárate bajo condiciones de tiempo reales de la prueba Saber 11 en Colombia. Este examen consta de <strong>105 preguntas</strong> y cuentas con un tiempo reglamentario ajustado de <strong>4 horas (240 minutos)</strong>. Al finalizar, recibirás tu diagnóstico y puntaje global estimado (0-500) que actualizará instantáneamente tus estadísticas.
         </p>
 
         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-            <h4 class="mb-3">Directrices y Estructura:</h4>
-            <ul style="padding-left: 1.25rem; margin: 0; line-height: 1.8; color: var(--text-muted);">
-                <li><strong>Matemáticas:</strong> 5 preguntas de formulación, ejecución y argumentación.</li>
-                <li><strong>Lectura Crítica:</strong> 5 preguntas de comprensión lectora e inferencia de textos.</li>
-                <li><strong>Ciencias Naturales:</strong> 5 preguntas sobre indagación y explicación de fenómenos.</li>
-                <li><strong>Sociales y Ciudadanas:</strong> 5 preguntas sobre pensamiento social y multiperspectivismo.</li>
-                <li><strong>Inglés:</strong> 5 preguntas de vocabulario, gramática y lectura (A2/B1).</li>
-                <li><strong>Tiempo límite:</strong> 45:00 minutos. Si el tiempo expira, las respuestas se enviarán automáticamente.</li>
+            <h4 class="mb-3">Distribución del Examen:</h4>
+            <ul style="padding-left: 1.25rem; margin: 0; line-height: 1.8; color: var(--text-muted); font-size: 0.95rem;">
+                <li><strong>Matemáticas:</strong> 20 preguntas (Enfoque ICFES cuantitativo).</li>
+                <li><strong>Lectura Crítica:</strong> 20 preguntas (Comprensión y textos discontinuos).</li>
+                <li><strong>Ciencias Naturales:</strong> 20 preguntas (Investigación y fenómenos).</li>
+                <li><strong>Sociales y Ciudadanas:</strong> 20 preguntas (Pensamiento social y multiperspectivismo).</li>
+                <li><strong>Inglés:</strong> 25 preguntas (Niveles gramaticales A1, A2, B1).</li>
+                <li><strong>Duración oficial:</strong> 4 horas (240 minutos). Las respuestas incompletas se calificarán al expirar el tiempo.</li>
             </ul>
         </div>
 
@@ -241,7 +251,7 @@
     <div id="loadingView" class="card loader-view" style="display: none; margin: 2rem auto; max-width: 600px;">
         <div class="loader-spinner"></div>
         <h3>Preparando tu Examen...</h3>
-        <p class="text-muted text-center mt-2">Generando tus preguntas dinámicas basadas en los estándares ICFES Saber 11.</p>
+        <p class="text-muted text-center mt-2">Generando tus preguntas oficiales basadas en los estándares ICFES Saber 11. Esto puede tardar unos segundos...</p>
     </div>
 
     <!-- VIEW 3: Active Exam Screen -->
@@ -251,19 +261,19 @@
             <!-- Timer Widget -->
             <div class="timer-card">
                 <span class="text-muted" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Tiempo Restante</span>
-                <div class="timer-display" id="examTimer">45:00</div>
+                <div class="timer-display" id="examTimer">4:00:00</div>
             </div>
 
             <!-- Nav Grid Card -->
             <div class="card" style="padding: 1.25rem;">
-                <h4 style="margin-bottom: 0.75rem;">Navegación</h4>
-                <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 1rem;">Haz clic para saltar a cualquier pregunta:</p>
+                <h4 style="margin-bottom: 0.5rem;">Navegación</h4>
+                <p class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.75rem;">Salta a cualquier pregunta:</p>
                 
                 <div class="nav-grid" id="navGridContainer">
                     <!-- Numbers will be injected dynamically -->
                 </div>
 
-                <button class="btn btn-danger mt-4" onclick="confirmSubmitSimulacro()" style="width: 100%; font-size: 0.9rem; font-weight: 700;">Finalizar y Calificar</button>
+                <button class="btn btn-danger mt-4" onclick="confirmSubmitSimulacro()" style="width: 100%; font-size: 0.9rem; font-weight: 700;">Entregar Examen</button>
             </div>
         </div>
 
@@ -278,10 +288,10 @@
             <div class="question-box" id="questionWorkspace">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
                     <span class="area-badge" id="questionAreaLabel">Matemáticas</span>
-                    <span class="text-muted" style="font-weight:700;" id="questionNumberLabel">Pregunta 1 de 25</span>
+                    <span class="text-muted" style="font-weight:700;" id="questionNumberLabel">Pregunta 1 de 105</span>
                 </div>
 
-                <h3 id="questionText" style="font-size: 1.25rem; line-height: 1.5; margin-bottom: 2rem; color: #fff;">
+                <h3 id="questionText" style="font-size: 1.2rem; line-height: 1.6; margin-bottom: 2rem; color: #fff;">
                     Cargando enunciado...
                 </h3>
 
@@ -300,15 +310,15 @@
 
     <!-- VIEW 4: Result / Dashboard Report -->
     <div id="resultView" class="card result-score-card" style="display: none; max-width: 800px; margin: 2rem auto;">
-        <h2>📝 Resultado del Simulacro</h2>
-        <p class="text-muted mt-1">Tu examen ha sido calificado bajo los estándares ICFES Saber 11.</p>
+        <h2>📝 Reporte de Resultados ICFES</h2>
+        <p class="text-muted mt-1">Calificación ponderada oficial de las Pruebas Saber 11.</p>
 
         <div class="global-score-badge" id="globalScoreVal">---</div>
-        <h4 style="margin-bottom: 2rem; color: var(--text-muted)">Puntaje Global Estimado (sobre 500)</h4>
+        <h4 style="margin-bottom: 2.5rem; color: var(--text-muted)">Puntaje Global Estimado (0 a 500)</h4>
 
         <!-- Area Breakdowns -->
         <div style="max-width: 600px; margin: 0 auto 2.5rem auto; text-align: left;">
-            <h3 class="mb-4 text-center">Desempeño Detallado por Competencias</h3>
+            <h3 class="mb-4 text-center">Desempeño y Niveles por Área</h3>
             
             <div id="areaBreakdownsContainer">
                 <!-- Competency score bars injected here -->
@@ -316,8 +326,8 @@
         </div>
 
         <div class="d-flex justify-content-center gap-3">
-            <a href="/dashboard" class="btn btn-primary" style="padding: 0.75rem 2rem; font-weight: 700;">Ver en mi Dashboard</a>
-            <button onclick="location.reload()" class="btn btn-secondary" style="padding: 0.75rem 2rem;">Realizar otro Simulacro</button>
+            <a href="/dashboard" class="btn btn-primary" style="padding: 0.75rem 2rem; font-weight: 700;">Ir al Dashboard</a>
+            <button onclick="location.reload()" class="btn btn-secondary" style="padding: 0.75rem 2rem;">Hacer Nuevo Simulacro</button>
         </div>
     </div>
 
@@ -330,7 +340,7 @@
     let answers = {}; // Maps question index -> selected option text
     let currentIdx = 0;
     let timerInterval = null;
-    let timeRemaining = 45 * 60; // 45 minutes in seconds
+    let timeRemaining = 240 * 60; // 240 minutes in seconds
 
     async function startSimulacro() {
         document.getElementById("setupView").style.display = "none";
@@ -385,7 +395,6 @@
 
         // Update progress bar
         const progressPercent = ((Object.keys(answers).length) / questions.length) * 100;
-        document.getElementById("progressBarFill").style.style = `width: ${progressPercent}%;`;
         document.getElementById("progressBarFill").style.width = `${progressPercent}%`;
 
         // Load Question content
@@ -459,9 +468,10 @@
                 alert("¡El tiempo ha terminado! Tu simulacro se enviará para ser calificado.");
                 submitSimulacro();
             } else {
-                const mins = Math.floor(timeRemaining / 60);
+                const hrs = Math.floor(timeRemaining / 3600);
+                const mins = Math.floor((timeRemaining % 3600) / 60);
                 const secs = timeRemaining % 60;
-                document.getElementById("examTimer").innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                document.getElementById("examTimer").innerText = `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }
         }, 1000);
     }
@@ -472,7 +482,7 @@
         
         let confirmMsg = "¿Estás seguro de que deseas finalizar tu simulacro?";
         if (unanswered > 0) {
-            confirmMsg += ` Tienes ${unanswered} preguntas sin responder.`;
+            confirmMsg += ` Tienes ${unanswered} preguntas sin responder de un total de ${questions.length}.`;
         }
 
         if (confirm(confirmMsg)) {
@@ -480,11 +490,26 @@
         }
     }
 
+    // Helper to calculate ICFES performance levels
+    function getPerformanceLevel(area, score) {
+        if (area === "Inglés") {
+            if (score <= 30) return { name: "Nivel -A", color: "#ef4444" };
+            if (score <= 45) return { name: "Nivel A1", color: "#f59e0b" };
+            if (score <= 70) return { name: "Nivel A2", color: "#3b82f6" };
+            if (score <= 90) return { name: "Nivel B1", color: "#10b981" };
+            return { name: "Nivel B+", color: "#8b5cf6" };
+        } else {
+            if (score <= 35) return { name: "Desempeño 1", color: "#ef4444" };
+            if (score <= 50) return { name: "Desempeño 2", color: "#f59e0b" };
+            if (score <= 70) return { name: "Desempeño 3", color: "#3b82f6" };
+            return { name: "Desempeño 4", color: "#10b981" };
+        }
+    }
+
     async function submitSimulacro() {
         clearInterval(timerInterval);
         
         // Calculate scores per area
-        // 5 questions per area. Each correct answer is 20 points (total 100 per area)
         let areaCorrectCounts = {
             "Matemáticas": 0,
             "Lectura Crítica": 0,
@@ -500,10 +525,14 @@
             }
         });
 
-        let areaScores = {};
-        for (let area in areaCorrectCounts) {
-            areaScores[area] = areaCorrectCounts[area] * 20; // 0 to 100
-        }
+        // 20 questions in Spanish areas -> 5 points each. 25 questions in English -> 4 points each.
+        let areaScores = {
+            "Matemáticas": areaCorrectCounts["Matemáticas"] * 5,
+            "Lectura Crítica": areaCorrectCounts["Lectura Crítica"] * 5,
+            "Ciencias Naturales": areaCorrectCounts["Ciencias Naturales"] * 5,
+            "Sociales y Ciudadanas": areaCorrectCounts["Sociales y Ciudadanas"] * 5,
+            "Inglés": areaCorrectCounts["Inglés"] * 4
+        };
 
         // Show processing state
         document.getElementById("examView").style.display = "none";
@@ -531,22 +560,21 @@
             const areas = ["Matemáticas", "Lectura Crítica", "Ciencias Naturales", "Sociales y Ciudadanas", "Inglés"];
             areas.forEach(area => {
                 const score = data.scores[area];
+                const perf = getPerformanceLevel(area, score);
                 const card = document.createElement("div");
                 card.className = "area-score-bar";
 
-                let fillClass = "#3b82f6"; // Blue
-                if (score < 50) fillClass = "#ef4444"; // Red
-                else if (score < 75) fillClass = "#fbbf24"; // Yellow
-                else fillClass = "#10b981"; // Green
-
                 card.innerHTML = `
                     <div style="flex: 1;">
-                        <div style="display:flex; justify-content:space-between; font-weight:700;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-weight:700;">
                             <span>${area}</span>
-                            <span>${score} / 100</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="performance-badge" style="color:${perf.color}; border-color:${perf.color};">${perf.name}</span>
+                                <span>${score} / 100</span>
+                            </div>
                         </div>
                         <div style="background:rgba(255,255,255,0.05); height:8px; border-radius:4px; margin-top:0.5rem; overflow:hidden;">
-                            <div style="background:${fillClass}; width:${score}%; height:100%; border-radius:4px;"></div>
+                            <div style="background:${perf.color}; width:${score}%; height:100%; border-radius:4px;"></div>
                         </div>
                     </div>
                 `;

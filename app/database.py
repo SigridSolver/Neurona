@@ -49,13 +49,14 @@ def init_db():
         )
     ''')
     
-    # Migración de columnas de racha y perfil si no existen en la base de datos previa
     for column, col_type in [
         ("streak", "INTEGER DEFAULT 0"),
         ("last_active_date", "TEXT"),
         ("bio", "TEXT DEFAULT ''"),
         ("avatar_color", "TEXT DEFAULT '#3b82f6'"),
-        ("badges", "TEXT DEFAULT '[]'")
+        ("badges", "TEXT DEFAULT '[]'"),
+        ("duel_points", "INTEGER DEFAULT 0"),
+        ("last_seen", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     ]:
         cursor.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column} {col_type}")
     
@@ -193,7 +194,7 @@ def init_db():
             FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE
         )
     ''')
-
+    cursor.execute("ALTER TABLE tutor_duels ADD COLUMN IF NOT EXISTS challenger_notified BOOLEAN DEFAULT FALSE")
     conn.commit()
 
     # --- SEEDING MOCK USERS AND COMMUNITY ---

@@ -34,6 +34,16 @@ VULGAR_WORDS = {
 }
 
 
+
+def format_points_compact(pts: int) -> str:
+    if pts is None:
+        return "0"
+    if pts >= 1000000:
+        return f"{pts / 1000000:.1f}M".replace(".0", "")
+    if pts >= 1000:
+        return f"{pts / 1000:.1f}k".replace(".0", "")
+    return str(pts)
+
 load_dotenv()
 
 # Configure Gemini
@@ -110,6 +120,13 @@ def get_current_user(request: Request):
         return None
     conn = get_db()
     user = conn.execute("SELECT * FROM users WHERE id = %s", (user_id,)).fetchone()
+    if user:
+        from datetime import datetime
+        try:
+            conn.execute("UPDATE users SET last_seen = %s WHERE id = %s", (datetime.now(), user_id))
+            conn.commit()
+        except Exception as e:
+            print("Error updating last_seen:", e)
     conn.close()
     return user
 
@@ -308,13 +325,10 @@ async def dashboard(request: Request):
             SELECT u.id, u.name, u.avatar_color, u.bio, u.badges, u.streak, 
                    d.score_math, d.score_reading, d.score_science, d.score_social, d.score_english
             FROM users u
-            JOIN (
-                SELECT user_id, score_math, score_reading, score_science, score_social, score_english, MAX(date)
-                FROM diagnostic_results
-                GROUP BY user_id
-            ) d ON u.id = d.user_id
+            JOIN diagnostic_results d ON u.id = d.user_id
         ''').fetchall()
         
+        user_max_scores = {}
         for row in leaderboard_rows:
             w_sum = (
                 row["score_math"] * 3 +
@@ -324,22 +338,25 @@ async def dashboard(request: Request):
                 row["score_english"] * 1
             )
             score = round((w_sum / 13) * 5)
-            try:
-                badges_list = json.loads(row["badges"]) if row["badges"] else []
-            except Exception:
-                badges_list = []
-                
-            leaderboard.append({
-                "id": row["id"],
-                "name": row["name"],
-                "score": score,
-                "avatar_color": row["avatar_color"] or "#3b82f6",
-                "bio": row["bio"] or "",
-                "streak": row["streak"] or 0,
-                "badges": badges_list
-            })
+            uid = row["id"]
             
-        leaderboard = sorted(leaderboard, key=lambda x: x["score"], reverse=True)[:5]
+            if uid not in user_max_scores or score > user_max_scores[uid]["score"]:
+                try:
+                    badges_list = json.loads(row["badges"]) if row["badges"] else []
+                except Exception:
+                    badges_list = []
+                    
+                user_max_scores[uid] = {
+                    "id": uid,
+                    "name": row["name"],
+                    "score": score,
+                    "avatar_color": row["avatar_color"] or "#3b82f6",
+                    "bio": row["bio"] or "",
+                    "streak": row["streak"] or 0,
+                    "badges": badges_list
+                }
+                
+        leaderboard = sorted(user_max_scores.values(), key=lambda x: x["score"], reverse=True)[:5]
     except Exception as e:
         print("Error al calcular el ranking:", e)
         
@@ -1325,6 +1342,27 @@ async def duels_page(request: Request):
     except Exception as e:
         print("Error checking expired duels:", e)
         
+    # 1.5 Fetch resolved duels for notifications
+    notif_rows = conn.execute('''
+        SELECT d.id, d.area, d.challenger_score, d.opponent_score, u.name as opponent_name
+        FROM tutor_duels d
+        JOIN users u ON d.opponent_id = u.id
+        WHERE d.challenger_id = %s AND d.status = 'resolved' AND d.challenger_notified = FALSE
+    ''', (user["id"],)).fetchall()
+    
+    notifications = []
+    cursor = conn.cursor()
+    for n in notif_rows:
+        notifications.append({
+            "id": n["id"],
+            "area": n["area"],
+            "challenger_score": n["challenger_score"],
+            "opponent_score": n["opponent_score"],
+            "opponent_name": n["opponent_name"]
+        })
+        cursor.execute("UPDATE tutor_duels SET challenger_notified = TRUE WHERE id = %s", (n["id"],))
+    conn.commit()
+        
     # 2. Get active incoming challenges (where user is the opponent)
     incoming_rows = conn.execute('''
         SELECT d.id, d.area, d.challenger_score, d.created_at, u.name as challenger_name, u.avatar_color
@@ -1396,7 +1434,7 @@ async def duels_page(request: Request):
 
     # 5. Get list of other registered users to challenge
     opponents_rows = conn.execute(
-        "SELECT id, name, avatar_color, streak FROM users WHERE id != %s ORDER BY name ASC",
+        "SELECT id, name, avatar_color, streak, duel_points, badges FROM users WHERE id != %s ORDER BY name ASC",
         (user["id"],)
     ).fetchall()
     
@@ -1404,15 +1442,43 @@ async def duels_page(request: Request):
         "id": r["id"],
         "name": r["name"],
         "avatar_color": r["avatar_color"] or "#3b82f6",
-        "streak": r["streak"] or 0
+        "streak": r["streak"] or 0,
+        "duel_points": r["duel_points"] or 0
     } for r in opponents_rows]
 
     # 6. Calculate Leaderboard (Won Duels ranking)
     leaderboard = {}
-    for op in opponents:
-        leaderboard[op["id"]] = {"name": op["name"], "avatar_color": op["avatar_color"], "wins": 0, "streak": op["streak"]}
-    # Add ourselves
-    leaderboard[user["id"]] = {"name": user["name"], "avatar_color": user["avatar_color"] or "#3b82f6", "wins": 0, "streak": user["streak"] or 0}
+    for op in opponents_rows:
+        try:
+            badges_list = json.loads(op["badges"]) if op["badges"] else []
+        except Exception:
+            badges_list = []
+        leaderboard[op["id"]] = {
+            "name": op["name"],
+            "avatar_color": op["avatar_color"] or "#3b82f6",
+            "wins": 0,
+            "streak": op["streak"] or 0,
+            "points": op["duel_points"] or 0,
+            "points_compact": format_points_compact(op["duel_points"] or 0),
+            "level": 1 + (op["duel_points"] or 0) // 50,
+            "badges": badges_list
+        }
+        
+    try:
+        user_badges_list = json.loads(user["badges"]) if user["badges"] else []
+    except Exception:
+        user_badges_list = []
+        
+    leaderboard[user["id"]] = {
+        "name": user["name"],
+        "avatar_color": user["avatar_color"] or "#3b82f6",
+        "wins": 0,
+        "streak": user["streak"] or 0,
+        "points": user["duel_points"] or 0,
+        "points_compact": format_points_compact(user["duel_points"] or 0),
+        "level": 1 + (user["duel_points"] or 0) // 50,
+        "badges": user_badges_list
+    }
     
     all_resolved = conn.execute("SELECT challenger_id, opponent_id, challenger_score, opponent_score FROM tutor_duels WHERE status = 'resolved'").fetchall()
     for d in all_resolved:
@@ -1423,7 +1489,7 @@ async def duels_page(request: Request):
             if d["opponent_id"] in leaderboard:
                 leaderboard[d["opponent_id"]]["wins"] += 1
                 
-    leaderboard_sorted = sorted(leaderboard.values(), key=lambda x: x["wins"], reverse=True)[:5]
+    leaderboard_sorted = sorted(leaderboard.values(), key=lambda x: (x["wins"], x["points"]), reverse=True)[:5]
     conn.close()
     
     return templates.TemplateResponse(
@@ -1435,7 +1501,8 @@ async def duels_page(request: Request):
             "incoming": incoming_challenges,
             "outgoing": outgoing_challenges,
             "completed": completed_duels,
-            "leaderboard": leaderboard_sorted
+            "leaderboard": leaderboard_sorted,
+            "notifications": notifications
         }
     )
 
@@ -1446,9 +1513,27 @@ async def start_duel(request: Request, body: dict):
         raise HTTPException(status_code=401, detail="No autorizado")
         
     area = body.get("area", "Matemáticas")
-    opponent_id = body.get("opponent_id")
     
     conn = get_db()
+    # Select opponent: prioritize active in the last 5 minutes
+    opponent_row = conn.execute('''
+        SELECT id, name, avatar_color, streak FROM users 
+        WHERE id != %s AND last_seen > NOW() - INTERVAL '5 minutes'
+        ORDER BY RANDOM() LIMIT 1
+    ''', (user["id"],)).fetchone()
+    
+    if not opponent_row:
+        opponent_row = conn.execute('''
+            SELECT id, name, avatar_color, streak FROM users 
+            WHERE id != %s 
+            ORDER BY RANDOM() LIMIT 1
+        ''', (user["id"],)).fetchone()
+        
+    if not opponent_row:
+        conn.close()
+        raise HTTPException(status_code=400, detail="No hay oponentes disponibles para desafiar.")
+        
+    opponent_id = opponent_row["id"]
     # 1. Fetch 1 random question for this area from DB
     r = conn.execute(
         "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 1",
@@ -1684,13 +1769,12 @@ async def respond_to_duel(request: Request, body: dict):
     
     if challenger_score > score:
         winner = "challenger"
-        # Challenger gets streak
+        cursor.execute("UPDATE users SET duel_points = COALESCE(duel_points, 0) + 5 WHERE id = %s", (duel["challenger_id"],))
     elif score > challenger_score:
         winner = "opponent"
-        # Opponent (current user) gets streak increase
         user_streak = (user["streak"] or 0) + 1
         streak_bonus = True
-        cursor.execute("UPDATE users SET streak = %s, last_active_date = %s WHERE id = %s", (user_streak, today_str, user["id"]))
+        cursor.execute("UPDATE users SET streak = %s, last_active_date = %s, duel_points = COALESCE(duel_points, 0) + 5 WHERE id = %s", (user_streak, today_str, user["id"]))
         
         # Add badge to opponent
         badges = []
@@ -1701,8 +1785,38 @@ async def respond_to_duel(request: Request, body: dict):
         if "Duelo Ganado" not in badges:
             badges.append("Duelo Ganado")
             cursor.execute("UPDATE users SET badges = %s WHERE id = %s", (json.dumps(badges), user["id"]))
-            
+    else:
+        # Tie
+        cursor.execute("UPDATE users SET duel_points = COALESCE(duel_points, 0) + 2 WHERE id = %s", (user["id"],))
+        cursor.execute("UPDATE users SET duel_points = COALESCE(duel_points, 0) + 2 WHERE id = %s", (duel["challenger_id"],))
+        
     conn.commit()
+
+    # Process badges/achievements for both users
+    for uid in [user["id"], duel["challenger_id"]]:
+        row = conn.execute("SELECT duel_points, badges FROM users WHERE id = %s", (uid,)).fetchone()
+        if row:
+            pts = row["duel_points"] or 0
+            try:
+                curr_badges = json.loads(row["badges"]) if row["badges"] else []
+            except Exception:
+                curr_badges = []
+            
+            badges_map = [
+                (10, "Duelista Principiante ⚔️"),
+                (50, "Duelista Pro 🛡️"),
+                (200, "Duelista de Oro 🏆"),
+                (500, "Campeón de Duelos 👑"),
+                (1000, "Leyenda del Saber 🌟")
+            ]
+            new_added = False
+            for thresh, bname in badges_map:
+                if pts >= thresh and bname not in curr_badges:
+                    curr_badges.append(bname)
+                    new_added = True
+            if new_added:
+                cursor.execute("UPDATE users SET badges = %s WHERE id = %s", (json.dumps(curr_badges), uid))
+                conn.commit()
     
     # Load updated user streak and badges
     updated_user = conn.execute("SELECT streak, badges FROM users WHERE id = %s", (user["id"],)).fetchone()
@@ -1894,15 +2008,23 @@ async def simulacro_page(request: Request):
 
 @app.get("/api/simulacro/questions")
 async def get_simulacro_questions():
+    limits = {
+        "Matemáticas": 20,
+        "Lectura Crítica": 20,
+        "Ciencias Naturales": 20,
+        "Sociales y Ciudadanas": 20,
+        "Inglés": 25
+    }
     areas = ["Matemáticas", "Lectura Crítica", "Ciencias Naturales", "Sociales y Ciudadanas", "Inglés"]
     conn = get_db()
     
     all_questions = []
     
     for area in areas:
+        limit = limits[area]
         rows = conn.execute(
-            "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 5",
-            (area,)
+            "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT %s",
+            (area, limit)
         ).fetchall()
         
         area_questions = []
@@ -1922,7 +2044,7 @@ async def get_simulacro_questions():
                 "graphic": r["graphic"]
             })
             
-        needed = 5 - len(area_questions)
+        needed = limit - len(area_questions)
         if needed > 0:
             api_key = os.getenv("GEMINI_API_KEY")
             if api_key:
@@ -1987,8 +2109,8 @@ async def get_simulacro_questions():
                 except Exception as e:
                     print(f"Error generating dynamic questions for {area} in mock exam:", e)
                     
-        # Fallback if still less than 5
-        if len(area_questions) < 5:
+        # Fallback if still less than limit
+        if len(area_questions) < limit:
             fallbacks = {
                 "Matemáticas": {"text": "¿Cuál es el valor de x si 2x + 5 = 15?", "options": ["5", "10", "15", "20"], "correct_answer": "5", "explanation": "Restando 5 a ambos lados queda 2x = 10, por tanto x = 5."},
                 "Lectura Crítica": {"text": "En el texto discontinuo de una caricatura, el sarcasmo se usa principalmente para:", "options": ["Criticar de forma indirecta", "Hacer reír sin reflexionar", "Explicar científicamente", "Describir paisajes"], "correct_answer": "Criticar de forma indirecta", "explanation": "El sarcasmo en caricaturas políticas busca la crítica social indirecta."},
@@ -1997,7 +2119,7 @@ async def get_simulacro_questions():
                 "Inglés": {"text": "Choose the correct word: She ____ to the gym every day.", "options": ["goes", "go", "going", "gone"], "correct_answer": "goes", "explanation": "Third person singular in Present Simple requires 'goes'."}
             }
             f_q = fallbacks[area]
-            for i in range(5 - len(area_questions)):
+            for i in range(limit - len(area_questions)):
                 area_questions.append({
                     "id": i + 5000 + (hash(area) % 1000),
                     "area": area,
