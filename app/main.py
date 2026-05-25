@@ -2223,6 +2223,11 @@ async def save_simulacro_result(request: Request, data: dict):
     }
 
 
+@app.get("/preview", response_class=HTMLResponse)
+async def preview_temp_page(request: Request):
+    return templates.TemplateResponse(request=request, name="preview_temp.html")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True)
