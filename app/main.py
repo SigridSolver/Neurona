@@ -470,7 +470,7 @@ async def get_practice_questions(area: str):
     if needed > 0 and api_key:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-3.1-flash-lite')
             cursor = conn.cursor()
             
             # Generate the needed questions in a single prompt to prevent timeout
@@ -619,7 +619,7 @@ async def generate_question_route(request: Request, body: QuestionGenerateReques
     
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3.1-flash-lite')
         response = model.generate_content(prompt)
         text_response = response.text.strip()
         text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
@@ -833,15 +833,15 @@ async def chat_api(request: Request, body: ChatRequest):
             # Smart fallback between Gemini models
             try:
                 model = genai.GenerativeModel(
-                    model_name='gemini-1.5-flash',
+                    model_name='gemini-3.1-flash-lite',
                     system_instruction=system_instruction
                 )
                 chat = model.start_chat(history=gemini_history)
                 response = chat.send_message(user_content)
             except Exception as e_model:
-                print("Failed with gemini-1.5-flash, trying gemini-2.0-flash fallback:", e_model)
+                print("Failed with gemini-3.1-flash-lite, trying gemini-2.5-flash-lite fallback:", e_model)
                 model = genai.GenerativeModel(
-                    model_name='gemini-2.0-flash',
+                    model_name='gemini-2.5-flash-lite',
                     system_instruction=system_instruction
                 )
                 chat = model.start_chat(history=gemini_history)
@@ -1121,7 +1121,7 @@ def simulate_tutor_response(post_id: int, content: str, area: str):
                 f"Responde de manera concisa, clara y didáctica (máximo 3-4 líneas). "
                 f"Explica el concepto o cómo resolver la duda, y motiva al estudiante. Usa un tono amigable, emojis y responde en español."
             )
-            model = genai.GenerativeModel(model_name='gemini-1.5-flash', system_instruction=system_instruction)
+            model = genai.GenerativeModel(model_name='gemini-3.1-flash-lite', system_instruction=system_instruction)
             response = model.generate_content(content)
             response_text = response.text.strip()
         except Exception:
@@ -1558,7 +1558,7 @@ async def start_duel(request: Request, body: dict):
         if api_key:
             try:
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-3.1-flash-lite')
                 prompt = f"""
                 Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
                 Genera 1 pregunta de selección múltiple original, inédita y de alta calidad para el área de {area}.
@@ -1915,7 +1915,7 @@ async def learn_page(request: Request, area: str = "Todas"):
         if api_key:
             try:
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-3.1-flash-lite')
                 
                 target_area = area if area != "Todas" else random.choice(["Matemáticas", "Lectura Crítica", "Ciencias Naturales", "Sociales y Ciudadanas", "Inglés"])
                 
@@ -2088,7 +2088,7 @@ async def get_simulacro_questions():
             if api_key:
                 try:
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    model = genai.GenerativeModel('gemini-3.1-flash-lite')
                     cursor = conn.cursor()
                     
                     prompt = f"""

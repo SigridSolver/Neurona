@@ -105,7 +105,7 @@ def generate_questions_with_gemini():
             """
             
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-3.1-flash-lite')
                 response = model.generate_content(prompt)
                 
                 # Parse JSON clean
