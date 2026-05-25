@@ -851,7 +851,7 @@ async def chat_api(request: Request, body: ChatRequest):
             mode = "ai"
         except Exception as e:
             print("Gemini API Error:", e)
-            response_text = f"Hola. La consulta a la API de Gemini falló con el siguiente error: `{str(e)}`. Por favor, verifica la clave API en tus variables de entorno de Render.com (GEMINI_API_KEY)."
+            response_text = ""
             mode = "local"
             
     if not response_text:
@@ -955,6 +955,10 @@ async def chat_api(request: Request, body: ChatRequest):
                     "\n\n*(Nota: Configura tu clave `GEMINI_API_KEY` en un archivo `.env` "
                     "en la raíz para habilitar un chat conversacional fluido con IA. "
                     "Actualmente estás en modo de búsqueda local).* "
+                )
+            else:
+                notice = (
+                    "\n\n*(Nota: La API de Gemini arrojó un error de cuota o límite. Se activó de forma temporal la respuesta del Tutor local).* "
                 )
                 
             if found_content:
