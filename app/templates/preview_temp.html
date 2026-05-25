@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Vista Previa de Pregunta - Relaciones Comerciales</title>
+  <title>Vista Previa de Pregunta Dinámica</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -72,34 +72,14 @@
       font-size: 1.05rem;
       line-height: 1.6;
       margin-bottom: 1.5rem;
+      white-space: pre-line;
     }
 
-    /* Table styling */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
+    .diagram-container {
+      display: flex;
+      justify-content: center;
       margin: 1.5rem 0;
-      font-size: 0.95rem;
-      text-align: center;
-    }
-
-    .data-table th {
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
-      font-weight: 700;
-      padding: 0.75rem;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .data-table td {
-      padding: 0.75rem;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.01);
-      font-style: italic;
-    }
-
-    .data-table tr:hover td {
-      background: rgba(255, 255, 255, 0.03);
+      width: 100%;
     }
 
     .options-grid {
@@ -123,8 +103,8 @@
       cursor: pointer;
       transition: all 0.3s ease;
       display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
+      align-items: center;
+      gap: 1rem;
     }
 
     .option-card:hover {
@@ -133,34 +113,21 @@
       transform: translateY(-2px);
     }
 
-    .option-title {
-      font-weight: 700;
-      font-size: 1.05rem;
-      color: #60a5fa;
+    .option-letter {
+      background: rgba(255,255,255,0.08);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      font-weight: 700;
+      color: #60a5fa;
+      flex-shrink: 0;
     }
 
-    .mini-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-      text-align: center;
-    }
-
-    .mini-table th {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-muted);
-      padding: 0.5rem;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      font-size: 0.8rem;
-    }
-
-    .mini-table td {
-      padding: 0.5rem;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      background: rgba(255, 255, 255, 0.01);
+    .option-content {
+      font-size: 0.95rem;
     }
 
     .explanation-box {
@@ -173,160 +140,54 @@
       font-size: 0.95rem;
       line-height: 1.5;
     }
+    
+    .refresh-notice {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
   </style>
 </head>
 <body>
 
   <div class="practice-card">
     <div class="question-header">
-      <span class="area-badge">Matemáticas</span>
-      <span class="difficulty-badge">Dificultad: Intermedio</span>
+      <span class="area-badge">{{ q.area }}</span>
+      <span class="difficulty-badge">Dificultad: {{ q.difficulty }} (Paramétrica)</span>
     </div>
 
     <div class="question-text">
-      La tabla muestra las relaciones de comercio, venta y compra de productos entre varios países.
+      {{ q.text }}
     </div>
 
-    <!-- Main Data Table -->
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>País</th>
-          <th>Vende productos a:</th>
-          <th>Compra productos de:</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="font-weight: bold; font-style: normal; color: #fff;">P</td>
-          <td>P, T</td>
-          <td>S, V, P, W</td>
-        </tr>
-        <tr>
-          <td style="font-weight: bold; font-style: normal; color: #fff;">Q</td>
-          <td>U, Q, T, R</td>
-          <td>V, Q</td>
-        </tr>
-        <tr>
-          <td style="font-weight: bold; font-style: normal; color: #fff;">R</td>
-          <td>T, R</td>
-          <td>R, V, W, Q</td>
-        </tr>
-        <tr>
-          <td style="font-weight: bold; font-style: normal; color: #fff;">S</td>
-          <td>P, U, T, S</td>
-          <td>S, V</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="question-text" style="font-weight: 600; margin-top: 1.5rem;">
-      De acuerdo con la información presentada, ¿cuál es la tabla que muestra las relaciones comerciales del país W?
+    <!-- Diagrama SVG Dinámico -->
+    {% if q.graphic %}
+    <div class="diagram-container">
+      <img src="{{ q.graphic }}" style="max-width: 320px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);" alt="Gráfico Dinámico" />
     </div>
+    {% endif %}
 
     <!-- Options Grid -->
     <div class="options-grid">
-      
-      <!-- Option A -->
+      {% for opt in q.options %}
       <div class="option-card">
-        <div class="option-title">
-          <span style="background: rgba(255,255,255,0.08); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">A</span>
-        </div>
-        <table class="mini-table">
-          <thead>
-            <tr>
-              <th>Vende productos a:</th>
-              <th>Compra productos de:</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Ninguno</td>
-              <td>Ninguno</td>
-            </tr>
-          </tbody>
-        </table>
+        <span class="option-letter">
+          {% if loop.index == 1 %}A{% elif loop.index == 2 %}B{% elif loop.index == 3 %}C{% else %}D{% endif %}
+        </span>
+        <div class="option-content">{{ opt }}</div>
       </div>
-
-      <!-- Option B -->
-      <div class="option-card">
-        <div class="option-title">
-          <span style="background: rgba(255,255,255,0.08); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">B</span>
-        </div>
-        <table class="mini-table">
-          <thead>
-            <tr>
-              <th>Vende productos a:</th>
-              <th>Compra productos de:</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Ninguno</td>
-              <td>P, R</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Option C -->
-      <div class="option-card">
-        <div class="option-title">
-          <span style="background: rgba(255,255,255,0.08); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">C</span>
-        </div>
-        <table class="mini-table">
-          <thead>
-            <tr>
-              <th>Vende productos a:</th>
-              <th>Compra productos de:</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>P, R</td>
-              <td>Ninguno</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Option D -->
-      <div class="option-card">
-        <div class="option-title">
-          <span style="background: rgba(255,255,255,0.08); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">D</span>
-        </div>
-        <table class="mini-table">
-          <thead>
-            <tr>
-              <th>Vende productos a:</th>
-              <th>Compra productos de:</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>R, V, Q</td>
-              <td>T, R</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
+      {% endfor %}
     </div>
 
     <!-- Explanation Box -->
     <div class="explanation-box">
-      <strong>✓ Respuesta correcta: C (Vende productos a: P, R | Compra productos de: Ninguno)</strong><br><br>
-      Para determinar las relaciones comerciales del país $W$, analicemos la tabla principal por separado:<br><br>
-      
-      1. **¿A quién le vende productos el país W?**<br>
-      Que el país $W$ le venda a otros países significa que esos otros países **compran** productos de $W$. Si revisamos la columna *"Compra productos de:"*, vemos que:
-      * El país $P$ compra de: $S, V, P, \mathbf{W}$ (por lo tanto, $W$ le vende a $P$).
-      * El país $R$ compra de: $R, V, \mathbf{W}, Q$ (por lo tanto, $W$ le vende a $R$).
-      * De este modo, $W$ vende productos a: $\mathbf{P, R}$.<br><br>
-      
-      2. **¿De quién compra productos el país W?**<br>
-      Que el país $W$ le compre a otros países significa que esos otros países le **venden** productos a $W$. Si revisamos la columna *"Vende productos a:"* para todos los países ($P, Q, R, S$), ninguno de ellos lista al país $W$. Por tanto, $W$ no realiza compras registradas.
-      * De este modo, $W$ compra productos de: $\mathbf{Ninguno}$.
+      <strong>✓ Respuesta correcta: {{ q.correct_answer }}</strong><br><br>
+      {{ q.explanation }}
+    </div>
+    
+    <div class="refresh-notice">
+      🔄 Recarga esta página (F5) para ver cómo cambian los valores, la respuesta correcta y el gráfico automáticamente.
     </div>
   </div>
 

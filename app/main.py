@@ -44,6 +44,134 @@ def format_points_compact(pts: int) -> str:
         return f"{pts / 1000:.1f}k".replace(".0", "")
     return str(pts)
 
+def process_parametric_question(q, seed=None):
+    text = q.get("text", "")
+    import random
+    import base64
+    from math import gcd
+    
+    local_random = random.Random(seed) if seed is not None else random.Random()
+    
+    if "{inclinacion}" in text:
+        inclinacion = local_random.choice([3, 4, 5, 6, 7, 8, 9, 10, 12])
+        correct_val = 90 - inclinacion
+        opts = [
+            f"{inclinacion}°",
+            f"{90 + inclinacion}°",
+            f"{correct_val}°",
+            "90°"
+        ]
+        local_random.shuffle(opts)
+        correct_answer = f"{correct_val}°"
+        new_text = text.format(inclinacion=inclinacion)
+        
+        explanation_tpl = q.get("explanation", "")
+        if "{inclinacion}" in explanation_tpl:
+            new_explanation = explanation_tpl.format(inclinacion=inclinacion, correct=correct_val)
+        else:
+            new_explanation = f"La línea vertical de referencia es perpendicular al suelo, por lo que forma un ángulo recto de 90°. Como la inclinación de la torre es de {inclinacion}° respecto a la vertical, el ángulo restante para llegar al suelo es 90° - {inclinacion}° = {correct_val}°."
+            
+        graphic = q.get("graphic")
+        if graphic and "base64," in graphic:
+            try:
+                header, encoded = graphic.split("base64,", 1)
+                decoded = base64.b64decode(encoded).decode("utf-8")
+                if "{inclinacion}" in decoded:
+                    decoded = decoded.replace("{inclinacion}", str(inclinacion))
+                new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
+                graphic = header + "base64," + new_encoded
+            except Exception as e:
+                print("Error processing parametric SVG graphic:", e)
+                
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": opts,
+            "correct_answer": correct_answer,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": graphic
+        }
+        
+    elif "{futbol_solo}" in text or "{baloncesto_solo}" in text or "diagrama de Venn" in text:
+        futbol_solo = local_random.randint(10, 20)
+        ambos = local_random.randint(5, 12)
+        baloncesto_solo = local_random.randint(8, 18)
+        ninguno = local_random.randint(4, 10)
+        total = futbol_solo + ambos + baloncesto_solo + ninguno
+        
+        num = baloncesto_solo
+        den = total
+        divisor = gcd(num, den)
+        simp_num = num // divisor
+        simp_den = den // divisor
+        correct_frac = f"{simp_num}/{simp_den}"
+        
+        d1_num = ambos // gcd(ambos, total)
+        d1_den = total // gcd(ambos, total)
+        d1 = f"{d1_num}/{d1_den}"
+        if d1 == correct_frac: d1 = f"{(ambos+2)//gcd(ambos+2, total)}/{total//gcd(ambos+2, total)}"
+        
+        b_total = ambos + baloncesto_solo
+        d2_num = b_total // gcd(b_total, total)
+        d2_den = total // gcd(b_total, total)
+        d2 = f"{d2_num}/{d2_den}"
+        if d2 == correct_frac: d2 = f"{(b_total-1)//gcd(b_total-1, total)}/{total//gcd(b_total-1, total)}"
+        
+        b_f_sum = futbol_solo + baloncesto_solo
+        d3_num = baloncesto_solo // gcd(baloncesto_solo, b_f_sum)
+        d3_den = b_f_sum // gcd(baloncesto_solo, b_f_sum)
+        d3 = f"{d3_num}/{d3_den}"
+        if d3 == correct_frac: d3 = f"{(baloncesto_solo+1)//gcd(baloncesto_solo+1, b_f_sum)}/{b_f_sum//gcd(baloncesto_solo+1, b_f_sum)}"
+        
+        opts = [correct_frac, d1, d2, d3]
+        unique_opts = []
+        for o in opts:
+            if o not in unique_opts:
+                unique_opts.append(o)
+                
+        while len(unique_opts) < 4:
+            random_num = local_random.randint(2, 9)
+            random_den = local_random.randint(10, 30)
+            g_val = gcd(random_num, random_den)
+            opt_str = f"{random_num//g_val}/{random_den//g_val}"
+            if opt_str not in unique_opts:
+                unique_opts.append(opt_str)
+                
+        local_random.shuffle(unique_opts)
+        
+        new_text = f"El siguiente diagrama de Venn representa la distribución de un grupo de {total} estudiantes según sus preferencias deportivas entre Fútbol (F) y Baloncesto (B):\n\nSi se selecciona un estudiante al azar dentro del grupo evaluado, ¿cuál es la probabilidad de que este prefiera únicamente Baloncesto?"
+        
+        new_explanation = f"Para hallar la probabilidad, realizamos el siguiente análisis paso a paso:\n\n1. **Establecer el total del universo:** Sumamos todos los estudiantes distribuidos en el diagrama de Venn:\n$$\\text{{Total}} = {futbol_solo} \\text{{ (F únicamente)}} + {ambos} \\text{{ (Ambos)}} + {baloncesto_solo} \\text{{ (B únicamente)}} + {ninguno} \\text{{ (Ninguno)}} = {total} \\text{{ estudiantes.}}$$\n2. **Identificar los casos favorables:** El problema pide específicamente la probabilidad de que el estudiante prefiera **únicamente** Baloncesto. Esto corresponde a la región exclusiva del círculo B, que equivale a **{baloncesto_solo} estudiantes**.\n3. **Calcular y simplificar la probabilidad:**\n$$P(\\text{{Únicamente Baloncesto}}) = \\frac{{\\text{{Casos Favorables}}}}{{\\text{{Casos Totales}}}} = \\frac{{{baloncesto_solo}}}{{{total}}}$$\nSimplificando la fracción por el MCD ({divisor}) obtenemos la respuesta: **{correct_frac}**."
+        
+        graphic = q.get("graphic")
+        if graphic and "base64," in graphic:
+            try:
+                header, encoded = graphic.split("base64,", 1)
+                decoded = base64.b64decode(encoded).decode("utf-8")
+                decoded = decoded.replace("{futbol_solo}", str(futbol_solo))
+                decoded = decoded.replace("{ambos}", str(ambos))
+                decoded = decoded.replace("{baloncesto_solo}", str(baloncesto_solo))
+                decoded = decoded.replace("{ninguno}", str(ninguno))
+                new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
+                graphic = header + "base64," + new_encoded
+            except Exception as e:
+                print("Error processing parametric Venn SVG:", e)
+                
+        return {
+            "id": q["id"],
+            "area": q["area"],
+            "text": new_text,
+            "options": unique_opts,
+            "correct_answer": correct_frac,
+            "explanation": new_explanation,
+            "difficulty": q["difficulty"],
+            "graphic": graphic
+        }
+        
+    return q
+
 load_dotenv()
 
 # Configure Gemini
@@ -546,7 +674,7 @@ async def get_practice_questions(area: str):
         except Exception:
             opts = [r["correct_answer"], "Opción B", "Opción C", "Opción D"]
             
-        questions.append({
+        q_obj = {
             "id": r["id"],
             "area": r["area"],
             "text": r["text"],
@@ -555,7 +683,9 @@ async def get_practice_questions(area: str):
             "explanation": r["explanation"],
             "difficulty": r["difficulty"],
             "graphic": r["graphic"]
-        })
+        }
+        q_obj = process_parametric_question(q_obj)
+        questions.append(q_obj)
         
     needed = 20 - len(questions)
     api_key = os.getenv("GEMINI_API_KEY")
@@ -1770,8 +1900,11 @@ async def start_duel(request: Request, body: dict):
         "options": opts,
         "correct_answer": r["correct_answer"],
         "explanation": r["explanation"],
+        "difficulty": r.get("difficulty", "Intermedio") if isinstance(r, dict) else r["difficulty"],
         "graphic": r["graphic"]
     }
+    duel_seed = user["id"] + opponent_id + r["id"]
+    question = process_parametric_question(question, seed=duel_seed)
     
     opponent_row = conn.execute("SELECT id, name, avatar_color, streak FROM users WHERE id = %s", (opponent_id,)).fetchone()
     conn.close()
@@ -1852,7 +1985,7 @@ async def load_pending_duel(duel_id: int, request: Request):
         
     conn = get_db()
     duel = conn.execute('''
-        SELECT d.id, d.area, d.challenger_score, q.id as q_id, q.text, q.options, q.correct_answer, q.explanation, q.graphic, u.name as challenger_name, u.avatar_color
+        SELECT d.id, d.area, d.challenger_score, d.challenger_id, d.opponent_id, q.id as q_id, q.text, q.options, q.correct_answer, q.explanation, q.graphic, u.name as challenger_name, u.avatar_color
         FROM tutor_duels d
         JOIN questions q ON d.question_id = q.id
         JOIN users u ON d.challenger_id = u.id
@@ -1868,19 +2001,25 @@ async def load_pending_duel(duel_id: int, request: Request):
     except Exception:
         opts = [duel["correct_answer"], "Opción B", "Opción C", "Opción D"]
         
+    question_obj = {
+        "id": duel["q_id"],
+        "area": duel["area"],
+        "text": duel["text"],
+        "options": opts,
+        "correct_answer": duel["correct_answer"],
+        "explanation": duel["explanation"],
+        "difficulty": "Intermedio",
+        "graphic": duel["graphic"]
+    }
+    duel_seed = duel["challenger_id"] + duel["opponent_id"] + duel["q_id"]
+    question_obj = process_parametric_question(question_obj, seed=duel_seed)
+        
     return {
         "id": duel["id"],
         "area": duel["area"],
         "challenger_name": duel["challenger_name"],
         "avatar_color": duel["avatar_color"] or "#3b82f6",
-        "question": {
-            "id": duel["q_id"],
-            "text": duel["text"],
-            "options": opts,
-            "correct_answer": duel["correct_answer"],
-            "explanation": duel["explanation"],
-            "graphic": duel["graphic"]
-        }
+        "question": question_obj
     }
 
 @app.post("/api/duelos/respond")
@@ -2185,7 +2324,7 @@ async def get_simulacro_questions():
                 opts = json.loads(r["options"])
             except Exception:
                 opts = [r["correct_answer"], "Opción B", "Opción C", "Opción D"]
-            area_questions.append({
+            q_obj = {
                 "id": r["id"],
                 "area": r["area"],
                 "text": r["text"],
@@ -2194,7 +2333,9 @@ async def get_simulacro_questions():
                 "explanation": r["explanation"],
                 "difficulty": r["difficulty"],
                 "graphic": r["graphic"]
-            })
+            }
+            q_obj = process_parametric_question(q_obj)
+            area_questions.append(q_obj)
             
         needed = limit - len(area_questions)
         if needed > 0:
@@ -2339,7 +2480,42 @@ async def save_simulacro_result(request: Request, data: dict):
 
 @app.get("/preview", response_class=HTMLResponse)
 async def preview_temp_page(request: Request):
-    return templates.TemplateResponse(request=request, name="preview_temp.html")
+    pisa_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <rect width="100%" height="100%" fill="#0f172a"/>
+  <line x1="30" y1="200" x2="290" y2="200" stroke="#94a3b8" stroke-width="2.5" />
+  <line x1="120" y1="30" x2="120" y2="200" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4" />
+  <rect x="105" y="185" width="15" height="15" fill="none" stroke="#64748b" stroke-width="1.5" />
+  <polygon points="120,200 131,40 166,42 155,200" fill="#1e293b" stroke="#38bdf8" stroke-width="3" />
+  <line x1="122" y1="170" x2="157" y2="170" stroke="#475569" stroke-width="1.5" />
+  <line x1="124" y1="140" x2="159" y2="140" stroke="#475569" stroke-width="1.5" />
+  <line x1="126" y1="110" x2="161" y2="110" stroke="#475569" stroke-width="1.5" />
+  <line x1="128" y1="80" x2="163" y2="80" stroke="#475569" stroke-width="1.5" />
+  <path d="M 120 130 A 70 70 0 0 1 125 130" fill="none" stroke="#3b82f6" stroke-width="2" />
+  <text x="110" y="125" fill="#3b82f6" font-family="sans-serif" font-size="12" font-weight="bold">{inclinacion}°</text>
+  <path d="M 175 200 A 20 20 0 0 0 153 182" fill="none" stroke="#f43f5e" stroke-width="2.5" />
+  <text x="135" y="185" fill="#f43f5e" font-family="sans-serif" font-size="16" font-weight="bold">?</text>
+</svg>"""
+
+    import base64
+    pisa_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(pisa_svg.encode('utf-8')).decode('utf-8')
+    
+    q_obj = {
+        "id": 9999,
+        "area": "Matemáticas",
+        "text": "Con respecto a la vertical, la torre se ha inclinado {inclinacion}° como se muestra en la gráfica. ¿Cuánto mide el otro ángulo (indicado con el signo de interrogación)?",
+        "options": ["{inclinacion}°", "{correct}°", "90°", "180°"],
+        "correct_answer": "{correct}°",
+        "explanation": "La línea vertical de referencia es perpendicular al suelo, por lo que forma un ángulo recto de 90°. Como la inclinación de la torre es de {inclinacion}° respecto a la vertical, el ángulo interno correspondiente entre la torre y la superficie disminuye en la misma cantidad: 90° - {inclinacion}° = {correct}°.",
+        "difficulty": "Fácil",
+        "graphic": pisa_graphic_uri
+    }
+    q_resolved = process_parametric_question(q_obj)
+    
+    return templates.TemplateResponse(
+        request=request, 
+        name="preview_temp.html", 
+        context={"q": q_resolved}
+    )
 
 
 if __name__ == "__main__":
