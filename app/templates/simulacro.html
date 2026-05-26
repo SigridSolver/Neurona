@@ -53,6 +53,7 @@
     .nav-grid::-webkit-scrollbar {
         width: 4px;
     }
+
     .nav-grid::-webkit-scrollbar-thumb {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 2px;
@@ -218,7 +219,15 @@
         margin-bottom: 1.5rem;
     }
 
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
 </style>
 {% endblock %}
 
@@ -229,29 +238,38 @@
     <div id="setupView" class="card" style="margin: 2rem auto; max-width: 750px; padding: 2.5rem;">
         <h2 class="text-center mb-3">⏱️ Simulacro Oficial ICFES Saber 11</h2>
         <p class="text-muted text-center mb-4" style="line-height: 1.6; font-size: 1.05rem;">
-            Prepárate bajo condiciones de tiempo reales de la prueba Saber 11 en Colombia. Este examen consta de <strong>105 preguntas</strong> y cuentas con un tiempo reglamentario ajustado de <strong>4 horas (240 minutos)</strong>. Al finalizar, recibirás tu diagnóstico y puntaje global estimado (0-500) que actualizará instantáneamente tus estadísticas.
+            Prepárate bajo condiciones de tiempo reales de la prueba Saber 11 en Colombia. Este examen consta de
+            <strong>105 preguntas</strong> y cuentas con un tiempo reglamentario ajustado de <strong>4 horas (240
+                minutos)</strong>. Al finalizar, recibirás tu diagnóstico y puntaje global estimado (0-500) que
+            actualizará instantáneamente tus estadísticas.
         </p>
 
-        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+        <div
+            style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
             <h4 class="mb-3">Distribución del Examen:</h4>
-            <ul style="padding-left: 1.25rem; margin: 0; line-height: 1.8; color: var(--text-muted); font-size: 0.95rem;">
+            <ul
+                style="padding-left: 1.25rem; margin: 0; line-height: 1.8; color: var(--text-muted); font-size: 0.95rem;">
                 <li><strong>Matemáticas:</strong> 20 preguntas (Enfoque ICFES cuantitativo).</li>
                 <li><strong>Lectura Crítica:</strong> 20 preguntas (Comprensión y textos discontinuos).</li>
                 <li><strong>Ciencias Naturales:</strong> 20 preguntas (Investigación y fenómenos).</li>
-                <li><strong>Sociales y Ciudadanas:</strong> 20 preguntas (Pensamiento social y multiperspectivismo).</li>
+                <li><strong>Sociales y Ciudadanas:</strong> 20 preguntas (Pensamiento social y multiperspectivismo).
+                </li>
                 <li><strong>Inglés:</strong> 25 preguntas (Niveles gramaticales A1, A2, B1).</li>
-                <li><strong>Duración oficial:</strong> 4 horas (240 minutos). Las respuestas incompletas se calificarán al expirar el tiempo.</li>
+                <li><strong>Duración oficial:</strong> 4 horas (240 minutos). Las respuestas incompletas se calificarán
+                    al expirar el tiempo.</li>
             </ul>
         </div>
 
-        <button class="btn btn-primary" onclick="startSimulacro()" style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700;">Iniciar Simulacro Oficial</button>
+        <button class="btn btn-primary" onclick="startSimulacro()"
+            style="width: 100%; padding: 1rem; font-size: 1.1rem; font-weight: 700;">Iniciar Simulacro Oficial</button>
     </div>
 
     <!-- VIEW 2: Loading State -->
     <div id="loadingView" class="card loader-view" style="display: none; margin: 2rem auto; max-width: 600px;">
         <div class="loader-spinner"></div>
         <h3>Preparando tu Examen...</h3>
-        <p class="text-muted text-center mt-2">Generando tus preguntas oficiales basadas en los estándares ICFES Saber 11. Esto puede tardar unos segundos...</p>
+        <p class="text-muted text-center mt-2">Generando tus preguntas oficiales basadas en los estándares ICFES Saber
+            11. Esto puede tardar unos segundos...</p>
     </div>
 
     <!-- VIEW 3: Active Exam Screen -->
@@ -260,20 +278,24 @@
         <div>
             <!-- Timer Widget -->
             <div class="timer-card">
-                <span class="text-muted" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Tiempo Restante</span>
+                <span class="text-muted"
+                    style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Tiempo
+                    Restante</span>
                 <div class="timer-display" id="examTimer">4:00:00</div>
             </div>
 
             <!-- Nav Grid Card -->
             <div class="card" style="padding: 1.25rem;">
                 <h4 style="margin-bottom: 0.5rem;">Navegación</h4>
-                <p class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.75rem;">Salta a cualquier pregunta:</p>
-                
+                <p class="text-muted" style="font-size: 0.75rem; margin-bottom: 0.75rem;">Salta a cualquier pregunta:
+                </p>
+
                 <div class="nav-grid" id="navGridContainer">
                     <!-- Numbers will be injected dynamically -->
                 </div>
 
-                <button class="btn btn-danger mt-4" onclick="confirmSubmitSimulacro()" style="width: 100%; font-size: 0.9rem; font-weight: 700;">Entregar Examen</button>
+                <button class="btn btn-danger mt-4" onclick="confirmSubmitSimulacro()"
+                    style="width: 100%; font-size: 0.9rem; font-weight: 700;">Entregar Examen</button>
             </div>
         </div>
 
@@ -283,6 +305,7 @@
             <div class="progress-bar-container">
                 <div class="progress-bar-fill" id="progressBarFill"></div>
             </div>
+
 
             <!-- Active Question Workspace -->
             <div class="question-box" id="questionWorkspace">
@@ -304,8 +327,10 @@
 
                 <!-- Navigation buttons at bottom -->
                 <div style="display:flex; justify-content:space-between; margin-top: auto; padding-top: 2rem;">
-                    <button class="btn btn-secondary" id="prevBtn" onclick="goToPrevQuestion()" style="padding: 0.6rem 1.5rem;">Anterior</button>
-                    <button class="btn btn-primary" id="nextBtn" onclick="goToNextQuestion()" style="padding: 0.6rem 2rem;">Siguiente</button>
+                    <button class="btn btn-secondary" id="prevBtn" onclick="goToPrevQuestion()"
+                        style="padding: 0.6rem 1.5rem;">Anterior</button>
+                    <button class="btn btn-primary" id="nextBtn" onclick="goToNextQuestion()"
+                        style="padding: 0.6rem 2rem;">Siguiente</button>
                 </div>
             </div>
         </div>
@@ -322,15 +347,17 @@
         <!-- Area Breakdowns -->
         <div style="max-width: 600px; margin: 0 auto 2.5rem auto; text-align: left;">
             <h3 class="mb-4 text-center">Desempeño y Niveles por Área</h3>
-            
+
             <div id="areaBreakdownsContainer">
                 <!-- Competency score bars injected here -->
             </div>
         </div>
 
         <div class="d-flex justify-content-center gap-3">
-            <a href="/dashboard" class="btn btn-primary" style="padding: 0.75rem 2rem; font-weight: 700;">Ir al Dashboard</a>
-            <button onclick="location.reload()" class="btn btn-secondary" style="padding: 0.75rem 2rem;">Hacer Nuevo Simulacro</button>
+            <a href="/dashboard" class="btn btn-primary" style="padding: 0.75rem 2rem; font-weight: 700;">Ir al
+                Dashboard</a>
+            <button onclick="location.reload()" class="btn btn-secondary" style="padding: 0.75rem 2rem;">Hacer Nuevo
+                Simulacro</button>
         </div>
     </div>
 
@@ -369,7 +396,7 @@
     function buildNavGrid() {
         const container = document.getElementById("navGridContainer");
         container.innerHTML = "";
-        
+
         for (let i = 0; i < questions.length; i++) {
             const btn = document.createElement("button");
             btn.className = "nav-num-btn";
@@ -382,7 +409,7 @@
 
     function renderQuestion() {
         const q = questions[currentIdx];
-        
+
         // Update nav active states
         for (let i = 0; i < questions.length; i++) {
             const btn = document.getElementById(`nav-btn-${i}`);
@@ -403,7 +430,7 @@
         // Load Question content
         document.getElementById("questionAreaLabel").innerText = q.area;
         document.getElementById("questionNumberLabel").innerText = `Pregunta ${currentIdx + 1} de ${questions.length}`;
-        
+
         // Format text content with image paths, markdown bold, and newlines
         let textContent = q.text;
         const imgRegex = /(\/static\/images\/recortes\/.*?\.(?:png|jpg|jpeg))/g;
@@ -444,7 +471,7 @@
 
         // Render KaTeX math formulas if available
         if (window.renderMathInElement) {
-            renderMathInElement(document.getElementById("questionWorkspace"), {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});
+            renderMathInElement(document.getElementById("questionWorkspace"), { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }] });
         }
 
         // Toggle Prev/Next buttons
@@ -501,7 +528,7 @@
     function confirmSubmitSimulacro() {
         const totalAnswered = Object.keys(answers).length;
         const unanswered = questions.length - totalAnswered;
-        
+
         let confirmMsg = "¿Estás seguro de que deseas finalizar tu simulacro?";
         if (unanswered > 0) {
             confirmMsg += ` Tienes ${unanswered} preguntas sin responder de un total de ${questions.length}.`;
@@ -530,7 +557,7 @@
 
     async function submitSimulacro() {
         clearInterval(timerInterval);
-        
+
         // Calculate scores per area
         let areaCorrectCounts = {
             "Matemáticas": 0,

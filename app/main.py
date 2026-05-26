@@ -1332,6 +1332,165 @@ async def get_question_hint(question_id: int, request: Request):
         conn.close()
 
 
+def get_matematicas_prompt(needed: int) -> str:
+    return f"""
+    Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia para el área de Matemáticas.
+    Genera una lista de {needed} preguntas de selección múltiple originales, inéditas, altamente didácticas y visuales.
+
+    ESTILO ICFES OBLIGATORIO:
+    - Las preguntas deben evaluar competencias y razonamiento matemático, no la memorización de fórmulas o cálculo mecánico puro.
+    - Deben presentar información suficiente para ser resueltas.
+    - Cada pregunta debe evaluar UNA competencia matemática específica del ICFES:
+      * Interpretación y representación
+      * Formulación y ejecución
+      * Argumentación
+    - Todas las preguntas deben estar contextualizadas en situaciones cotidianas o aplicadas (ej. economía familiar, transporte, deportes, ventas, fenómenos sociales, consumo, experimentos, producción, ambiente, datos reales, etc.). Evita ejercicios abstractos sin contexto.
+    - Varía el nivel cognitivo entre comprensión, aplicación e inferencia matemática, manteniendo una dificultad intermedia.
+    - Debe existir una única respuesta correcta, inequívoca y verificable.
+    - Los distractores (opciones incorrectas) deben ser plausibles y representar errores frecuentes de razonamiento o cálculo que cometen los estudiantes. Evita opciones absurdas.
+    - Evita preguntas de cálculo mecánico o rutinario sin interpretación o análisis contextual.
+
+    IMPORTANTE: Cada pregunta DEBE ser de una CATEGORÍA DIFERENTE. Selecciona aleatoriamente entre estas categorías:
+
+    CATEGORÍA 1 - GRÁFICA CIRCULAR (TORTA):
+    - Palabra clave en el enunciado: "gráfica circular" o "gráfica de torta"
+    - Contexto: distribución porcentual de datos cotidianos (asignaturas, deportes, preferencias, presupuestos)
+    - SVG: Gráfico de pastel con sectores de colores (#38bdf8, #f43f5e, #10b981, #fbbf24), fondo oscuro (#0f172a), porcentajes dentro de cada sector, y leyenda lateral
+    - Pregunta: calcular la cantidad real a partir de un porcentaje dado o realizar un análisis/interpretación de la distribución
+
+    CATEGORÍA 2 - GRÁFICA DE BARRAS / HISTOGRAMA:
+    - Palabra clave: "frecuencias" o incluir placeholders {{{{frec_1}}}}, {{{{frec_2}}}}, {{{{frec_3}}}}, {{{{frec_4}}}}
+    - SVG: Barras verticales con etiquetas de valor, ejes X/Y con nombres de variables contextuales, colores vibrantes
+    - Pregunta: calcular media aritmética, rango, total, o interpretar relaciones de magnitud entre barras
+
+    CATEGORÍA 3 - DIAGRAMA DE VENN:
+    - Palabra clave: "diagrama de Venn" e incluir placeholders {{{{futbol_solo}}}}, {{{{baloncesto_solo}}}}, {{{{ambos}}}}, {{{{ninguno}}}}
+    - SVG: Dos círculos superpuestos con valores en cada región, fondo oscuro y etiquetas claras
+    - Pregunta: probabilidad de un evento específico o interpretación de conjuntos
+
+    CATEGORÍA 4 - PLANO CARTESIANO:
+    - Palabra clave: "plano cartesiano" e incluir placeholders {{{{a}}}}, {{{{b}}}}, {{{{x2_svg}}}}, {{{{y2_svg}}}}
+    - SVG: Ejes coordenados con una recta trazada que representa una situación del mundo real (ej. costos vs distancia), puntos marcados
+    - Pregunta: calcular pendiente, intercepto, distancia, o interpretar el significado físico/contextual de la pendiente
+
+    CATEGORÍA 5 - GEOMETRÍA (Triángulos, Rectángulos):
+    - Enunciado: Debe contener las palabras base y altura y usar los placeholders {{{{base}}}} y {{{{altura}}}} únicamente para sus valores numéricos (ej. "Determina el área de un terreno triangular de base {{{{base}}}} metros y altura {{{{altura}}}} metros."). No uses los placeholders como los nombres de las variables, y no incluyas números fijos en el texto.
+    - SVG: Figura geométrica con cotas/medidas, fondo oscuro
+    - Pregunta: calcular área, perímetro, o resolver un problema de optimización simple
+
+    CATEGORÍA 6 - ECUACIÓN CUADRÁTICA:
+    - Palabra clave: "ecuación cuadrática" o "ecuación de segundo grado"
+    - Enunciado con fórmula LaTeX: $$ax^2 + bx + c = 0$$
+    - Pregunta: suma de raíces, discriminante o soluciones en el contexto de una trayectoria u optimización
+
+    CATEGORÍA 7 - FRACCIONES:
+    - Palabra clave: "fracciones" en el enunciado
+    - Enunciado con fórmula LaTeX: $$\\frac{{a}}{{b}} + \\frac{{c}}{{d}}$$
+    - Pregunta: resultado de la operación simplificado en un contexto aplicado (ej. reparto de bienes o tiempos)
+
+    CATEGORÍA 8 - TABLA DE DATOS (Mediana/Moda):
+    - Palabra clave: "mediana" o "moda de" en el enunciado
+    - Incluir placeholder {{{{dato_1}}}} en texto
+    - SVG: Tabla con celdas estilizadas mostrando datos ordenados de un estudio cotidiano
+    - Pregunta: calcular mediana o moda e interpretar su significado
+
+    CATEGORÍA 9 - FUNCIONES EXPONENCIALES:
+    - Incluir placeholder {{{{x_eval}}}} en el enunciado
+    - Enunciado: evaluar función $f(x) = a \\cdot 2^{{x+c}} + d$ que represente un modelo de crecimiento (población, bacterias, etc.)
+    - Pregunta: calcular $f(x)$ para un valor dado o interpretar el crecimiento
+
+    CATEGORÍA 10 - PROBABILIDAD:
+    - Palabras clave: probabilidad, evento, azar
+    - Contexto: juegos, selección de estudiantes, experimentos, decisiones bajo incertidumbre
+    - Pregunta: calcular probabilidad simple o compuesta
+    - SVG/Graphic: Puede ser null o mostrar un árbol de decisiones, una tabla de contingencia o un SVG simple explicativo
+
+    CATEGORÍA 11 - PROPORCIONALIDAD:
+    - Palabras clave: razón, proporcionalidad, regla de tres
+    - Contexto: descuentos, recetas, velocidad, consumo, escalas de mapas
+    - Pregunta: razón entre magnitudes, regla de tres simple/compuesta o variación proporcional directa o inversa
+    - SVG/Graphic: Puede ser null o un diagrama explicativo
+
+    CATEGORÍA 12 - ANÁLISIS ESTADÍSTICO:
+    - Palabras clave: tendencia, dispersión, conclusión, análisis
+    - Contexto: conjuntos de datos reales de encuestas, producción o rendimiento deportivo
+    - Pregunta: interpretar tendencias, comparar dos conjuntos de datos, o seleccionar la conclusión/afirmación correcta basada en la evidencia estadística
+
+    REGLAS GENERALES DE SVG:
+    1. Si la categoría requiere SVG, INCLUYE el código SVG completo en "graphic". Usa fondo oscuro (fill="#0f172a"), bordes redondeados, colores brillantes (#38bdf8, #f43f5e, #10b981).
+    2. Si la categoría no requiere SVG, el campo "graphic" puede ser null pero la explicación DEBE usar LaTeX extenso.
+    3. Las explicaciones deben ser paso a paso, detalladas, usando $$fórmulas$$ en LaTeX.
+    4. Usa **negritas** (markdown) para resaltar conceptos clave.
+    5. CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
+    6. VARÍA las categorías: no repitas la misma categoría en múltiples preguntas.
+
+    El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
+       - "area": "Matemáticas"
+       - "text": "[El enunciado con las palabras clave de la categoría y el contexto ICFES]"
+       - "options": ["Opción A", "Opción B", "Opción C", "Opción D"]
+       - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+       - "explanation": "[Justificación detallada paso a paso con LaTeX]"
+       - "difficulty": "Intermedio"
+       - "graphic": "[Código SVG completo o null]"
+    """
+
+def get_area_prompt(area: str, needed: int) -> str:
+    return f"""
+    Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
+    Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {area}.
+
+    ESTILO ICFES OBLIGATORIO:
+    - Las preguntas deben evaluar competencias y razonamiento crítico o científico, no la memorización de datos.
+    - Deben presentar información suficiente en el enunciado/contexto para ser resueltas de forma autónoma.
+    - Deben usar distractores plausibles y representativos de errores comunes de análisis o inferencia.
+    - Deben evitar pistas obvias o distractores triviales.
+    - Deben asemejarse estrictamente al tono formal, riguroso y analítico de la prueba Saber 11 oficial en Colombia.
+
+    REGLAS ESPECÍFICAS SEGÚN EL ÁREA:
+
+    1. LECTURA CRÍTICA:
+    - Distribuye las preguntas entre estas competencias del ICFES:
+      * Competencia 1: Identificar y entender los contenidos locales que conforman un texto.
+      * Competencia 2: Comprender cómo se articulan las partes de un texto para darle un sentido global.
+      * Competencia 3: Reflexionar a partir de un texto y evaluar su contenido y su forma.
+    - Usa variedad de tipologías textuales: literario (cuento, novela, poesía), argumentativo (ensayo, editorial, columna), divulgativo o científico, periodístico, filosófico, o discontinuo (caricatura, afiche, tabla, infografía).
+    - Varía la longitud y complejidad del texto propuesto (desde fragmentos cortos a medianos/largos).
+
+    2. CIENCIAS NATURALES:
+    - Distribuye las preguntas entre estas competencias del ICFES:
+      * Competencia 1: Uso comprensivo del conocimiento científico.
+      * Competencia 2: Explicación de fenómenos.
+      * Competencia 3: Indagación e interpretación de evidencia.
+    - Incluye tablas de datos, resultados experimentales descritos, gráficos, diagramas de flujo de procesos o escenarios de investigación/laboratorio cuando sea pertinente.
+
+    3. SOCIALES Y CIUDADANAS:
+    - Distribuye las preguntas entre estas competencias del ICFES:
+      * Competencia 1: Pensamiento social (conceptos básicos, constitucionales e históricos).
+      * Competencia 2: Interpretación y análisis de perspectivas (diferenciar opiniones de hechos, multiperspectivismo en dilemas o conflictos).
+      * Competencia 3: Pensamiento sistémico y reflexión ciudadana (analizar causas y efectos, mecanismos constitucionales).
+    - Incluye análisis de fuentes cuando sea pertinente: extractos de discursos, citas de autores, fragmentos de noticias, mapas, caricaturas políticas o gráficos socioeconómicos.
+
+    4. INGLÉS:
+    - Varía la tipología de preguntas entre:
+      * Parte 1/2: Notices, advertisements or short messages (avisos cotidianos en inglés).
+      * Parte 3/4: Vocabulary in context / Functional language (completar diálogos o seleccionar palabras adecuadas).
+      * Parte 5/6: Reading comprehension (textos medianos y preguntas de comprensión factual e inferencial).
+      * Parte 7: Grammar in context (completar textos con estructuras verbales adecuadas, nivel A2/B1).
+    - REGLA CRÍTICA: El texto (enunciado) y las opciones de respuesta DEBEN estar completamente en inglés. La explicación ("explanation") puede estar en español para facilitar la retroalimentación pedagógica.
+
+    REGLAS GENERALES:
+    - CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
+
+    El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
+       - "area": "{area}"
+       - "text": "[El texto/contexto de base y el enunciado de la pregunta, integrados limpiamente]"
+       - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
+       - "correct_answer": "[Debe ser idéntica a una de las opciones]"
+       - "explanation": "[Justificación detallada de la opción correcta y descarte de las incorrectas]"
+       - "difficulty": "Intermedio"
+    """
+
+
 @app.get("/api/questions/{area}")
 async def get_practice_questions(area: str):
     conn = get_db()
@@ -1371,97 +1530,9 @@ async def get_practice_questions(area: str):
             cursor = conn.cursor()
             
             if area == "Matemáticas":
-                prompt = f"""
-                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia para el área de Matemáticas.
-                Genera una lista de {needed} preguntas de selección múltiple originales, inéditas, altamente didácticas y visuales.
-                
-                IMPORTANTE: Cada pregunta DEBE ser de una CATEGORÍA DIFERENTE. Selecciona aleatoriamente entre estas categorías:
-                
-                CATEGORÍA 1 - GRÁFICA CIRCULAR (TORTA):
-                - Palabra clave en el enunciado: "gráfica circular" o "gráfica de torta"
-                - Contexto: distribución porcentual de datos (asignaturas, deportes, preferencias)
-                - SVG: Gráfico de pastel con sectores de colores (#38bdf8, #f43f5e, #10b981, #fbbf24), fondo oscuro (#0f172a), porcentajes dentro de cada sector, y leyenda lateral
-                - Pregunta: calcular la cantidad real a partir de un porcentaje dado
-                
-                CATEGORÍA 2 - GRÁFICA DE BARRAS / HISTOGRAMA:
-                - Palabra clave: "frecuencias" o incluir placeholders {{{{frec_1}}}}, {{{{frec_2}}}}, {{{{frec_3}}}}, {{{{frec_4}}}}
-                - SVG: Barras verticales con etiquetas de valor, ejes X/Y, colores vibrantes
-                - Pregunta: calcular media aritmética, rango o total
-                
-                CATEGORÍA 3 - DIAGRAMA DE VENN:
-                - Palabra clave: "diagrama de Venn" e incluir placeholders {{{{futbol_solo}}}}, {{{{baloncesto_solo}}}}, {{{{ambos}}}}, {{{{ninguno}}}}
-                - SVG: Dos círculos superpuestos con valores en cada región, fondo oscuro
-                - Pregunta: probabilidad de un evento específico
-                
-                CATEGORÍA 4 - PLANO CARTESIANO:
-                - Palabra clave: "plano cartesiano" e incluir placeholders {{{{a}}}}, {{{{b}}}}, {{{{x2_svg}}}}, {{{{y2_svg}}}}
-                - SVG: Ejes coordenados con una recta trazada, puntos marcados
-                - Pregunta: calcular pendiente, intercepto o distancia
-                
-                CATEGORÍA 5 - GEOMETRÍA (Triángulos, Rectángulos):
-                - Enunciado: Debe contener las palabras base y altura y usar los placeholders {{{{base}}}} y {{{{altura}}}} únicamente para sus valores numéricos (ej. "Determina el área de un triángulo de base {{{{base}}}} cm y altura {{{{altura}}}} cm."). No uses los placeholders como los nombres de las variables, y no incluyas números fijos en el texto.
-                - SVG: Figura geométrica con cotas/medidas, fondo oscuro
-                - Pregunta: calcular área o perímetro
-                
-                CATEGORÍA 6 - ECUACIÓN CUADRÁTICA:
-                - Palabra clave: "ecuación cuadrática" o "ecuación de segundo grado"
-                - Enunciado con fórmula LaTeX: $$ax^2 + bx + c = 0$$
-                - Pregunta: suma de raíces, discriminante o soluciones
-                
-                CATEGORÍA 7 - FRACCIONES:
-                - Palabra clave: "fracciones" en el enunciado
-                - Enunciado con fórmula LaTeX: $$\\\\frac{{a}}{{b}} + \\\\frac{{c}}{{d}}$$
-                - Pregunta: resultado de la operación simplificado
-                
-                CATEGORÍA 8 - TABLA DE DATOS (Mediana/Moda):
-                - Palabra clave: "mediana" o "moda de" en el enunciado
-                - Incluir placeholder {{{{dato_1}}}} en texto
-                - SVG: Tabla con celdas estilizadas mostrando datos ordenados
-                - Pregunta: calcular mediana o moda
-                
-                CATEGORÍA 9 - FUNCIONES EXPONENCIALES:
-                - Incluir placeholder {{{{x_eval}}}} en el enunciado
-                - Enunciado: evaluar función $f(x) = a \\\\cdot 2^{{x+c}} + d$
-                - Pregunta: calcular $f(x)$ para un valor dado
-                
-                REGLAS GENERALES:
-                1. Si la categoría requiere SVG, INCLUYE el código SVG completo en "graphic". Usa fondo oscuro (fill="#0f172a"), bordes redondeados, colores brillantes (#38bdf8, #f43f5e, #10b981).
-                2. Si la categoría es algebraica (ecuaciones, fracciones, exponenciales), el campo "graphic" puede ser null pero la explicación DEBE usar LaTeX extenso.
-                3. Las explicaciones deben ser paso a paso, detalladas, usando $$fórmulas$$ en LaTeX.
-                4. Usa **negritas** (markdown) para resaltar conceptos clave.
-                5. CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
-                6. VARÍA las categorías: no repitas la misma categoría en múltiples preguntas.
-                
-                El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
-                   - "area": "Matemáticas"
-                   - "text": "[El enunciado con las palabras clave de la categoría]"
-                   - "options": ["Opción A", "Opción B", "Opción C", "Opción D"]
-                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-                   - "explanation": "[Justificación detallada paso a paso con LaTeX]"
-                   - "difficulty": "Intermedio"
-                   - "graphic": "[Código SVG completo o null si es algebraica]"
-                """
+                prompt = get_matematicas_prompt(needed)
             else:
-                prompt = f"""
-                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
-                Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {area}.
-                
-                REGLAS DE DISEÑO ICFES SABER 11:
-                1. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, opinión) y formula una pregunta de inferencia.
-                2. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico.
-                3. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, o análisis de multiperspectivismo.
-                4. Para **Inglés**: Gramática y vocabulario de nivel A2/B1 o comprensión lectora.
-                
-                CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
-                
-                El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
-                   - "area": "{area}"
-                   - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
-                   - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
-                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-                   - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
-                   - "difficulty": "Intermedio"
-                """
+                prompt = get_area_prompt(area, needed)
             
             response = model.generate_content(prompt)
             text_response = response.text.strip()
@@ -1476,6 +1547,7 @@ async def get_practice_questions(area: str):
                 if graphic_val and "base64," not in graphic_val and "<svg" in graphic_val:
                     try:
                         import base64
+                        graphic_val = ensure_svg_xmlns(graphic_val)
                         graphic_val = "data:image/svg+xml;base64," + base64.b64encode(graphic_val.encode('utf-8')).decode('utf-8')
                     except Exception as e:
                         print("Error encoding generated SVG:", e)
@@ -2555,32 +2627,27 @@ async def start_duel(request: Request, body: dict):
             try:
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-3.1-flash-lite')
-                prompt = f"""
-                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
-                Genera 1 pregunta de selección múltiple original, inédita y de alta calidad para el área de {area}.
+                if area == "Matemáticas":
+                    prompt = get_matematicas_prompt(1)
+                else:
+                    prompt = get_area_prompt(area, 1)
                 
-                REGLAS DE DISEÑO ICFES SABER 11:
-                1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación (ej. álgebra, geometría, probabilidad, estadística o razonamiento cuantitativo).
-                2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, columna de opinión o texto discontinuo descriptivo) y formula una pregunta de inferencia o análisis sobre él.
-                3. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico donde se evalúe indagación o explicación de fenómenos.
-                4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, mecanismo de participación o análisis de multiperspectivismo donde haya diferentes puntos de vista en juego.
-                5. Para **Inglés**: Genera un ejercicio enfocado en comprensión lectora o gramática y vocabulario de nivel A2/B1.
-                
-                ESTRUCTURA DE RESPUESTA REQUERIDA:
-                La respuesta correcta debe ser indiscutible y las otras tres opciones (distractores) deben representar errores conceptuales o interpretativos comunes y verosímiles.
-                
-                El formato de salida DEBE ser estrictamente un objeto JSON en español, sin envolverlo en bloques markdown (sin ```json) y con las siguientes llaves:
-                   - "area": "{area}"
-                   - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
-                   - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
-                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-                   - "explanation": "[Justificación detallada de por qué es la clave correcta y por qué las demás son distractores]"
-                   - "difficulty": "[Básico, Intermedio, Avanzado]"
-                """
                 response = model.generate_content(prompt)
                 text_response = response.text.strip()
                 text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
                 q_data = json.loads(text_response)
+                
+                if isinstance(q_data, list):
+                    q_data = q_data[0]
+                    
+                graphic_val = q_data.get("graphic")
+                if graphic_val and "base64," not in graphic_val and "<svg" in graphic_val:
+                    try:
+                        import base64
+                        graphic_val = ensure_svg_xmlns(graphic_val)
+                        graphic_val = "data:image/svg+xml;base64," + base64.b64encode(graphic_val.encode('utf-8')).decode('utf-8')
+                    except Exception as e:
+                        print("Error encoding generated SVG for duel:", e)
                 
                 cursor = conn.cursor()
                 cursor.execute('''
@@ -2592,8 +2659,8 @@ async def start_duel(request: Request, body: dict):
                     json.dumps(q_data["options"], ensure_ascii=False),
                     q_data["correct_answer"],
                     q_data["explanation"],
-                    q_data["difficulty"],
-                    None
+                    q_data.get("difficulty", "Intermedio"),
+                    graphic_val
                 ))
                 new_id = cursor.fetchone()[0]
                 conn.commit()
@@ -2605,7 +2672,7 @@ async def start_duel(request: Request, body: dict):
                     "options": json.dumps(q_data["options"], ensure_ascii=False),
                     "correct_answer": q_data["correct_answer"],
                     "explanation": q_data["explanation"],
-                    "graphic": None
+                    "graphic": graphic_val
                 }
             except Exception as e:
                 print("Error generating question for duel:", e)
@@ -2935,28 +3002,10 @@ async def learn_page(request: Request, area: str = "Todas"):
                 model = genai.GenerativeModel('gemini-3.1-flash-lite')
                 
                 target_area = area if area != "Todas" else random.choice(["Matemáticas", "Lectura Crítica", "Ciencias Naturales", "Sociales y Ciudadanas", "Inglés"])
-                
-                prompt = f"""
-                Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
-                Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {target_area}.
-                
-                REGLAS DE DISEÑO ICFES SABER 11:
-                1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación (ej. álgebra, geometría, probabilidad, estadística o razonamiento cuantitativo).
-                2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, columna de opinión o texto discontinuo descriptivo) y formula una pregunta de inferencia o análisis sobre él.
-                3. Para **Ciencias Naturales**: Plantea una situation de investigación, laboratorio o fenómeno ecológico/físico/químico donde se evalúe indagación o explicación de fenómenos.
-                4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, mecanismo de participación o análisis de multiperspectivismo donde haya diferentes puntos de vista en juego.
-                5. Para **Inglés**: Genera un ejercicio enfocado en comprensión lectora o gramática y vocabulario de nivel A2/B1.
-                
-                CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
-                
-                El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
-                   - "area": "{target_area}"
-                   - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
-                   - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
-                   - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-                   - "explanation": "[Justificación detallada de por qué es la clave correcta]"
-                   - "difficulty": "Intermedio"
-                """
+                if target_area == "Matemáticas":
+                    prompt = get_matematicas_prompt(needed)
+                else:
+                    prompt = get_area_prompt(target_area, needed)
                 
                 response = model.generate_content(prompt)
                 text_response = response.text.strip()
@@ -2968,16 +3017,26 @@ async def learn_page(request: Request, area: str = "Todas"):
                     
                 cursor = conn.cursor()
                 for q_data in q_list:
+                    graphic_val = q_data.get("graphic")
+                    if graphic_val and "base64," not in graphic_val and "<svg" in graphic_val:
+                        try:
+                            import base64
+                            graphic_val = ensure_svg_xmlns(graphic_val)
+                            graphic_val = "data:image/svg+xml;base64," + base64.b64encode(graphic_val.encode('utf-8')).decode('utf-8')
+                        except Exception as e:
+                            print("Error encoding generated SVG for flashcard:", e)
+                    
                     cursor.execute('''
-                        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty)
-                        VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+                        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
                     ''', (
                         q_data["area"],
                         q_data["text"],
                         json.dumps(q_data["options"], ensure_ascii=False),
                         q_data["correct_answer"],
                         q_data["explanation"],
-                        q_data.get("difficulty", "Intermedio")
+                        q_data.get("difficulty", "Intermedio"),
+                        graphic_val
                     ))
                     new_id = cursor.fetchone()[0]
                     q_obj = {
@@ -2988,7 +3047,7 @@ async def learn_page(request: Request, area: str = "Todas"):
                         "correct_answer": q_data["correct_answer"],
                         "explanation": q_data["explanation"],
                         "difficulty": q_data.get("difficulty", "Intermedio"),
-                        "graphic": None
+                        "graphic": graphic_val
                     }
                     q_processed = process_parametric_question(q_obj)
                     questions.append({
@@ -3123,27 +3182,11 @@ async def get_simulacro_questions():
                     model = genai.GenerativeModel('gemini-3.1-flash-lite')
                     cursor = conn.cursor()
                     
-                    prompt = f"""
-                    Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
-                    Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {area}.
+                    if area == "Matemáticas":
+                        prompt = get_matematicas_prompt(needed)
+                    else:
+                        prompt = get_area_prompt(area, needed)
                     
-                    REGLAS DE DISEÑO ICFES:
-                    - Para Matemáticas: modelación, formulación y ejecución, o argumentación.
-                    - Para Lectura Crítica: fragmento corto y pregunta de inferencia.
-                    - Para Ciencias Naturales: indagación o explicación de fenómenos.
-                    - Para Sociales y Ciudadanas: dilema ético, conflicto social o multiperspectivismo.
-                    - Para Inglés: gramática, vocabulario nivel A2/B1 o comprensión lectora.
-                    
-                    CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
-                    
-                    El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
-                       - "area": "{area}"
-                       - "text": "[El enunciado de la pregunta. Si es Lectura Crítica o Ciencias, incluye primero el texto/contexto seguido de la pregunta]"
-                       - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
-                       - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-                       - "explanation": "[Justificación detallada de por qué es la clave correcta]"
-                       - "difficulty": "Intermedio"
-                    """
                     response = model.generate_content(prompt)
                     text_response = response.text.strip()
                     text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
@@ -3153,16 +3196,26 @@ async def get_simulacro_questions():
                         q_list = [q_list]
                         
                     for q_data in q_list:
+                        graphic_val = q_data.get("graphic")
+                        if graphic_val and "base64," not in graphic_val and "<svg" in graphic_val:
+                            try:
+                                import base64
+                                graphic_val = ensure_svg_xmlns(graphic_val)
+                                graphic_val = "data:image/svg+xml;base64," + base64.b64encode(graphic_val.encode('utf-8')).decode('utf-8')
+                            except Exception as e:
+                                print("Error encoding generated SVG for mock exam:", e)
+                                
                         cursor.execute('''
-                            INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty)
-                            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+                            INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
                         ''', (
                             area,
                             q_data["text"],
                             json.dumps(q_data["options"], ensure_ascii=False),
                             q_data["correct_answer"],
                             q_data["explanation"],
-                            q_data.get("difficulty", "Intermedio")
+                            q_data.get("difficulty", "Intermedio"),
+                            graphic_val
                         ))
                         new_id = cursor.fetchone()[0]
                         area_questions.append({
@@ -3173,7 +3226,7 @@ async def get_simulacro_questions():
                             "correct_answer": q_data["correct_answer"],
                             "explanation": q_data["explanation"],
                             "difficulty": q_data.get("difficulty", "Intermedio"),
-                            "graphic": None
+                            "graphic": graphic_val
                         })
                     conn.commit()
                 except Exception as e:
