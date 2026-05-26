@@ -1500,14 +1500,68 @@ def get_area_prompt(area: str, needed: int) -> str:
         """
 
 
+def generate_more_questions_bg(area: str, needed_count: int):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-3.1-flash-lite')
+        if area == "Matemáticas":
+            prompt = get_matematicas_prompt(needed_count)
+        else:
+            prompt = get_area_prompt(area, needed_count)
+        response = model.generate_content(prompt)
+        text_response = response.text.strip()
+        text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
+        q_list = json.loads(text_response)
+        if isinstance(q_list, dict):
+            q_list = [q_list]
+        conn = get_db()
+        cursor = conn.cursor()
+        for q_data in q_list:
+            exists = cursor.execute("SELECT id FROM questions WHERE text = %s", (q_data["text"],)).fetchone()
+            if exists:
+                continue
+            graphic_val = q_data.get("graphic")
+            if graphic_val and "base64," not in graphic_val and "<svg" in graphic_val:
+                try:
+                    import base64
+                    graphic_val = ensure_svg_xmlns(graphic_val)
+                    graphic_val = "data:image/svg+xml;base64," + base64.b64encode(graphic_val.encode('utf-8')).decode('utf-8')
+                except Exception as e:
+                    print("Error encoding background SVG:", e)
+            cursor.execute('''
+                INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                area,
+                q_data["text"],
+                json.dumps(q_data["options"], ensure_ascii=False),
+                q_data["correct_answer"],
+                q_data["explanation"],
+                q_data.get("difficulty", "Intermedio"),
+                graphic_val
+            ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print("Error generating background questions:", e)
+
+
 @app.get("/api/questions/{area}")
-async def get_practice_questions(area: str):
+async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
     conn = get_db()
     # Query 20 random questions matching the selected area
     rows = conn.execute(
         "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 20",
         (area,)
     ).fetchall()
+    
+    total_count = conn.execute("SELECT COUNT(*) FROM questions WHERE area = %s", (area,)).fetchone()[0]
+    api_key = os.getenv("GEMINI_API_KEY")
+    if total_count < 200 and api_key:
+        background_tasks.add_task(generate_more_questions_bg, area, min(10, 200 - total_count))
     
     questions = []
     for r in rows:

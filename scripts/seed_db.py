@@ -168,7 +168,7 @@ def main():
         
     conn = get_db_connection()
     try:
-        parse_and_insert_questions(conn)
+        # parse_and_insert_questions(conn) # Desactivado: no generar preguntas a partir de cuadernillos o pdfs
         seed_user_data(conn)
         conn.commit()
         print("Database seeding completed successfully!")
