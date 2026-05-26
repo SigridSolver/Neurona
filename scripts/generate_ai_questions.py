@@ -10,7 +10,8 @@ import google.generativeai as genai
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import get_db_connection
-from app.main import get_matematicas_prompt, get_area_prompt, ensure_svg_xmlns
+from app.areas.registry import AREA_REGISTRY
+from app.main import ensure_svg_xmlns
 
 # Load environment variables
 load_dotenv()
@@ -57,10 +58,8 @@ def generate_bank_questions():
             current_batch = min(batch_size, needed)
             print(f"  -> Generando lote de {current_batch} preguntas...")
             
-            if area == "Matemáticas":
-                prompt = get_matematicas_prompt(current_batch)
-            else:
-                prompt = get_area_prompt(area, current_batch)
+            handler = AREA_REGISTRY[area]
+            prompt = handler.get_generation_prompt(current_batch)
                 
             try:
                 response = model.generate_content(prompt)
