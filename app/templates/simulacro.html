@@ -295,6 +295,9 @@
                     Cargando enunciado...
                 </h3>
 
+                <!-- Graphic Container for question images/SVGs -->
+                <div id="graphicContainer" class="mb-4" style="text-align: center; display: none; width: 100%;"></div>
+
                 <div id="optionsContainer">
                     <!-- Option items will be injected here -->
                 </div>
@@ -401,9 +404,23 @@
         document.getElementById("questionAreaLabel").innerText = q.area;
         document.getElementById("questionNumberLabel").innerText = `Pregunta ${currentIdx + 1} de ${questions.length}`;
         
-        // Format layout formatting
-        let formattedText = q.text.replace(/\n/g, "<br>");
-        document.getElementById("questionText").innerHTML = formattedText;
+        // Format text content with image paths, markdown bold, and newlines
+        let textContent = q.text;
+        const imgRegex = /(\/static\/images\/recortes\/.*?\.(?:png|jpg|jpeg))/g;
+        textContent = textContent.replace(imgRegex, '<br><img src="$1" style="max-width: 100%; border-radius: 8px; margin-top: 1rem;"><br>');
+        textContent = textContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        textContent = textContent.replace(/\n/g, "<br>");
+        document.getElementById("questionText").innerHTML = textContent;
+
+        // Render graphic (SVG, data URI, or image path)
+        const graphicContainer = document.getElementById("graphicContainer");
+        if (q.graphic) {
+            graphicContainer.innerHTML = `<img src="${q.graphic}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.02); padding: 5px;">`;
+            graphicContainer.style.display = 'block';
+        } else {
+            graphicContainer.innerHTML = '';
+            graphicContainer.style.display = 'none';
+        }
 
         const optionsContainer = document.getElementById("optionsContainer");
         optionsContainer.innerHTML = "";
@@ -424,6 +441,11 @@
             `;
             optionsContainer.appendChild(button);
         });
+
+        // Render KaTeX math formulas if available
+        if (window.renderMathInElement) {
+            renderMathInElement(document.getElementById("questionWorkspace"), {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});
+        }
 
         // Toggle Prev/Next buttons
         document.getElementById("prevBtn").disabled = (currentIdx === 0);
