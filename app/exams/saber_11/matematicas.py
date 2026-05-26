@@ -12,7 +12,7 @@ class MatematicasArea(BaseArea):
 
     ESTILO ICFES OBLIGATORIO:
     - Las preguntas deben evaluar competencias y razonamiento matemático, no la memorización de fórmulas o cálculo mecánico puro.
-    - Deben presentar información suficiente para ser resueltas.
+    - Deben presentar información suficiente para ser resueltas de forma autónoma.
     - Cada pregunta debe evaluar UNA competencia matemática específica del ICFES:
       * Interpretación y representación
       * Formulación y ejecución
@@ -21,89 +21,58 @@ class MatematicasArea(BaseArea):
     - Varía el nivel cognitivo entre comprensión, aplicación e inferencia matemática, manteniendo una dificultad intermedia.
     - Debe existir una única respuesta correcta, inequívoca y verificable.
     - Los distractores (opciones incorrectas) deben ser plausibles y representar errores frecuentes de razonamiento o cálculo que cometen los estudiantes. Evita opciones absurdas.
-    - Evita preguntas de cálculo mecánico o rutinario sin interpretación o análisis contextual.
+    - Evita preguntas de cálculo mecánico o rutinario sin interpretación o análisis de datos.
 
-    REGLA CRÍTICA DE DATOS Y GRÁFICOS:
-    - NO utilices llaves, corchetes, ni variables de reemplazo de ningún tipo (como texto entre llaves o marcadores de plantilla). Escribe todos los números, nombres, cotas y valores finales de forma directa y explícitamente en el texto del enunciado (por ejemplo: escribe "base de 8 cm" directamente en lugar de usar variables).
-    - Todo gráfico SVG generado DEBE contener las etiquetas de datos, números, valores y nombres de los ejes explícitamente dibujados usando elementos `<text>` legibles y con contraste (ej. blanco o amarillo sobre fondo oscuro).
-    - Evita generar gráficos mudos (barras sin números, figuras geométricas sin cotas, o planos sin coordenadas). Dibuja los números en el propio SVG.
+    REGLA CRÍTICA DE EVITAR SPOILERS EN GRÁFICOS:
+    - **PROHIBIDO revelar la respuesta correcta directamente en el SVG**. Por ejemplo: si la pregunta pide hallar el valor de 'x' cuando 'y = 15000', NO dibujes un punto marcado con el texto exacto "P(5, 15000)" sobre la recta. En su lugar, rotula puntos de referencia alternativos (como el intercepto en Y "(0, 5000)" o un punto lejano de ejemplo) y dibuja marcas de escala en los ejes para que el estudiante deba deducir e interpretar la ecuación por sí mismo. El gráfico debe ser una ayuda para plantear el problema, no un spoiler de la solución.
 
-    IMPORTANTE: Cada pregunta DEBE ser de una CATEGORÍA DIFERENTE. Selecciona aleatoriamente entre estas categorías:
+    REGLA CRÍTICA DE DISEÑO SVG Y LEGIBILIDAD (EVITAR CORTE DE TEXTOS Y TRASLAPES):
+    - **Fondo y Dimensiones:** Usa siempre un contenedor SVG con viewBox adecuado (ej: `viewBox="0 0 400 250"`) con fondo oscuro (#0f172a) y bordes redondeados (rx="12").
+    - **Márgenes de seguridad:** Asegúrate de que todos los elementos gráficos y textos tengan al menos 20px de espacio con respecto a los bordes del SVG para evitar que las etiquetas o números se recorten en la pantalla.
+    - **Ejes y Escalas:** En todos los gráficos de barras, histogramas, diagramas de dispersión y planos cartesianos, es OBLIGATORIO dibujar ambos ejes (X e Y) con líneas visibles (stroke="#64748b" o similar). Coloca marcas numéricas indicadoras de escala a lo largo de los ejes y etiquetas de texto legibles indicando qué variable representa cada eje (ej: "Distancia (km)" y "Costo ($)").
+    - **Contraste de textos:** Todos los textos del SVG deben estar escritos en etiquetas `<text>` con colores contrastantes y visibles sobre fondo oscuro (ej: `fill="#ffffff"`, `fill="#38bdf8"`, `fill="#fbbf24"`, `fill="#10b981"`). Usa fuentes modernas y legibles (`font-family="sans-serif"` o `font-family="Inter, sans-serif"`).
+
+    CATEGORÍAS DE PREGUNTAS Y REGLAS DE GRÁFICOS COMPONENTES:
+    Selecciona de manera variada entre las siguientes categorías para las {needed} preguntas:
 
     CATEGORÍA 1 - GRÁFICA CIRCULAR (TORTA):
-    - Contexto: distribución porcentual de datos cotidianos (asignaturas, deportes, preferencias, presupuestos).
-    - SVG: Gráfico de pastel con sectores de colores (#38bdf8, #f43f5e, #10b981, #fbbf24), fondo oscuro (#0f172a), porcentajes explícitos dibujados con `<text>` dentro de cada sector, y leyenda lateral legible.
-    - Pregunta: calcular la cantidad real a partir de un porcentaje dado o realizar un análisis/interpretación de la distribución.
+    - Contexto: distribución de presupuestos, preferencias, ventas.
+    - SVG obligatorio: Círculo dividido en sectores con colores vivos (#38bdf8, #f43f5e, #10b981, #fbbf24). Las etiquetas con los nombres de categorías y porcentajes deben colocarse en una leyenda lateral bien organizada a la derecha (ej. a partir de X=260) o bien espaciadas para evitar que el texto se traslape.
 
     CATEGORÍA 2 - GRÁFICA DE BARRAS / HISTOGRAMA:
-    - Contexto: distribución de frecuencias (ej. notas, ventas, asistencia).
-    - SVG: Barras verticales de colores vibrantes con sus números de frecuencia dibujados en la parte superior de cada barra, ejes X/Y con nombres de variables contextuales y números indicadores de escala dibujados.
-    - Pregunta: calcular media aritmética, rango, total, o interpretar relaciones entre las barras.
+    - Contexto: análisis de frecuencias o estadísticas (ej. libros leídos, calificaciones, producción diaria).
+    - SVG obligatorio: Barras verticales de colores. El eje X debe incluir etiquetas de categorías claras (ej. marcas o números debajo de cada barra) y el eje Y debe indicar la frecuencia con marcas de escala. La frecuencia numérica de cada barra debe estar escrita en blanco justo encima de cada barra para mayor legibilidad. Asegura suficiente espacio vertical arriba de las barras para que las frecuencias no se corten.
 
     CATEGORÍA 3 - DIAGRAMA DE VENN:
-    - Contexto: superposición de conjuntos en un escenario real (ej. estudiantes que prefieren deportes o idiomas).
-    - SVG: Dos o tres círculos superpuestos con los valores numéricos de cada región dibujados con `<text>` en el centro de sus respectivas áreas, fondo oscuro y etiquetas claras.
-    - Pregunta: probabilidad de un evento específico o interpretación de conjuntos.
+    - Contexto: problemas de conjuntos y probabilidad.
+    - SVG obligatorio: Dibuja un rectángulo de fondo que represente el conjunto universal `U` con su etiqueta de texto en una esquina. Dibuja dos o tres círculos semitransparentes superpuestos, rotula claramente el nombre de cada conjunto arriba o al lado de su respectivo círculo (ej. "Fútbol (F)" y "Natación (N)"). Coloca números legibles dentro de cada sección (incluyendo la intersección) y coloca visiblemente el número de elementos fuera de los círculos (el complemento) en una esquina interna del rectángulo universal.
 
-    CATEGORÍA 4 - PLANO CARTESIANO:
-    - Contexto: recta o puntos que representan una situación real (ej. costo de envío según distancia).
-    - SVG: Ejes coordenados X/Y marcados con números y una recta trazada con puntos clave claramente rotulados con sus coordenadas (ej. "P(3, 4)").
-    - Pregunta: calcular pendiente, intercepto, distancia, o interpretar el significado contextual de la recta.
+    CATEGORÍA 4 - PLANO CARTESIANO / FUNCIONES:
+    - Contexto: modelación lineal, costos de envíos, trayectorias.
+    - SVG obligatorio: Ejes X y Y perpendiculares con flechas, marcas numéricas graduadas y nombres de variables. Dibuja la recta o curva y rotula algunos puntos de apoyo útiles (ej. el intercepto y otro punto de referencia intermedio que obligue al análisis). El punto correspondiente a la respuesta correcta NO debe estar rotulado con su valor numérico en el gráfico.
 
-    CATEGORÍA 5 - GEOMETRÍA (Triángulos, Rectángulos, Círculos):
-    - Contexto: cálculo de dimensiones o distribución en espacios (ej. distribución de un terreno, una ventana).
-    - SVG: Figura geométrica con cotas, medidas e indicaciones de base y altura escritas de forma muy visible con elementos `<text>` (ej. "8 m" y "5 m") junto a líneas de acotación.
-    - Pregunta: calcular área, perímetro, o resolver un problema de optimización simple.
+    CATEGORÍA 5 - GEOMETRÍA (2D Y 3D):
+    - Contexto: áreas, perímetros y volúmenes de recipientes u objetos reales (tanques cilíndricos, cajas, terrenos triangulares/rectangulares).
+    - SVG obligatorio: Dibuja la figura geométrica en 2D o una proyección en perspectiva 3D estilizada (ej. un cilindro de agua para problemas de volumen). Incluye líneas de cota claras (líneas punteadas con flechas) indicando el radio, diámetro, base o altura y escribe sus medidas numéricas directamente en el gráfico (ej. "r = 2 m", "h = 5 m").
 
-    CATEGORÍA 6 - ECUACIÓN CUADRÁTICA:
-    - Enunciado con fórmula LaTeX: $$ax^2 + bx + c = 0$$ que modele una trayectoria, costo o ganancia.
-    - Pregunta: suma de raíces, discriminante o soluciones en el contexto planteado.
-    - SVG: Puede ser null o un gráfico de la parábola con las raíces y el vértice marcados.
+    CATEGORÍA 6 - ECUACIÓN CUADRÁTICA / PARÁBOLA:
+    - Contexto: física del movimiento (lanzamientos de objetos) o costos/ingresos parabólicos.
+    - SVG obligatorio: Gráfico de la parábola en el plano cartesiano mostrando el vértice y los interceptos con los ejes X/Y para apoyar el análisis de las raíces.
 
-    CATEGORÍA 7 - FRACCIONES:
-    - Enunciado con fórmula LaTeX: $$\\frac{{a}}{{b}} + \\frac{{c}}{{d}}$$
-    - Pregunta: resultado de la operación simplificado en un contexto aplicado (ej. reparto de recursos).
-    - SVG: Puede ser null o un diagrama explicativo de las partes.
+    CATEGORÍA 7 - FRACCIONES / OPERACIONES:
+    - Contexto: problemas de partición de recursos, terrenos o presupuestos.
+    - SVG obligatorio: Una representación visual de las fracciones involucradas (ej. un rectángulo fraccionado con sectores coloreados, o un diagrama de torta simplificado de partición).
 
-    CATEGORÍA 8 - TABLA DE DATOS (Mediana/Moda):
-    - Contexto: estudio estadístico de variables discretas.
-    - SVG: Una tabla rectangular estilizada con celdas de colores y los datos numéricos ordenados escritos de forma muy clara.
-    - Pregunta: calcular mediana o moda e interpretar su significado.
-
-    CATEGORÍA 9 - FUNCIONES EXPONENCIALES:
-    - Enunciado: evaluar función $f(x) = a \\cdot 2^{{x+c}} + d$ que represente un modelo de crecimiento.
-    - Pregunta: calcular $f(x)$ para un valor dado o interpretar el crecimiento.
-    - SVG: Puede ser null o el gráfico de la curva exponencial.
-
-    CATEGORÍA 10 - PROBABILIDAD:
-    - Contexto: experimentos de azar, juegos o decisiones cotidianas.
-    - Pregunta: calcular probabilidad simple o compuesta.
-    - SVG: Diagrama de árbol con porcentajes, tabla de contingencia o gráfico explicativo.
-
-    CATEGORÍA 11 - PROPORCIONALIDAD:
-    - Contexto: recetas, escalas de mapas, velocidad, variaciones de producción.
-    - Pregunta: razón entre magnitudes, regla de tres o variación proporcional directa o inversa.
-    - SVG: Gráfico de proporcionalidad lineal o diagrama explicativo.
-
-    CATEGORÍA 12 - ANÁLISIS ESTADÍSTICO:
-    - Contexto: conjuntos de datos reales de encuestas o rendimiento deportivo.
-    - Pregunta: interpretar tendencias, comparar dos conjuntos de datos, o seleccionar la conclusión basada en la evidencia estadística.
-    - SVG: Gráfico de líneas o comparación de conjuntos.
-
-    REGLAS GENERALES DE SVG:
-    1. Si la categoría requiere SVG, INCLUYE el código SVG completo en "graphic". Usa fondo oscuro (fill="#0f172a"), bordes redondeados, colores brillantes (#38bdf8, #f43f5e, #10b981).
-    2. Si la categoría no requiere SVG, el campo "graphic" puede ser null pero la explicación DEBE usar LaTeX extenso.
-    3. Las explicaciones deben ser paso a paso, claras, pedagógicas y concisas, usando $$fórmulas$$ en LaTeX.
-    4. Usa **negritas** (markdown) para resaltar conceptos clave.
-    5. CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
-    6. VARÍA las categorías: no repitas la misma categoría en múltiples preguntas.
+    CATEGORÍA 8 - TABLAS DE DATOS / ESTADÍSTICA:
+    - Contexto: promedios, medianas, modas de rendimiento deportivo o encuestas.
+    - SVG obligatorio: Una tabla rectangular estilizada con celdas de colores contrastantes y bordes claros, que muestre los datos de forma estructurada para evitar listados de texto simples.
 
     El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
        - "area": "Matemáticas"
-       - "text": "[El enunciado completo con datos reales integrados]"
+       - "text": "[El enunciado completo de la pregunta con el contexto y los datos explícitos de la situación]"
        - "options": ["Opción A", "Opción B", "Opción C", "Opción D"]
-       - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-       - "explanation": "[justificación pedagógica, concisa, y clara paso a paso con LaTeX]"
+       - "correct_answer": "[Debe ser exactamente idéntica a una de las opciones]"
+       - "explanation": "[justificación pedagógica detallada paso a paso, escrita de forma clara con LaTeX $$fórmulas$$]"
        - "difficulty": "Intermedio"
-       - "graphic": "[Código SVG completo o null]"
+       - "graphic": "[Código SVG completo conforme a todas las reglas de diseño y legibilidad mencionadas, o null si la categoría de verdad no requiere apoyo visual]"
     """
