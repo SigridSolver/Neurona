@@ -567,7 +567,7 @@ def process_parametric_question(q, seed=None):
 </svg>'''
         
         import base64 as b64mod
-        graphic = "data:image/svg+xml;base64," + b64mod.b64encode(pie_svg.encode("utf-8")).decode("utf-8")
+        graphic = "data:image/svg+xml;charset=utf-8;base64," + b64mod.b64encode(pie_svg.encode("utf-8")).decode("utf-8")
         
         new_text = f"La siguiente gráfica circular muestra la distribución porcentual de las asignaturas preferidas por un grupo de {total_students} estudiantes.\n\n¿Cuántos estudiantes prefieren {labels[ask_idx]}?"
         
