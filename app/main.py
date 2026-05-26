@@ -733,6 +733,7 @@ class QuestionSaveRequest(BaseModel):
     explanation: str
     difficulty: str
     graphic: str | None = None
+    exam_type: str = "saber_11"
 
 class QuestionGenerateRequest(BaseModel):
     area: str
@@ -796,8 +797,8 @@ async def save_question_route(request: Request, body: QuestionSaveRequest):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, exam_type)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     ''', (
         body.area,
         body.text,
@@ -805,7 +806,8 @@ async def save_question_route(request: Request, body: QuestionSaveRequest):
         body.correct_answer,
         body.explanation,
         body.difficulty,
-        body.graphic
+        body.graphic,
+        body.exam_type
     ))
     conn.commit()
     conn.close()
