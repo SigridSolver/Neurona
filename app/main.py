@@ -61,6 +61,14 @@ def process_parametric_question(q, seed=None):
         text = text.replace("{{", "{").replace("}}", "}")
     if graphic and isinstance(graphic, str):
         graphic = graphic.replace("{{", "{").replace("}}", "}")
+        if graphic.strip().startswith("<svg"):
+            try:
+                import base64 as b64mod
+                graphic = "data:image/svg+xml;charset=utf-8;base64," + b64mod.b64encode(graphic.encode('utf-8')).decode('utf-8')
+            except Exception as e:
+                print("Error pre-encoding raw SVG:", e)
+        elif "base64," in graphic and "charset=utf-8" not in graphic:
+            graphic = graphic.replace("data:image/svg+xml;base64,", "data:image/svg+xml;charset=utf-8;base64,")
     if explanation:
         explanation = explanation.replace("{{", "{").replace("}}", "}")
     if options and isinstance(options, list):
@@ -1352,7 +1360,7 @@ async def get_practice_questions(area: str):
                 - Pregunta: calcular pendiente, intercepto o distancia
                 
                 CATEGORÍA 5 - GEOMETRÍA (Triángulos, Rectángulos):
-                - Incluir placeholders {{{{base}}}}, {{{{altura}}}} en el enunciado
+                - Enunciado: Debe contener las palabras base y altura y usar los placeholders {{{{base}}}} y {{{{altura}}}} únicamente para sus valores numéricos (ej. "Determina el área de un triángulo de base {{{{base}}}} cm y altura {{{{altura}}}} cm."). No uses los placeholders como los nombres de las variables, y no incluyas números fijos en el texto.
                 - SVG: Figura geométrica con cotas/medidas, fondo oscuro
                 - Pregunta: calcular área o perímetro
                 
@@ -2849,11 +2857,11 @@ async def learn_page(request: Request, area: str = "Todas"):
     # Fetch questions
     if area == "Todas":
         rows = conn.execute(
-            "SELECT id, area, text, correct_answer, explanation FROM questions ORDER BY RANDOM() LIMIT 5"
+            "SELECT id, area, text, correct_answer, explanation, graphic FROM questions ORDER BY RANDOM() LIMIT 5"
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT id, area, text, correct_answer, explanation FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 5",
+            "SELECT id, area, text, correct_answer, explanation, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 5",
             (area,)
         ).fetchall()
         
@@ -2867,7 +2875,7 @@ async def learn_page(request: Request, area: str = "Todas"):
             "correct_answer": r["correct_answer"],
             "explanation": r["explanation"],
             "difficulty": "Intermedio",
-            "graphic": None
+            "graphic": r["graphic"]
         }
         q_processed = process_parametric_question(q_obj)
         questions.append({
@@ -2875,7 +2883,8 @@ async def learn_page(request: Request, area: str = "Todas"):
             "area": q_processed["area"],
             "text": q_processed["text"],
             "correct_answer": q_processed["correct_answer"],
-            "explanation": q_processed["explanation"]
+            "explanation": q_processed["explanation"],
+            "graphic": q_processed["graphic"]
         })
         
     needed = 5 - len(questions)
@@ -2895,7 +2904,7 @@ async def learn_page(request: Request, area: str = "Todas"):
                 REGLAS DE DISEÑO ICFES SABER 11:
                 1. Para **Matemáticas**: Enfócate en modelación, formulación y ejecución, o argumentación (ej. álgebra, geometría, probabilidad, estadística o razonamiento cuantitativo).
                 2. Para **Lectura Crítica**: Crea un fragmento corto e interesante (filosófico, literario, columna de opinión o texto discontinuo descriptivo) y formula una pregunta de inferencia o análisis sobre él.
-                3. Para **Ciencias Naturales**: Plantea una situación de investigación, laboratorio o fenómeno ecológico/físico/químico donde se evalúe indagación o explicación de fenómenos.
+                3. Para **Ciencias Naturales**: Plantea una situation de investigación, laboratorio o fenómeno ecológico/físico/químico donde se evalúe indagación o explicación de fenómenos.
                 4. Para **Sociales y Ciudadanas**: Plantea un conflicto social, dilema ético, mecanismo de participación o análisis de multiperspectivismo donde haya diferentes puntos de vista en juego.
                 5. Para **Inglés**: Genera un ejercicio enfocado en comprensión lectora o gramática y vocabulario de nivel A2/B1.
                 
@@ -2948,7 +2957,8 @@ async def learn_page(request: Request, area: str = "Todas"):
                         "area": q_processed["area"],
                         "text": q_processed["text"],
                         "correct_answer": q_processed["correct_answer"],
-                        "explanation": q_processed["explanation"]
+                        "explanation": q_processed["explanation"],
+                        "graphic": q_processed["graphic"]
                     })
                 conn.commit()
             except Exception as e:
@@ -2959,11 +2969,11 @@ async def learn_page(request: Request, area: str = "Todas"):
     # Fallback to make sure we have 5 cards if Gemini failed or is not available
     if len(questions) < 5:
         fallbacks = [
-            {"id": 901, "area": "Matemáticas", "text": "¿Cómo se calcula el área de un círculo?", "correct_answer": "A = π * r²", "explanation": "π es la relación entre el perímetro y el diámetro de un círculo, r es el radio."},
-            {"id": 902, "area": "Ciencias Naturales", "text": "¿Cuál es el gas causante del efecto invernadero más emitido por actividades humanas?", "correct_answer": "Dióxido de Carbono (CO₂)", "explanation": "El CO₂ es emitido principalmente por la quema de combustibles fósiles."},
-            {"id": 903, "area": "Sociales y Ciudadanas", "text": "¿Qué mecanismo protege de forma inmediata los derechos fundamentales en Colombia?", "correct_answer": "La Acción de Tutela", "explanation": "Establecida en el artículo 86 de la Constitución de 1991."},
-            {"id": 904, "area": "Lectura Crítica", "text": "¿Qué es la tesis de un texto argumentativo?", "correct_answer": "La idea u opinión central que el autor defiende", "explanation": "Es la columna vertebral del texto argumentativo y se sustenta con argumentos."},
-            {"id": 905, "area": "Inglés", "text": "What is the correct auxiliary verb for the Present Perfect tense?", "correct_answer": "Have / Has", "explanation": "Present perfect uses have/has + past participle."}
+            {"id": 901, "area": "Matemáticas", "text": "¿Cómo se calcula el área de un círculo?", "correct_answer": "A = π * r²", "explanation": "π es la relación entre el perímetro y el diámetro de un círculo, r es el radio.", "graphic": None},
+            {"id": 902, "area": "Ciencias Naturales", "text": "¿Cuál es el gas causante del efecto invernadero más emitido por actividades humanas?", "correct_answer": "Dióxido de Carbono (CO₂)", "explanation": "El CO₂ es emitido principalmente por la quema de combustibles fósiles.", "graphic": None},
+            {"id": 903, "area": "Sociales y Ciudadanas", "text": "¿Qué mecanismo protege de forma inmediata los derechos fundamentales en Colombia?", "correct_answer": "La Acción de Tutela", "explanation": "Establecida en el artículo 86 de la Constitución de 1991.", "graphic": None},
+            {"id": 904, "area": "Lectura Crítica", "text": "¿Qué es la tesis de un texto argumentativo?", "correct_answer": "La idea u opinión central que el autor defiende", "explanation": "Es la columna vertebral del texto argumentativo y se sustenta con argumentos.", "graphic": None},
+            {"id": 905, "area": "Inglés", "text": "What is the correct auxiliary verb for the Present Perfect tense?", "correct_answer": "Have / Has", "explanation": "Present perfect uses have/has + past participle.", "graphic": None}
         ]
         for f in fallbacks:
             if len(questions) >= 5:
@@ -2981,7 +2991,8 @@ async def learn_page(request: Request, area: str = "Todas"):
             "area": q["area"],
             "title": f"Pregunta de {q['area']}",
             "front": front_text,
-            "back": back_text
+            "back": back_text,
+            "graphic": q.get("graphic")
         })
         
     return templates.TemplateResponse(
