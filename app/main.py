@@ -83,7 +83,7 @@ def process_parametric_question(q, seed=None):
                 if "{inclinacion}" in decoded:
                     decoded = decoded.replace("{inclinacion}", str(inclinacion))
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
-                graphic = header + "base64," + new_encoded
+                graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
                 print("Error processing parametric SVG graphic:", e)
                 
@@ -159,7 +159,7 @@ def process_parametric_question(q, seed=None):
                 decoded = decoded.replace("{baloncesto_solo}", str(baloncesto_solo))
                 decoded = decoded.replace("{ninguno}", str(ninguno))
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
-                graphic = header + "base64," + new_encoded
+                graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
                 print("Error processing parametric Venn SVG:", e)
                 
@@ -268,7 +268,7 @@ def process_parametric_question(q, seed=None):
                 decoded = base64.b64decode(encoded).decode("utf-8")
                 decoded = decoded.replace("{base}", str(base_val)).replace("{altura}", str(altura_val))
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
-                graphic = header + "base64," + new_encoded
+                graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
                 print("Error processing parametric geometry SVG:", e)
                 
@@ -397,7 +397,7 @@ def process_parametric_question(q, seed=None):
                                .replace(f"{{y_bar_{i}}}", str(y))
                                .replace(f"{{y_txt_{i}}}", str(y_txt)))
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
-                graphic = header + "base64," + new_encoded
+                graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
                 print("Error processing parametric statistics SVG:", e)
                 
@@ -462,7 +462,7 @@ def process_parametric_question(q, seed=None):
                            .replace("{x2_lbl_svg}", str(x2_lbl_svg))
                            .replace("{y2_lbl_svg}", str(y2_lbl_svg)))
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
-                graphic = header + "base64," + new_encoded
+                graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
                 print("Error processing parametric coordinate plane SVG:", e)
                 
