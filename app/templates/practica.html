@@ -310,7 +310,7 @@
         
         const graphicContainer = document.getElementById('graphic-container');
         if (q.graphic) {
-            graphicContainer.innerHTML = `<img src="${q.graphic}" style="max-width: 100%; border-radius: 8px; margin-top: 1rem;">`;
+            graphicContainer.innerHTML = `<img src="${q.graphic}" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.02); padding: 5px;">`;
             graphicContainer.style.display = 'block';
         } else {
             graphicContainer.innerHTML = '';

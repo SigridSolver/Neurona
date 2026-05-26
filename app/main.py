@@ -57,11 +57,17 @@ def process_parametric_question(q, seed=None):
     options = q.get("options", [])
     explanation = q.get("explanation", "")
     
+    placeholders = [
+        "base", "altura", "inclinacion", "frec_1", "frec_2", "frec_3", "frec_4", 
+        "futbol_solo", "ambos", "baloncesto_solo", "ninguno", "n_estudiantes", 
+        "k_seleccionados", "a", "c_sign", "c_abs", "d", "x_eval", "slope", "x2_svg"
+    ]
     if text:
-        text = text.replace("{{", "{").replace("}}", "}")
+        for p in placeholders:
+            text = text.replace(f"{{{{{p}}}}}", f"{{{p}}}")
     if graphic and isinstance(graphic, str):
-        graphic = graphic.replace("{{", "{").replace("}}", "}")
         if graphic.strip().startswith("<svg"):
+            graphic = graphic.replace("{{", "{").replace("}}", "}")
             try:
                 import base64 as b64mod
                 graphic = "data:image/svg+xml;charset=utf-8;base64," + b64mod.b64encode(graphic.encode('utf-8')).decode('utf-8')
@@ -70,9 +76,16 @@ def process_parametric_question(q, seed=None):
         elif "base64," in graphic and "charset=utf-8" not in graphic:
             graphic = graphic.replace("data:image/svg+xml;base64,", "data:image/svg+xml;charset=utf-8;base64,")
     if explanation:
-        explanation = explanation.replace("{{", "{").replace("}}", "}")
+        for p in placeholders:
+            explanation = explanation.replace(f"{{{{{p}}}}}", f"{{{p}}}")
     if options and isinstance(options, list):
-        options = [o.replace("{{", "{").replace("}}", "}") if isinstance(o, str) else o for o in options]
+        new_opts = []
+        for o in options:
+            if isinstance(o, str):
+                for p in placeholders:
+                    o = o.replace(f"{{{{{p}}}}}", f"{{{p}}}")
+            new_opts.append(o)
+        options = new_opts
         
     q = dict(q)
     q["text"] = text
@@ -110,6 +123,7 @@ def process_parametric_question(q, seed=None):
             try:
                 header, encoded = graphic.split("base64,", 1)
                 decoded = base64.b64decode(encoded).decode("utf-8")
+                decoded = decoded.replace("{{", "{").replace("}}", "}")
                 if "{inclinacion}" in decoded:
                     decoded = decoded.replace("{inclinacion}", str(inclinacion))
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
@@ -184,6 +198,7 @@ def process_parametric_question(q, seed=None):
             try:
                 header, encoded = graphic.split("base64,", 1)
                 decoded = base64.b64decode(encoded).decode("utf-8")
+                decoded = decoded.replace("{{", "{").replace("}}", "}")
                 decoded = decoded.replace("{futbol_solo}", str(futbol_solo))
                 decoded = decoded.replace("{ambos}", str(ambos))
                 decoded = decoded.replace("{baloncesto_solo}", str(baloncesto_solo))
@@ -296,6 +311,7 @@ def process_parametric_question(q, seed=None):
             try:
                 header, encoded = graphic.split("base64,", 1)
                 decoded = base64.b64decode(encoded).decode("utf-8")
+                decoded = decoded.replace("{{", "{").replace("}}", "}")
                 decoded = decoded.replace("{base}", str(base_val)).replace("{altura}", str(altura_val))
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
                 graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
@@ -413,6 +429,7 @@ def process_parametric_question(q, seed=None):
             try:
                 header, encoded = graphic.split("base64,", 1)
                 decoded = base64.b64decode(encoded).decode("utf-8")
+                decoded = decoded.replace("{{", "{").replace("}}", "}")
                 decoded = (decoded
                            .replace("{frec_1}", str(frec_1))
                            .replace("{frec_2}", str(frec_2))
@@ -484,6 +501,7 @@ def process_parametric_question(q, seed=None):
             try:
                 header, encoded = graphic.split("base64,", 1)
                 decoded = base64.b64decode(encoded).decode("utf-8")
+                decoded = decoded.replace("{{", "{").replace("}}", "}")
                 decoded = (decoded
                            .replace("{a}", str(a))
                            .replace("{b}", str(b))
