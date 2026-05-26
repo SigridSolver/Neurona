@@ -1335,7 +1335,7 @@ async def get_question_hint(question_id: int, request: Request):
 def get_matematicas_prompt(needed: int) -> str:
     return f"""
     Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia para el área de Matemáticas.
-    Genera una lista de {needed} preguntas de selección múltiple originales, inéditas, altamente didácticas y visuales.
+    Genera una lista de {needed} preguntas de selección múltiple originales y diferentes entre sí en contexto, estructura y solución, inéditas, altamente didácticas y visuales.
 
     ESTILO ICFES OBLIGATORIO:
     - Las preguntas deben evaluar competencias y razonamiento matemático, no la memorización de fórmulas o cálculo mecánico puro.
@@ -1419,7 +1419,7 @@ def get_matematicas_prompt(needed: int) -> str:
     REGLAS GENERALES DE SVG:
     1. Si la categoría requiere SVG, INCLUYE el código SVG completo en "graphic". Usa fondo oscuro (fill="#0f172a"), bordes redondeados, colores brillantes (#38bdf8, #f43f5e, #10b981).
     2. Si la categoría no requiere SVG, el campo "graphic" puede ser null pero la explicación DEBE usar LaTeX extenso.
-    3. Las explicaciones deben ser paso a paso, detalladas, usando $$fórmulas$$ en LaTeX.
+    3. Las explicaciones deben ser paso a paso, claras, pedagógicas y concisas, usando $$fórmulas$$ en LaTeX.
     4. Usa **negritas** (markdown) para resaltar conceptos clave.
     5. CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
     6. VARÍA las categorías: no repitas la misma categoría en múltiples preguntas.
@@ -1429,7 +1429,7 @@ def get_matematicas_prompt(needed: int) -> str:
        - "text": "[El enunciado con las palabras clave de la categoría y el contexto ICFES]"
        - "options": ["Opción A", "Opción B", "Opción C", "Opción D"]
        - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-       - "explanation": "[Justificación detallada paso a paso con LaTeX]"
+       - "explanation": "[justificación pedagógica y concisa, y clara paso a paso con LaTeX]"
        - "difficulty": "Intermedio"
        - "graphic": "[Código SVG completo o null]"
     """
@@ -1437,7 +1437,7 @@ def get_matematicas_prompt(needed: int) -> str:
 def get_area_prompt(area: str, needed: int) -> str:
     return f"""
     Eres un diseñador experto de pruebas Saber 11 (ICFES) en Colombia.
-    Genera una lista de {needed} preguntas de selección múltiple originales, inéditas y de alta calidad para el área de {area}.
+    Genera una lista de {needed} preguntas de selección múltiple originales y diferentes entre sí en contexto, estructura y solución, inéditas y de alta calidad para el área de {area}.
 
     ESTILO ICFES OBLIGATORIO:
     - Las preguntas deben evaluar competencias y razonamiento crítico o científico, no la memorización de datos.
@@ -1449,7 +1449,7 @@ def get_area_prompt(area: str, needed: int) -> str:
     REGLAS ESPECÍFICAS SEGÚN EL ÁREA:
 
     1. LECTURA CRÍTICA:
-    - Distribuye las preguntas entre estas competencias del ICFES:
+    - Distribuye equilibradamente las competencias ICFES entre las preguntas generadas:
       * Competencia 1: Identificar y entender los contenidos locales que conforman un texto.
       * Competencia 2: Comprender cómo se articulan las partes de un texto para darle un sentido global.
       * Competencia 3: Reflexionar a partir de un texto y evaluar su contenido y su forma.
@@ -1457,14 +1457,14 @@ def get_area_prompt(area: str, needed: int) -> str:
     - Varía la longitud y complejidad del texto propuesto (desde fragmentos cortos a medianos/largos).
 
     2. CIENCIAS NATURALES:
-    - Distribuye las preguntas entre estas competencias del ICFES:
+    - Distribuye equilibradamente las competencias ICFES entre las preguntas generadas:
       * Competencia 1: Uso comprensivo del conocimiento científico.
       * Competencia 2: Explicación de fenómenos.
       * Competencia 3: Indagación e interpretación de evidencia.
     - Incluye tablas de datos, resultados experimentales descritos, gráficos, diagramas de flujo de procesos o escenarios de investigación/laboratorio cuando sea pertinente.
 
     3. SOCIALES Y CIUDADANAS:
-    - Distribuye las preguntas entre estas competencias del ICFES:
+    - Distribuye equilibradamente las competencias ICFES entre las preguntas generadas:
       * Competencia 1: Pensamiento social (conceptos básicos, constitucionales e históricos).
       * Competencia 2: Interpretación y análisis de perspectivas (diferenciar opiniones de hechos, multiperspectivismo en dilemas o conflictos).
       * Competencia 3: Pensamiento sistémico y reflexión ciudadana (analizar causas y efectos, mecanismos constitucionales).
@@ -1477,18 +1477,27 @@ def get_area_prompt(area: str, needed: int) -> str:
       * Parte 5/6: Reading comprehension (textos medianos y preguntas de comprensión factual e inferencial).
       * Parte 7: Grammar in context (completar textos con estructuras verbales adecuadas, nivel A2/B1).
     - REGLA CRÍTICA: El texto (enunciado) y las opciones de respuesta DEBEN estar completamente en inglés. La explicación ("explanation") puede estar en español para facilitar la retroalimentación pedagógica.
+    - Inspírate en las tipologías de Saber 11 Inglés, sin necesidad de seguir el orden exacto del examen oficial.
 
     REGLAS GENERALES:
     - CRÍTICO: No incluyas números de pregunta (como "1.", "2.") en el texto de los enunciados.
+    - Evita preguntas puramente definicionales, cronológicas o basadas en memoria factual aislada.
 
     El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
        - "area": "{area}"
        - "text": "[El texto/contexto de base y el enunciado de la pregunta, integrados limpiamente]"
        - "options": ["[Opción A]", "[Opción B]", "[Opción C]", "[Opción D]"]
        - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-       - "explanation": "[Justificación detallada de la opción correcta y descarte de las incorrectas]"
+       - "explanation": "[justificación pedagógica y concisa de la opción correcta y descarte de las incorrectas]"
        - "difficulty": "Intermedio"
-    """
+    
+    - REGLA CRÍTICA DE FORMATO:
+    * Devuelve EXCLUSIVAMENTE una lista JSON válida.
+    * No agregues texto antes ni después del JSON.
+    * No uses bloques markdown.
+    * Todas las comillas deben ser dobles.
+    * El JSON debe ser parseable por json.loads().
+        """
 
 
 @app.get("/api/questions/{area}")
