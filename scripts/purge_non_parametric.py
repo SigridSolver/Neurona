@@ -1,24 +1,51 @@
-import json
-import base64
+import sys
 import os
-import psycopg2
-import psycopg2.extras
+import json
+import sqlite3
+from pathlib import Path
 from dotenv import load_dotenv
+
+# Add parent directory to path to import app modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.database import get_db_connection
+from scripts.seed_static_questions import STATIC_QUESTIONS
 
 load_dotenv()
 
-def get_db():
-    url = os.getenv("DATABASE_URL")
-    if url:
-        conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
-        return conn
-    else:
-        raise Exception("DATABASE_URL not found in .env")
+def get_connection():
+    try:
+        conn = get_db_connection()
+        is_sqlite = False
+        print("Conectado con éxito a PostgreSQL (Producción).")
+        return conn, is_sqlite
+    except Exception as e:
+        print(f"Error conectando a PostgreSQL ({e}). Usando SQLite local ('saber11.db').")
+        conn = sqlite3.connect('saber11.db')
+        conn.row_factory = sqlite3.Row
+        is_sqlite = True
+        return conn, is_sqlite
 
-def insert_questions():
-    conn = get_db()
+def purge_and_clean_db():
+    print("Iniciando purga y limpieza de base de datos...")
+    
+    conn, is_sqlite = get_connection()
     cursor = conn.cursor()
-
+    
+    # 1. Delete all questions to start from a completely clean state
+    print("Eliminando todas las preguntas de la base de datos...")
+    cursor.execute("DELETE FROM questions")
+    conn.commit()
+    conn.close()
+    
+    # 2. Re-seed parametric template questions (which will have is_parametric = TRUE)
+    print("Insertando las 12 plantillas de preguntas paramétricas...")
+    # To run cross-platform, we manually insert the 12 templates here with appropriate placeholders
+    conn, is_sqlite = get_connection()
+    cursor = conn.cursor()
+    
+    p = "?" if is_sqlite else "%s"
+    
     # 1. Pisa Tower Question Template
     pisa_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
   <rect width="100%" height="100%" fill="#0f172a"/>
@@ -35,10 +62,11 @@ def insert_questions():
   <path d="M 175 200 A 20 20 0 0 0 153 182" fill="none" stroke="#f43f5e" stroke-width="2.5" />
   <text x="135" y="185" fill="#f43f5e" font-family="sans-serif" font-size="16" font-weight="bold">?</text>
 </svg>"""
+    import base64
     pisa_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(pisa_svg.encode('utf-8')).decode('utf-8')
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "Con respecto a la vertical, la torre se ha inclinado {inclinacion}° como se muestra en la gráfica. ¿Cuánto mide el otro ángulo (indicado con el signo de interrogación)?",
@@ -48,7 +76,6 @@ def insert_questions():
         "Fácil",
         pisa_graphic_uri
     ))
-    print("  ✓ Torre de Pisa")
 
     # 2. Venn Diagram Question Template
     venn_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="400" height="220">
@@ -65,9 +92,9 @@ def insert_questions():
   <text x="340" y="180" fill="#f8fafc" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">{ninguno}</text>
 </svg>"""
     venn_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(venn_svg.encode('utf-8')).decode('utf-8')
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "El siguiente diagrama de Venn representa la distribución de un grupo de estudiantes según sus preferencias deportivas entre Fútbol (F) y Baloncesto (B). Si se selecciona un estudiante al azar dentro del grupo, ¿cuál es la probabilidad de que prefiera únicamente Baloncesto?",
@@ -77,12 +104,11 @@ def insert_questions():
         "Intermedio",
         venn_graphic_uri
     ))
-    print("  ✓ Diagrama de Venn")
 
     # 3. Combinations Question Template
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "En un colegio se realiza una preselección de estudiantes para participar en las olimpiadas de matemáticas. De un grupo de {n_estudiantes} estudiantes destacados, el entrenador debe elegir a {k_seleccionados} de ellos para conformar el equipo oficial. ¿De cuántas formas diferentes se puede conformar el equipo?",
@@ -92,12 +118,11 @@ def insert_questions():
         "Intermedio",
         None
     ))
-    print("  ✓ Combinaciones")
 
     # 4. Pie Chart Question Template
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "La siguiente gráfica circular muestra la distribución porcentual de las asignaturas preferidas por un grupo de estudiantes. ¿Cuántos estudiantes prefieren la asignatura indicada?",
@@ -107,12 +132,11 @@ def insert_questions():
         "Intermedio",
         None
     ))
-    print("  ✓ Gráfica Circular")
 
     # 5. Quadratic Equation Question Template
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "Dada la ecuación cuadrática que se muestra a continuación, ¿cuál es la suma de las raíces de esta ecuación?",
@@ -122,12 +146,11 @@ def insert_questions():
         "Intermedio",
         None
     ))
-    print("  ✓ Ecuación Cuadrática")
 
     # 6. Fractions Question Template
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "Calcule la suma de las siguientes fracciones y simplifique el resultado.",
@@ -137,12 +160,11 @@ def insert_questions():
         "Básico",
         None
     ))
-    print("  ✓ Fracciones")
 
     # 7. Median Question Template
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "El siguiente conjunto de datos ordenados representa las calificaciones obtenidas por un grupo de estudiantes en un examen. ¿Cuál es la mediana de este conjunto de datos?",
@@ -152,12 +174,11 @@ def insert_questions():
         "Intermedio",
         None
     ))
-    print("  ✓ Mediana")
 
     # 8. Mode Question Template
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "El siguiente conjunto de datos representa los puntajes de un grupo de estudiantes. ¿Cuál es la moda de este conjunto de datos?",
@@ -167,12 +188,11 @@ def insert_questions():
         "Básico",
         None
     ))
-    print("  ✓ Moda")
 
     # 9. Exponential Function Question Template
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "Dada la función exponencial $f(x) = {a} \\cdot 2^{x {c_sign} {c_abs}} + {d}$, evalúe $f({x_eval})$.",
@@ -182,7 +202,6 @@ def insert_questions():
         "Avanzado",
         None
     ))
-    print("  ✓ Función Exponencial")
 
     # 10. Triangle Area Question Template
     tri_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
@@ -194,9 +213,9 @@ def insert_questions():
   <rect x="258" y="188" width="12" height="12" fill="none" stroke="#64748b" stroke-width="1.5"/>
 </svg>"""
     tri_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(tri_svg.encode('utf-8')).decode('utf-8')
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "Halla el área del triángulo rectángulo que tiene una base de {base} cm y una altura de {altura} cm.",
@@ -206,7 +225,6 @@ def insert_questions():
         "Básico",
         tri_graphic_uri
     ))
-    print("  ✓ Triángulo (Geometría)")
 
     # 11. Bar Chart Question Template
     bar_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220">
@@ -228,9 +246,9 @@ def insert_questions():
   <text x="275" y="205" fill="#94a3b8" font-size="10" text-anchor="middle">40</text>
 </svg>"""
     bar_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(bar_svg.encode('utf-8')).decode('utf-8')
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "La gráfica de barras representa la distribución de puntajes obtenidos por un grupo de estudiantes en un examen de matemáticas. Con base en las frecuencias suministradas, ¿cuál es el promedio (media aritmética) de los puntajes?",
@@ -240,7 +258,6 @@ def insert_questions():
         "Intermedio",
         bar_graphic_uri
     ))
-    print("  ✓ Gráfica de Barras")
 
     # 12. Cartesian Plane / Slope Question Template
     slope_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
@@ -256,9 +273,9 @@ def insert_questions():
   <text x="{x2_lbl_svg}" y="{y2_lbl_svg}" fill="#10b981" font-size="12" font-family="Inter, sans-serif" font-weight="bold">P({a},{b})</text>
 </svg>"""
     slope_graphic_uri = "data:image/svg+xml;base64," + base64.b64encode(slope_svg.encode('utf-8')).decode('utf-8')
-    cursor.execute('''
+    cursor.execute(f'''
         INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {'1' if is_sqlite else 'TRUE'})
     ''', (
         "Matemáticas",
         "La imagen representa una recta en el plano cartesiano que pasa por el origen y por el punto P. ¿Cuál es el valor de la pendiente de esta recta?",
@@ -268,11 +285,31 @@ def insert_questions():
         "Intermedio",
         slope_graphic_uri
     ))
-    print("  ✓ Plano Cartesiano (Pendiente)")
-
+    
+    print("* Las 12 plantillas paramétricas insertadas con éxito.")
+    
+    # 3. Insert static questions (is_parametric = FALSE)
+    print("Insertando las 10 preguntas estáticas de alta calidad...")
+    inserted_static = 0
+    for q in STATIC_QUESTIONS:
+        cursor.execute(f'''
+            INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, is_parametric)
+            VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {'0' if is_sqlite else 'FALSE'})
+        ''', (
+            q["area"], 
+            q["text"], 
+            json.dumps(q["options"], ensure_ascii=False), 
+            q["correct_answer"], 
+            q["explanation"], 
+            q["difficulty"]
+        ))
+        inserted_static += 1
+        
     conn.commit()
     conn.close()
-    print("\n✅ 12 preguntas paramétricas insertadas con éxito en PostgreSQL.")
+    
+    print(f"* {inserted_static} preguntas estáticas insertadas con éxito.")
+    print("=== LIMPIEZA Y RESTAURACIÓN DE BASE DE DATOS COMPLETADA ===")
 
 if __name__ == '__main__':
-    insert_questions()
+    purge_and_clean_db()

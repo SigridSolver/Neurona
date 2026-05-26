@@ -95,12 +95,14 @@ def init_db():
             correct_answer TEXT NOT NULL,
             explanation TEXT NOT NULL,
             difficulty TEXT NOT NULL,
-            graphic TEXT DEFAULT NULL
+            graphic TEXT DEFAULT NULL,
+            is_parametric BOOLEAN DEFAULT FALSE
         )
     ''')
     
-    # Migración de columna graphic en la tabla questions si no existe
+    # Migración de columnas en la tabla questions si no existen
     cursor.execute("ALTER TABLE questions ADD COLUMN IF NOT EXISTS graphic TEXT DEFAULT NULL")
+    cursor.execute("ALTER TABLE questions ADD COLUMN IF NOT EXISTS is_parametric BOOLEAN DEFAULT FALSE")
     
     # Practice Sessions
     cursor.execute('''

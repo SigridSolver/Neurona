@@ -58,6 +58,10 @@ def process_parametric_question(q, seed=None):
     if not q:
         return q
         
+    # Skip processing if this is not a parametric question template
+    if not q.get("is_parametric", False):
+        return q
+        
     text = q.get("text", "")
     graphic = q.get("graphic")
     options = q.get("options", [])
@@ -159,7 +163,7 @@ def process_parametric_question(q, seed=None):
             "graphic": graphic
         }
         
-    elif "{futbol_solo}" in text or "{baloncesto_solo}" in text or "diagrama de Venn" in text:
+    elif "{futbol_solo}" in text or "{baloncesto_solo}" in text:
         futbol_solo = local_random.randint(10, 20)
         ambos = local_random.randint(5, 12)
         baloncesto_solo = local_random.randint(8, 18)
@@ -237,7 +241,7 @@ def process_parametric_question(q, seed=None):
             "graphic": graphic
         }
         
-    elif "{n_estudiantes}" in text or "preselección de estudiantes" in text or "{k_seleccionados}" in text:
+    elif "{n_estudiantes}" in text or "{k_seleccionados}" in text:
         comb_options = [
             {"n": 5, "k": 3, "ans": 10, "distractors": [15, 60, 20]},
             {"n": 6, "k": 3, "ans": 20, "distractors": [18, 120, 30]},
@@ -402,7 +406,7 @@ def process_parametric_question(q, seed=None):
             "graphic": q.get("graphic")
         }
         
-    elif "{frec_1}" in text or "frecuencias" in text.lower() or "gráfica de barras" in text.lower() or "grafica de barras" in text.lower() or "{val_1}" in text:
+    elif "{frec_1}" in text or "{val_1}" in text:
         val_1, val_2, val_3, val_4 = 10, 20, 30, 40
         frec_1 = local_random.randint(2, 6)
         frec_2 = local_random.randint(3, 8)
@@ -479,7 +483,7 @@ def process_parametric_question(q, seed=None):
             "graphic": graphic
         }
         
-    elif "{slope}" in text or "plano cartesiano" in text.lower() or "{x2_svg}" in text:
+    elif "{slope}" in text or "{x2_svg}" in text:
         choices = [
             {"a": 3, "b": 2, "slope_str": "2/3", "distractors": ["3/2", "-2/3", "1/2"]},
             {"a": 4, "b": 3, "slope_str": "3/4", "distractors": ["4/3", "-3/4", "1/3"]},
@@ -546,7 +550,7 @@ def process_parametric_question(q, seed=None):
             "graphic": graphic
         }
         
-    elif "{sector_1}" in text or "gráfica circular" in text.lower() or "gráfica de torta" in text.lower():
+    elif "{sector_1}" in text:
         # PIE CHART / CIRCULAR GRAPH QUESTION
         sector_1 = local_random.randint(15, 35)
         sector_2 = local_random.randint(15, 30)
@@ -636,7 +640,7 @@ def process_parametric_question(q, seed=None):
             "graphic": graphic
         }
     
-    elif "{a_cuad}" in text or "ecuación cuadrática" in text.lower() or "ecuación de segundo grado" in text.lower():
+    elif "{a_cuad}" in text:
         # QUADRATIC EQUATION QUESTION
         a_c = local_random.choice([1, 2, 3])
         r1 = local_random.choice([-4, -3, -2, -1, 1, 2, 3, 4, 5])
@@ -687,7 +691,7 @@ def process_parametric_question(q, seed=None):
             "graphic": q.get("graphic")
         }
     
-    elif "{num_1}" in text or "fracción" in text.lower() or "fracciones" in text.lower():
+    elif "{num_1}" in text:
         # FRACTIONS QUESTION
         num_1 = local_random.randint(1, 7)
         den_1 = local_random.choice([2, 3, 4, 5, 6, 8])
@@ -756,7 +760,7 @@ def process_parametric_question(q, seed=None):
             "graphic": q.get("graphic")
         }
     
-    elif "{dato_1}" in text or "mediana" in text.lower() or "moda de" in text.lower():
+    elif "{dato_1}" in text:
         # STATISTICAL DATA TABLE - MEDIAN/MODE QUESTION
         n_data = local_random.choice([7, 9, 11])
         data_set = sorted([local_random.randint(2, 30) for _ in range(n_data)])
@@ -1350,71 +1354,72 @@ def get_matematicas_prompt(needed: int) -> str:
     - Los distractores (opciones incorrectas) deben ser plausibles y representar errores frecuentes de razonamiento o cálculo que cometen los estudiantes. Evita opciones absurdas.
     - Evita preguntas de cálculo mecánico o rutinario sin interpretación o análisis contextual.
 
+    REGLA CRÍTICA DE DATOS Y GRÁFICOS:
+    - NO utilices llaves, corchetes, ni variables de reemplazo de ningún tipo (como texto entre llaves o marcadores de plantilla). Escribe todos los números, nombres, cotas y valores finales de forma directa y explícita en el texto del enunciado (por ejemplo: escribe "base de 8 cm" directamente en lugar de usar variables).
+    - Todo gráfico SVG generado DEBE contener las etiquetas de datos, números, valores y nombres de los ejes explícitamente dibujados usando elementos `<text>` legibles y con contraste (ej. blanco o amarillo sobre fondo oscuro).
+    - Evita generar gráficos mudos (barras sin números, figuras geométricas sin cotas, o planos sin coordenadas). Dibuja los números en el propio SVG.
+
     IMPORTANTE: Cada pregunta DEBE ser de una CATEGORÍA DIFERENTE. Selecciona aleatoriamente entre estas categorías:
 
     CATEGORÍA 1 - GRÁFICA CIRCULAR (TORTA):
-    - Palabra clave en el enunciado: "gráfica circular" o "gráfica de torta"
-    - Contexto: distribución porcentual de datos cotidianos (asignaturas, deportes, preferencias, presupuestos)
-    - SVG: Gráfico de pastel con sectores de colores (#38bdf8, #f43f5e, #10b981, #fbbf24), fondo oscuro (#0f172a), porcentajes dentro de cada sector, y leyenda lateral
-    - Pregunta: calcular la cantidad real a partir de un porcentaje dado o realizar un análisis/interpretación de la distribución
+    - Contexto: distribución porcentual de datos cotidianos (asignaturas, deportes, preferencias, presupuestos).
+    - SVG: Gráfico de pastel con sectores de colores (#38bdf8, #f43f5e, #10b981, #fbbf24), fondo oscuro (#0f172a), porcentajes explícitos dibujados con `<text>` dentro de cada sector, y leyenda lateral legible.
+    - Pregunta: calcular la cantidad real a partir de un porcentaje dado o realizar un análisis/interpretación de la distribución.
 
     CATEGORÍA 2 - GRÁFICA DE BARRAS / HISTOGRAMA:
-    - Palabra clave: "frecuencias" o incluir placeholders {{{{frec_1}}}}, {{{{frec_2}}}}, {{{{frec_3}}}}, {{{{frec_4}}}}
-    - SVG: Barras verticales con etiquetas de valor, ejes X/Y con nombres de variables contextuales, colores vibrantes
-    - Pregunta: calcular media aritmética, rango, total, o interpretar relaciones de magnitud entre barras
+    - Contexto: distribución de frecuencias (ej. notas, ventas, asistencia).
+    - SVG: Barras verticales de colores vibrantes con sus números de frecuencia dibujados en la parte superior de cada barra, ejes X/Y con nombres de variables contextuales y números indicadores de escala dibujados.
+    - Pregunta: calcular media aritmética, rango, total, o interpretar relaciones entre las barras.
 
     CATEGORÍA 3 - DIAGRAMA DE VENN:
-    - Palabra clave: "diagrama de Venn" e incluir placeholders {{{{futbol_solo}}}}, {{{{baloncesto_solo}}}}, {{{{ambos}}}}, {{{{ninguno}}}}
-    - SVG: Dos círculos superpuestos con valores en cada región, fondo oscuro y etiquetas claras
-    - Pregunta: probabilidad de un evento específico o interpretación de conjuntos
+    - Contexto: superposición de conjuntos en un escenario real (ej. estudiantes que prefieren deportes o idiomas).
+    - SVG: Dos o tres círculos superpuestos con los valores numéricos de cada región dibujados con `<text>` en el centro de sus respectivas áreas, fondo oscuro y etiquetas claras.
+    - Pregunta: probabilidad de un evento específico o interpretación de conjuntos.
 
     CATEGORÍA 4 - PLANO CARTESIANO:
-    - Palabra clave: "plano cartesiano" e incluir placeholders {{{{a}}}}, {{{{b}}}}, {{{{x2_svg}}}}, {{{{y2_svg}}}}
-    - SVG: Ejes coordenados con una recta trazada que representa una situación del mundo real (ej. costos vs distancia), puntos marcados
-    - Pregunta: calcular pendiente, intercepto, distancia, o interpretar el significado físico/contextual de la pendiente
+    - Contexto: recta o puntos que representan una situación real (ej. costo de envío según distancia).
+    - SVG: Ejes coordenados X/Y marcados con números y una recta trazada con puntos clave claramente rotulados con sus coordenadas (ej. "P(3, 4)").
+    - Pregunta: calcular pendiente, intercepto, distancia, o interpretar el significado contextual de la recta.
 
-    CATEGORÍA 5 - GEOMETRÍA (Triángulos, Rectángulos):
-    - Enunciado: Debe contener las palabras base y altura y usar los placeholders {{{{base}}}} y {{{{altura}}}} únicamente para sus valores numéricos (ej. "Determina el área de un terreno triangular de base {{{{base}}}} metros y altura {{{{altura}}}} metros."). No uses los placeholders como los nombres de las variables, y no incluyas números fijos en el texto.
-    - SVG: Figura geométrica con cotas/medidas, fondo oscuro
-    - Pregunta: calcular área, perímetro, o resolver un problema de optimización simple
+    CATEGORÍA 5 - GEOMETRÍA (Triángulos, Rectángulos, Círculos):
+    - Contexto: cálculo de dimensiones o distribución en espacios (ej. distribución de un terreno, una ventana).
+    - SVG: Figura geométrica con cotas, medidas e indicaciones de base y altura escritas de forma muy visible con elementos `<text>` (ej. "8 m" y "5 m") junto a líneas de acotación.
+    - Pregunta: calcular área, perímetro, o resolver un problema de optimización simple.
 
     CATEGORÍA 6 - ECUACIÓN CUADRÁTICA:
-    - Palabra clave: "ecuación cuadrática" o "ecuación de segundo grado"
-    - Enunciado con fórmula LaTeX: $$ax^2 + bx + c = 0$$
-    - Pregunta: suma de raíces, discriminante o soluciones en el contexto de una trayectoria u optimización
+    - Enunciado con fórmula LaTeX: $$ax^2 + bx + c = 0$$ que modele una trayectoria, costo o ganancia.
+    - Pregunta: suma de raíces, discriminante o soluciones en el contexto planteado.
+    - SVG: Puede ser null o un gráfico de la parábola con las raíces y el vértice marcados.
 
     CATEGORÍA 7 - FRACCIONES:
-    - Palabra clave: "fracciones" en el enunciado
     - Enunciado con fórmula LaTeX: $$\\frac{{a}}{{b}} + \\frac{{c}}{{d}}$$
-    - Pregunta: resultado de la operación simplificado en un contexto aplicado (ej. reparto de bienes o tiempos)
+    - Pregunta: resultado de la operación simplificado en un contexto aplicado (ej. reparto de recursos).
+    - SVG: Puede ser null o un diagrama explicativo de las partes.
 
     CATEGORÍA 8 - TABLA DE DATOS (Mediana/Moda):
-    - Palabra clave: "mediana" o "moda de" en el enunciado
-    - Incluir placeholder {{{{dato_1}}}} en texto
-    - SVG: Tabla con celdas estilizadas mostrando datos ordenados de un estudio cotidiano
-    - Pregunta: calcular mediana o moda e interpretar su significado
+    - Contexto: estudio estadístico de variables discretas.
+    - SVG: Una tabla rectangular estilizada con celdas de colores y los datos numéricos ordenados escritos de forma muy clara.
+    - Pregunta: calcular mediana o moda e interpretar su significado.
 
     CATEGORÍA 9 - FUNCIONES EXPONENCIALES:
-    - Incluir placeholder {{{{x_eval}}}} en el enunciado
-    - Enunciado: evaluar función $f(x) = a \\cdot 2^{{x+c}} + d$ que represente un modelo de crecimiento (población, bacterias, etc.)
-    - Pregunta: calcular $f(x)$ para un valor dado o interpretar el crecimiento
+    - Enunciado: evaluar función $f(x) = a \\cdot 2^{{x+c}} + d$ que represente un modelo de crecimiento.
+    - Pregunta: calcular $f(x)$ para un valor dado o interpretar el crecimiento.
+    - SVG: Puede ser null o el gráfico de la curva exponencial.
 
     CATEGORÍA 10 - PROBABILIDAD:
-    - Palabras clave: probabilidad, evento, azar
-    - Contexto: juegos, selección de estudiantes, experimentos, decisiones bajo incertidumbre
-    - Pregunta: calcular probabilidad simple o compuesta
-    - SVG/Graphic: Puede ser null o mostrar un árbol de decisiones, una tabla de contingencia o un SVG simple explicativo
+    - Contexto: experimentos de azar, juegos o decisiones cotidianas.
+    - Pregunta: calcular probabilidad simple o compuesta.
+    - SVG: Diagrama de árbol con porcentajes, tabla de contingencia o gráfico explicativo.
 
     CATEGORÍA 11 - PROPORCIONALIDAD:
-    - Palabras clave: razón, proporcionalidad, regla de tres
-    - Contexto: descuentos, recetas, velocidad, consumo, escalas de mapas
-    - Pregunta: razón entre magnitudes, regla de tres simple/compuesta o variación proporcional directa o inversa
-    - SVG/Graphic: Puede ser null o un diagrama explicativo
+    - Contexto: recetas, escalas de mapas, velocidad, variaciones de producción.
+    - Pregunta: razón entre magnitudes, regla de tres o variación proporcional directa o inversa.
+    - SVG: Gráfico de proporcionalidad lineal o diagrama explicativo.
 
     CATEGORÍA 12 - ANÁLISIS ESTADÍSTICO:
-    - Palabras clave: tendencia, dispersión, conclusión, análisis
-    - Contexto: conjuntos de datos reales de encuestas, producción o rendimiento deportivo
-    - Pregunta: interpretar tendencias, comparar dos conjuntos de datos, o seleccionar la conclusión/afirmación correcta basada en la evidencia estadística
+    - Contexto: conjuntos de datos reales de encuestas o rendimiento deportivo.
+    - Pregunta: interpretar tendencias, comparar dos conjuntos de datos, o seleccionar la conclusión basada en la evidencia estadística.
+    - SVG: Gráfico de líneas o comparación de conjuntos.
 
     REGLAS GENERALES DE SVG:
     1. Si la categoría requiere SVG, INCLUYE el código SVG completo en "graphic". Usa fondo oscuro (fill="#0f172a"), bordes redondeados, colores brillantes (#38bdf8, #f43f5e, #10b981).
@@ -1426,10 +1431,10 @@ def get_matematicas_prompt(needed: int) -> str:
 
     El formato de salida DEBE ser estrictamente una lista JSON en español, sin envolverlo en bloques markdown (sin ```json) y cada objeto con las siguientes llaves:
        - "area": "Matemáticas"
-       - "text": "[El enunciado con las palabras clave de la categoría y el contexto ICFES]"
+       - "text": "[El enunciado completo con datos reales integrados]"
        - "options": ["Opción A", "Opción B", "Opción C", "Opción D"]
        - "correct_answer": "[Debe ser idéntica a una de las opciones]"
-       - "explanation": "[justificación pedagógica y concisa, y clara paso a paso con LaTeX]"
+       - "explanation": "[justificación pedagógica, concisa, y clara paso a paso con LaTeX]"
        - "difficulty": "Intermedio"
        - "graphic": "[Código SVG completo o null]"
     """
@@ -1445,6 +1450,14 @@ def get_area_prompt(area: str, needed: int) -> str:
     - Deben usar distractores plausibles y representativos de errores comunes de análisis o inferencia.
     - Deben evitar pistas obvias o distractores triviales.
     - Deben asemejarse estrictamente al tono formal, riguroso y analítico de la prueba Saber 11 oficial en Colombia.
+
+    REGLA DE PREGUNTAS CON IMÁGENES / SOPORTE VISUAL:
+    - Si la pregunta o el texto de lectura hace referencia directa o indirecta a un elemento visual, soporte gráfico o imagen (por ejemplo, en Lectura Crítica una caricatura, afiche, cómic o infografía; en Sociales un mapa, caricatura política o gráfico de barras; en Ciencias Naturales un diagrama de laboratorio, circuito eléctrico, célula, ciclo ecológico o tabla de resultados):
+      **ES OBLIGATORIO Y MANDATORIO generar un código SVG completo** en el campo `graphic` que represente visualmente dicho elemento. NO devuelvas null en `graphic` si la pregunta menciona una imagen, caricatura, mapa o gráfico.
+      * El SVG debe ser estético, nítido y de alta calidad, con fondo oscuro (fill="#0f172a") y bordes redondeados (rx="12").
+      * Dibuja los elementos de la caricatura o diagrama de forma creativa usando elementos nativos de SVG (`<rect>`, `<circle>`, `<path>`, `<line>`, `<polygon>`) (por ejemplo, dibuja siluetas de personas, bocadillos de diálogo, nubes, pantallas, libros, etc.).
+      * REGLA CRÍTICA: Escribe los textos, nombres de ejes, diálogos de la caricatura o etiquetas de los diagramas de forma muy clara usando etiquetas `<text>` con suficiente contraste y coordenadas adecuadas para que sean perfectamente legibles (ej. usando fill="white", fill="#38bdf8", fill="#fbbf24" sobre el fondo oscuro).
+    - Si la pregunta es 100% textual (no menciona caricaturas, ni imágenes, ni gráficos, ni mapas) y no requiere ningún apoyo visual, pon `graphic`: null.
 
     REGLAS ESPECÍFICAS SEGÚN EL ÁREA:
 
@@ -1490,6 +1503,7 @@ def get_area_prompt(area: str, needed: int) -> str:
        - "correct_answer": "[Debe ser idéntica a una de las opciones]"
        - "explanation": "[justificación pedagógica y concisa de la opción correcta y descarte de las incorrectas]"
        - "difficulty": "Intermedio"
+       - "graphic": "[Código SVG completo o null]"
     
     - REGLA CRÍTICA DE FORMATO:
     * Devuelve EXCLUSIVAMENTE una lista JSON válida.
@@ -1498,6 +1512,7 @@ def get_area_prompt(area: str, needed: int) -> str:
     * Todas las comillas deben ser dobles.
     * El JSON debe ser parseable por json.loads().
         """
+
 
 
 def generate_more_questions_bg(area: str, needed_count: int):
@@ -1554,7 +1569,7 @@ async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
     conn = get_db()
     # Query 20 random questions matching the selected area
     rows = conn.execute(
-        "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 20",
+        "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 20",
         (area,)
     ).fetchall()
     
@@ -1578,7 +1593,8 @@ async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
             "correct_answer": r["correct_answer"],
             "explanation": r["explanation"],
             "difficulty": r["difficulty"],
-            "graphic": r["graphic"]
+            "graphic": r["graphic"],
+            "is_parametric": r["is_parametric"]
         }
         q_obj = process_parametric_question(q_obj)
         questions.append(q_obj)
@@ -1691,11 +1707,16 @@ class QuestionGenerateRequest(BaseModel):
 
 @app.get("/api/admin/clear-questions")
 async def clear_questions_route(request: Request):
-    conn = get_db()
-    conn.execute("DELETE FROM questions")
-    conn.commit()
-    conn.close()
-    return {"status": "success", "message": "Preguntas eliminadas correctamente de la base de datos"}
+    try:
+        from scripts.purge_non_parametric import purge_and_clean_db
+        purge_and_clean_db()
+        return {"status": "success", "message": "Base de datos purgada y re-sembrada correctamente con plantillas y preguntas estáticas."}
+    except Exception as e:
+        conn = get_db()
+        conn.execute("DELETE FROM questions")
+        conn.commit()
+        conn.close()
+        return {"status": "success", "message": f"Preguntas eliminadas de la base de datos. Se omitió re-siembra por error: {str(e)}"}
 
 @app.post("/api/admin/generate-question")
 async def generate_question_route(request: Request, body: QuestionGenerateRequest):
