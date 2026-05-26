@@ -2,7 +2,7 @@ import random
 import json
 import base64
 from math import gcd
-from app.areas.base_area import BaseArea
+from app.exams.base_area import BaseArea
 
 def ensure_svg_xmlns(svg_str):
     if svg_str and '<svg' in svg_str and 'xmlns' not in svg_str:

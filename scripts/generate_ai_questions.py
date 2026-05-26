@@ -10,7 +10,7 @@ import google.generativeai as genai
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import get_db_connection
-from app.areas.registry import AREA_REGISTRY
+from app.exams.registry import EXAM_REGISTRY
 from app.main import ensure_svg_xmlns
 
 # Load environment variables
@@ -36,7 +36,7 @@ def generate_bank_questions():
         conn = get_db_connection()
         # Count current questions for this area
         cursor = conn
-        row = cursor.execute("SELECT COUNT(*) FROM questions WHERE area = %s", (area,)).fetchone()
+        row = cursor.execute("SELECT COUNT(*) FROM questions WHERE exam_type = %s AND area = %s", ("saber_11", area)).fetchone()
         current_count = row[0] if row else 0
         conn.close()
         
@@ -58,7 +58,7 @@ def generate_bank_questions():
             current_batch = min(batch_size, needed)
             print(f"  -> Generando lote de {current_batch} preguntas...")
             
-            handler = AREA_REGISTRY[area]
+            handler = EXAM_REGISTRY["saber_11"].areas[area]
             prompt = handler.get_generation_prompt(current_batch)
                 
             try:
@@ -77,7 +77,7 @@ def generate_bank_questions():
                 
                 for q_data in q_list:
                     # Check duplicate text in DB
-                    exists = cursor.execute("SELECT id FROM questions WHERE text = %s", (q_data["text"],)).fetchone()
+                    exists = cursor.execute("SELECT id FROM questions WHERE exam_type = %s AND text = %s", ("saber_11", q_data["text"])).fetchone()
                     if exists:
                         continue
                         
@@ -91,8 +91,8 @@ def generate_bank_questions():
                             print(f"    Error al codificar SVG generado: {e}")
                             
                     cursor.execute('''
-                        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, exam_type)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ''', (
                         area,
                         q_data["text"],
@@ -100,7 +100,8 @@ def generate_bank_questions():
                         q_data["correct_answer"],
                         q_data["explanation"],
                         q_data.get("difficulty", "Intermedio"),
-                        graphic_val
+                        graphic_val,
+                        "saber_11"
                     ))
                     inserted_in_batch += 1
                     generated_in_area += 1

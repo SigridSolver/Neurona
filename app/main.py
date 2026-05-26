@@ -22,7 +22,7 @@ import re
 import base64
 import io
 from PIL import Image
-from app.areas.registry import AREA_REGISTRY
+from app.exams.registry import EXAM_REGISTRY
 
 # Validation patterns
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -542,14 +542,15 @@ async def get_question_hint(question_id: int, request: Request):
         conn.close()
 
 
-def generate_more_questions_bg(area: str, needed_count: int):
+def generate_more_questions_bg(area: str, needed_count: int, exam_type: str = "saber_11"):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-3.1-flash-lite')
-        handler = AREA_REGISTRY[area]
+        exam = EXAM_REGISTRY[exam_type]
+        handler = exam.areas[area]
         prompt = handler.get_generation_prompt(needed_count)
         response = model.generate_content(prompt)
         text_response = response.text.strip()
@@ -560,7 +561,7 @@ def generate_more_questions_bg(area: str, needed_count: int):
         conn = get_db()
         cursor = conn.cursor()
         for q_data in q_list:
-            exists = cursor.execute("SELECT id FROM questions WHERE text = %s", (q_data["text"],)).fetchone()
+            exists = cursor.execute("SELECT id FROM questions WHERE exam_type = %s AND text = %s", (exam_type, q_data["text"])).fetchone()
             if exists:
                 continue
             graphic_val = q_data.get("graphic")
@@ -572,8 +573,8 @@ def generate_more_questions_bg(area: str, needed_count: int):
                 except Exception as e:
                     print("Error encoding background SVG:", e)
             cursor.execute('''
-                INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, exam_type)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 area,
                 q_data["text"],
@@ -581,7 +582,8 @@ def generate_more_questions_bg(area: str, needed_count: int):
                 q_data["correct_answer"],
                 q_data["explanation"],
                 q_data.get("difficulty", "Intermedio"),
-                graphic_val
+                graphic_val,
+                exam_type
             ))
         conn.commit()
         conn.close()
@@ -589,21 +591,24 @@ def generate_more_questions_bg(area: str, needed_count: int):
         print("Error generating background questions:", e)
 
 
-@app.get("/api/questions/{area}")
-async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
+@app.get("/api/questions/{exam_type}/{area}")
+async def get_practice_questions_multi(exam_type: str, area: str, background_tasks: BackgroundTasks):
     conn = get_db()
-    # Query 20 random questions matching the selected area
+    # Query 20 random questions matching the selected area and exam_type
     rows = conn.execute(
-        "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric FROM questions WHERE area = %s ORDER BY RANDOM() LIMIT 20",
-        (area,)
+        "SELECT id, area, text, options, correct_answer, explanation, difficulty, graphic, is_parametric FROM questions WHERE exam_type = %s AND area = %s ORDER BY RANDOM() LIMIT 20",
+        (exam_type, area)
     ).fetchall()
     
-    total_count = conn.execute("SELECT COUNT(*) FROM questions WHERE area = %s", (area,)).fetchone()[0]
+    total_count = conn.execute("SELECT COUNT(*) FROM questions WHERE exam_type = %s AND area = %s", (exam_type, area)).fetchone()[0]
     api_key = os.getenv("GEMINI_API_KEY")
     if total_count < 200 and api_key:
-        background_tasks.add_task(generate_more_questions_bg, area, min(10, 200 - total_count))
+        background_tasks.add_task(generate_more_questions_bg, area, min(10, 200 - total_count), exam_type)
     
     questions = []
+    exam = EXAM_REGISTRY[exam_type]
+    handler = exam.areas[area]
+    
     for r in rows:
         try:
             opts = json.loads(r["options"])
@@ -621,7 +626,6 @@ async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
             "graphic": r["graphic"],
             "is_parametric": r["is_parametric"]
         }
-        handler = AREA_REGISTRY[area]
         q_obj = handler.process_question(q_obj)
         questions.append(q_obj)
         
@@ -634,7 +638,6 @@ async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
             model = genai.GenerativeModel('gemini-3.1-flash-lite')
             cursor = conn.cursor()
             
-            handler = AREA_REGISTRY[area]
             prompt = handler.get_generation_prompt(needed)
             
             response = model.generate_content(prompt)
@@ -656,8 +659,8 @@ async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
                         print("Error encoding generated SVG:", e)
                         
                 cursor.execute('''
-                    INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+                    INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, exam_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
                 ''', (
                     area,
                     q_data["text"],
@@ -665,7 +668,8 @@ async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
                     q_data["correct_answer"],
                     q_data["explanation"],
                     q_data.get("difficulty", "Intermedio"),
-                    graphic_val
+                    graphic_val,
+                    exam_type
                 ))
                 new_id = cursor.fetchone()[0]
                 
@@ -700,6 +704,10 @@ async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
             })
             
     return {"questions": questions}
+
+@app.get("/api/questions/{area}")
+async def get_practice_questions(area: str, background_tasks: BackgroundTasks):
+    return await get_practice_questions_multi(exam_type="saber_11", area=area, background_tasks=background_tasks)
 
 @app.post("/api/practice_result")
 async def save_practice_result(request: Request, data: dict):

@@ -96,13 +96,15 @@ def init_db():
             explanation TEXT NOT NULL,
             difficulty TEXT NOT NULL,
             graphic TEXT DEFAULT NULL,
-            is_parametric BOOLEAN DEFAULT FALSE
+            is_parametric BOOLEAN DEFAULT FALSE,
+            exam_type TEXT DEFAULT 'saber_11'
         )
     ''')
     
     # Migración de columnas en la tabla questions si no existen
     cursor.execute("ALTER TABLE questions ADD COLUMN IF NOT EXISTS graphic TEXT DEFAULT NULL")
     cursor.execute("ALTER TABLE questions ADD COLUMN IF NOT EXISTS is_parametric BOOLEAN DEFAULT FALSE")
+    cursor.execute("ALTER TABLE questions ADD COLUMN IF NOT EXISTS exam_type TEXT DEFAULT 'saber_11'")
     
     # Practice Sessions
     cursor.execute('''
@@ -114,9 +116,11 @@ def init_db():
             score INTEGER NOT NULL,
             total_questions INTEGER NOT NULL,
             date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id)
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            exam_type TEXT DEFAULT 'saber_11'
         )
     ''')
+    cursor.execute("ALTER TABLE practice_sessions ADD COLUMN IF NOT EXISTS exam_type TEXT DEFAULT 'saber_11'")
     
     # Posts Table
     cursor.execute('''
@@ -193,10 +197,60 @@ def init_db():
             resolved_at TIMESTAMP DEFAULT NULL,
             FOREIGN KEY(challenger_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY(opponent_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE
+            FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE,
+            exam_type TEXT DEFAULT 'saber_11'
         )
     ''')
     cursor.execute("ALTER TABLE tutor_duels ADD COLUMN IF NOT EXISTS challenger_notified BOOLEAN DEFAULT FALSE")
+    cursor.execute("ALTER TABLE tutor_duels ADD COLUMN IF NOT EXISTS exam_type TEXT DEFAULT 'saber_11'")
+
+    # User Exam Scores Table (For multi-exam dynamic tracking)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_exam_scores (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            exam_type TEXT NOT NULL,
+            area TEXT NOT NULL,
+            score INTEGER DEFAULT 0,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE(user_id, exam_type, area)
+        )
+    ''')
+
+    # Migration from old diagnostic_results to user_exam_scores
+    try:
+        # Check if migration is needed (count == 0)
+        scores_count = cursor.execute("SELECT COUNT(*) FROM user_exam_scores").fetchone()[0]
+        if scores_count == 0:
+            diagnostic_rows = cursor.execute("SELECT user_id, score_reading, score_math, score_social, score_science, score_english FROM diagnostic_results").fetchall()
+            for r in diagnostic_rows:
+                uid = r[0] if isinstance(r, tuple) else r["user_id"]
+                s_reading = r[1] if isinstance(r, tuple) else r["score_reading"]
+                s_math = r[2] if isinstance(r, tuple) else r["score_math"]
+                s_social = r[3] if isinstance(r, tuple) else r["score_social"]
+                s_science = r[4] if isinstance(r, tuple) else r["score_science"]
+                s_english = r[5] if isinstance(r, tuple) else r["score_english"]
+                
+                scores_mapping = {
+                    "Matemáticas": s_math,
+                    "Lectura Crítica": s_reading,
+                    "Ciencias Naturales": s_science,
+                    "Sociales y Ciudadanas": s_social,
+                    "Inglés": s_english
+                }
+                for area, val in scores_mapping.items():
+                    if val is not None:
+                        exists = cursor.execute("SELECT COUNT(*) FROM user_exam_scores WHERE user_id = %s AND exam_type = %s AND area = %s", (uid, 'saber_11', area)).fetchone()[0]
+                        if exists == 0:
+                            cursor.execute('''
+                                INSERT INTO user_exam_scores (user_id, exam_type, area, score)
+                                VALUES (%s, %s, %s, %s)
+                            ''', (uid, 'saber_11', area, val))
+            print("✓ Datos de diagnostic_results migrados exitosamente a user_exam_scores.")
+    except Exception as e:
+        print("Error durante la migración de puntajes diagnósticos:", e)
+
     conn.commit()
 
     # --- SEEDING MOCK USERS AND COMMUNITY ---

@@ -1,4 +1,4 @@
-from app.areas.base_area import BaseArea
+from app.exams.base_area import BaseArea
 
 class CienciasNaturalesArea(BaseArea):
     @property
