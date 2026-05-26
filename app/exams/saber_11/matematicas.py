@@ -24,12 +24,16 @@ class MatematicasArea(BaseArea):
     - Evita preguntas de cálculo mecánico o rutinario sin interpretación o análisis de datos.
 
     REGLA CRÍTICA DE EVITAR SPOILERS EN GRÁFICOS:
-    - **PROHIBIDO revelar la respuesta correcta directamente en el SVG**. Por ejemplo: si la pregunta pide hallar el valor de 'x' cuando 'y = 15000', NO dibujes un punto marcado con el texto exacto "P(5, 15000)" sobre la recta. En su lugar, rotula puntos de referencia alternativos (como el intercepto en Y "(0, 5000)" o un punto lejano de ejemplo) y dibuja marcas de escala en los ejes para que el estudiante deba deducir e interpretar la ecuación por sí mismo. El gráfico debe ser una ayuda para plantear el problema, no un spoiler de la solución.
+    - **PROHIBIDO revelar la respuesta correcta directamente en el SVG**. 
+      * En planos cartesianos/funciones: Si la pregunta pide hallar el valor de 'x' cuando 'y = 15000', NO dibujes un punto marcado con el texto exacto "P(5, 15000)" sobre la recta. En su lugar, rotula puntos de referencia alternativos (como el intercepto en Y "(0, 5000)" o un punto lejano de ejemplo) y dibuja marcas de escala en los ejes para que el estudiante deba deducir e interpretar la ecuación por sí mismo.
+      * En diagramas de Venn: Si la pregunta pide calcular la cantidad en una región específica (como "cuántos miembros practican ambos deportes"), la intersección de los círculos en el SVG NO debe mostrar el número final resuelto (ej. "20"). En su lugar, coloca una incógnita como `"?"` o `"x"`. Esto obliga al estudiante a deducir el valor mediante la información del enunciado. El diagrama debe ilustrar la incógnita del problema por resolver, no la solución.
 
-    REGLA CRÍTICA DE DISEÑO SVG Y LEGIBILIDAD (EVITAR CORTE DE TEXTOS Y TRASLAPES):
+    REGLA CRÍTICA DE DISEÑO SVG Y LEGIBILIDAD (EVITAR TRASLAPES Y TEXTOS CORTADOS):
     - **Fondo y Dimensiones:** Usa siempre un contenedor SVG con viewBox adecuado (ej: `viewBox="0 0 400 250"`) con fondo oscuro (#0f172a) y bordes redondeados (rx="12").
     - **Márgenes de seguridad:** Asegúrate de que todos los elementos gráficos y textos tengan al menos 20px de espacio con respecto a los bordes del SVG para evitar que las etiquetas o números se recorten en la pantalla.
-    - **Ejes y Escalas:** En todos los gráficos de barras, histogramas, diagramas de dispersión y planos cartesianos, es OBLIGATORIO dibujar ambos ejes (X e Y) con líneas visibles (stroke="#64748b" o similar). Coloca marcas numéricas indicadoras de escala a lo largo de los ejes y etiquetas de texto legibles indicando qué variable representa cada eje (ej: "Distancia (km)" y "Costo ($)").
+    - **Ejes y Escalas:** En todos los gráficos de barras, histogramas, diagramas de dispersión y planos cartesianos, es OBLIGATORIO dibujar ambos ejes (X e Y) con líneas visibles (stroke="#64748b" o similar). Coloca marcas numéricas indicadoras de escala a lo largo de los ejes y etiquetas de texto legibles indicando qué variable representa cada eje.
+    - **Separación de Textos (Evitar Traslapes):** No encimes etiquetas de texto sobre los puntos o las líneas. Usa atributos como `dx` y `dy` en las etiquetas `<text>` para desplazar los textos ligeramente (ej: `dx="10" dy="-10"`) con respecto a los puntos coordenados, líneas o barras correspondientes.
+    - **Cuadrículas:** En gráficos cartesianos, dibuja siempre una cuadrícula tenue de fondo (líneas discontinuas delgadas con `stroke="#334155"` y `stroke-dasharray="3,3"`) para facilitar la lectura visual de coordenadas por parte del estudiante.
     - **Contraste de textos:** Todos los textos del SVG deben estar escritos en etiquetas `<text>` con colores contrastantes y visibles sobre fondo oscuro (ej: `fill="#ffffff"`, `fill="#38bdf8"`, `fill="#fbbf24"`, `fill="#10b981"`). Usa fuentes modernas y legibles (`font-family="sans-serif"` o `font-family="Inter, sans-serif"`).
 
     CATEGORÍAS DE PREGUNTAS Y REGLAS DE GRÁFICOS COMPONENTES:
@@ -40,16 +44,16 @@ class MatematicasArea(BaseArea):
     - SVG obligatorio: Círculo dividido en sectores con colores vivos (#38bdf8, #f43f5e, #10b981, #fbbf24). Las etiquetas con los nombres de categorías y porcentajes deben colocarse en una leyenda lateral bien organizada a la derecha (ej. a partir de X=260) o bien espaciadas para evitar que el texto se traslape.
 
     CATEGORÍA 2 - GRÁFICA DE BARRAS / HISTOGRAMA:
-    - Contexto: análisis de frecuencias o estadísticas (ej. libros leídos, calificaciones, producción diaria).
-    - SVG obligatorio: Barras verticales de colores. El eje X debe incluir etiquetas de categorías claras (ej. marcas o números debajo de cada barra) y el eje Y debe indicar la frecuencia con marcas de escala. La frecuencia numérica de cada barra debe estar escrita en blanco justo encima de cada barra para mayor legibilidad. Asegura suficiente espacio vertical arriba de las barras para que las frecuencias no se corten.
+    - Contexto: análisis de frecuencias o estadísticas (ej. porciones de fruta consumidas, libros leídos, calificaciones, producción diaria).
+    - SVG obligatorio: Barras verticales de colores. El eje X debe incluir etiquetas de categorías claras y visibles debajo de cada barra (ej: números "1", "2", "3", "4", "5" o marcas equivalentes). El eje Y debe indicar la frecuencia con marcas de escala. La frecuencia numérica de cada barra debe estar escrita en blanco justo encima de cada barra para mayor legibilidad. Asegura suficiente espacio vertical arriba de las barras para que las frecuencias no se corten. **ADVERTENCIA: Sin las etiquetas numéricas/categorías del eje X, la pregunta es imposible de responder; asegúrate de dibujarlas siempre.**
 
     CATEGORÍA 3 - DIAGRAMA DE VENN:
     - Contexto: problemas de conjuntos y probabilidad.
-    - SVG obligatorio: Dibuja un rectángulo de fondo que represente el conjunto universal `U` con su etiqueta de texto en una esquina. Dibuja dos o tres círculos semitransparentes superpuestos, rotula claramente el nombre de cada conjunto arriba o al lado de su respectivo círculo (ej. "Fútbol (F)" y "Natación (N)"). Coloca números legibles dentro de cada sección (incluyendo la intersección) y coloca visiblemente el número de elementos fuera de los círculos (el complemento) en una esquina interna del rectángulo universal.
+    - SVG obligatorio: Dibuja un rectángulo de fondo que represente el conjunto universal `U` con su etiqueta de texto en una esquina (ej: "U = 100"). Dibuja dos o tres círculos semitransparentes superpuestos, rotula claramente el nombre de cada conjunto arriba de su respectivo círculo (ej. "Fútbol (F)" y "Natación (N)"). Coloca números legibles dentro de cada sección externa. Si la pregunta busca calcular un dato específico (como la intersección), escribe `"?"` o `"x"` en la sección correspondiente en vez del número resuelto. Coloca visiblemente el número de elementos fuera de los círculos (el complemento) en una esquina interna del rectángulo universal.
 
     CATEGORÍA 4 - PLANO CARTESIANO / FUNCIONES:
     - Contexto: modelación lineal, costos de envíos, trayectorias.
-    - SVG obligatorio: Ejes X y Y perpendiculares con flechas, marcas numéricas graduadas y nombres de variables. Dibuja la recta o curva y rotula algunos puntos de apoyo útiles (ej. el intercepto y otro punto de referencia intermedio que obligue al análisis). El punto correspondiente a la respuesta correcta NO debe estar rotulado con su valor numérico en el gráfico.
+    - SVG obligatorio: Ejes X y Y perpendiculares con marcas numéricas graduadas y nombres de variables. Dibuja la recta o curva y rotula algunos puntos de apoyo útiles (ej. el intercepto y otro punto de referencia intermedio que obligue al análisis) con sus respectivas coordenadas bien legibles. El punto correspondiente a la respuesta correcta NO debe estar rotulado con su valor numérico en el gráfico.
 
     CATEGORÍA 5 - GEOMETRÍA (2D Y 3D):
     - Contexto: áreas, perímetros y volúmenes de recipientes u objetos reales (tanques cilíndricos, cajas, terrenos triangulares/rectangulares).
