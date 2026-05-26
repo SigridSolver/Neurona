@@ -49,7 +49,29 @@ def format_points_compact(pts: int) -> str:
     return str(pts)
 
 def process_parametric_question(q, seed=None):
+    if not q:
+        return q
+        
     text = q.get("text", "")
+    graphic = q.get("graphic")
+    options = q.get("options", [])
+    explanation = q.get("explanation", "")
+    
+    if text:
+        text = text.replace("{{", "{").replace("}}", "}")
+    if graphic and isinstance(graphic, str):
+        graphic = graphic.replace("{{", "{").replace("}}", "}")
+    if explanation:
+        explanation = explanation.replace("{{", "{").replace("}}", "}")
+    if options and isinstance(options, list):
+        options = [o.replace("{{", "{").replace("}}", "}") if isinstance(o, str) else o for o in options]
+        
+    q = dict(q)
+    q["text"] = text
+    q["graphic"] = graphic
+    q["options"] = options
+    q["explanation"] = explanation
+    
     import random
     import base64
     from math import gcd
@@ -337,7 +359,7 @@ def process_parametric_question(q, seed=None):
             "graphic": q.get("graphic")
         }
         
-    elif "{frec_1}" in text or "frecuencias" in text.lower() or "{val_1}" in text:
+    elif "{frec_1}" in text or "frecuencias" in text.lower() or "gráfica de barras" in text.lower() or "grafica de barras" in text.lower() or "{val_1}" in text:
         val_1, val_2, val_3, val_4 = 10, 20, 30, 40
         frec_1 = local_random.randint(2, 6)
         frec_2 = local_random.randint(3, 8)
@@ -2837,12 +2859,23 @@ async def learn_page(request: Request, area: str = "Todas"):
         
     questions = []
     for r in rows:
-        questions.append({
+        q_obj = {
             "id": r["id"],
             "area": r["area"],
             "text": r["text"],
+            "options": ["A", "B", "C", "D"],
             "correct_answer": r["correct_answer"],
-            "explanation": r["explanation"]
+            "explanation": r["explanation"],
+            "difficulty": "Intermedio",
+            "graphic": None
+        }
+        q_processed = process_parametric_question(q_obj)
+        questions.append({
+            "id": q_processed["id"],
+            "area": q_processed["area"],
+            "text": q_processed["text"],
+            "correct_answer": q_processed["correct_answer"],
+            "explanation": q_processed["explanation"]
         })
         
     needed = 5 - len(questions)
@@ -2899,12 +2932,23 @@ async def learn_page(request: Request, area: str = "Todas"):
                         q_data.get("difficulty", "Intermedio")
                     ))
                     new_id = cursor.fetchone()[0]
-                    questions.append({
+                    q_obj = {
                         "id": new_id,
                         "area": q_data["area"],
                         "text": q_data["text"],
+                        "options": q_data["options"],
                         "correct_answer": q_data["correct_answer"],
-                        "explanation": q_data["explanation"]
+                        "explanation": q_data["explanation"],
+                        "difficulty": q_data.get("difficulty", "Intermedio"),
+                        "graphic": None
+                    }
+                    q_processed = process_parametric_question(q_obj)
+                    questions.append({
+                        "id": q_processed["id"],
+                        "area": q_processed["area"],
+                        "text": q_processed["text"],
+                        "correct_answer": q_processed["correct_answer"],
+                        "explanation": q_processed["explanation"]
                     })
                 conn.commit()
             except Exception as e:
