@@ -48,6 +48,12 @@ def format_points_compact(pts: int) -> str:
         return f"{pts / 1000:.1f}k".replace(".0", "")
     return str(pts)
 
+def ensure_svg_xmlns(svg_str):
+    """Ensure SVG string has the xmlns namespace attribute required for <img> tag rendering."""
+    if svg_str and '<svg' in svg_str and 'xmlns' not in svg_str:
+        svg_str = svg_str.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"', 1)
+    return svg_str
+
 def process_parametric_question(q, seed=None):
     if not q:
         return q
@@ -68,13 +74,23 @@ def process_parametric_question(q, seed=None):
     if graphic and isinstance(graphic, str):
         if graphic.strip().startswith("<svg"):
             graphic = graphic.replace("{{", "{").replace("}}", "}")
+            graphic = ensure_svg_xmlns(graphic)
             try:
                 import base64 as b64mod
                 graphic = "data:image/svg+xml;charset=utf-8;base64," + b64mod.b64encode(graphic.encode('utf-8')).decode('utf-8')
             except Exception as e:
                 print("Error pre-encoding raw SVG:", e)
-        elif "base64," in graphic and "charset=utf-8" not in graphic:
-            graphic = graphic.replace("data:image/svg+xml;base64,", "data:image/svg+xml;charset=utf-8;base64,")
+        elif "base64," in graphic:
+            # Fix existing base64 SVGs: ensure xmlns and charset
+            try:
+                import base64 as b64mod
+                _header, _encoded = graphic.split("base64,", 1)
+                _decoded = b64mod.b64decode(_encoded).decode("utf-8")
+                _decoded = ensure_svg_xmlns(_decoded)
+                graphic = "data:image/svg+xml;charset=utf-8;base64," + b64mod.b64encode(_decoded.encode('utf-8')).decode('utf-8')
+            except Exception:
+                if "charset=utf-8" not in graphic:
+                    graphic = graphic.replace("data:image/svg+xml;base64,", "data:image/svg+xml;charset=utf-8;base64,")
     if explanation:
         for p in placeholders:
             explanation = explanation.replace(f"{{{{{p}}}}}", f"{{{p}}}")
@@ -126,6 +142,7 @@ def process_parametric_question(q, seed=None):
                 decoded = decoded.replace("{{", "{").replace("}}", "}")
                 if "{inclinacion}" in decoded:
                     decoded = decoded.replace("{inclinacion}", str(inclinacion))
+                decoded = ensure_svg_xmlns(decoded)
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
                 graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
@@ -203,6 +220,7 @@ def process_parametric_question(q, seed=None):
                 decoded = decoded.replace("{ambos}", str(ambos))
                 decoded = decoded.replace("{baloncesto_solo}", str(baloncesto_solo))
                 decoded = decoded.replace("{ninguno}", str(ninguno))
+                decoded = ensure_svg_xmlns(decoded)
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
                 graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
@@ -313,6 +331,7 @@ def process_parametric_question(q, seed=None):
                 decoded = base64.b64decode(encoded).decode("utf-8")
                 decoded = decoded.replace("{{", "{").replace("}}", "}")
                 decoded = decoded.replace("{base}", str(base_val)).replace("{altura}", str(altura_val))
+                decoded = ensure_svg_xmlns(decoded)
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
                 graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
@@ -443,6 +462,7 @@ def process_parametric_question(q, seed=None):
                                .replace(f"{{h_bar_{i}}}", str(h))
                                .replace(f"{{y_bar_{i}}}", str(y))
                                .replace(f"{{y_txt_{i}}}", str(y_txt)))
+                decoded = ensure_svg_xmlns(decoded)
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
                 graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
@@ -509,6 +529,7 @@ def process_parametric_question(q, seed=None):
                            .replace("{y2_svg}", str(y2_svg))
                            .replace("{x2_lbl_svg}", str(x2_lbl_svg))
                            .replace("{y2_lbl_svg}", str(y2_lbl_svg)))
+                decoded = ensure_svg_xmlns(decoded)
                 new_encoded = base64.b64encode(decoded.encode("utf-8")).decode("utf-8")
                 graphic = "data:image/svg+xml;charset=utf-8;base64," + new_encoded
             except Exception as e:
