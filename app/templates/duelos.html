@@ -399,6 +399,53 @@
             </div>
         </div>
     </div>
+    
+    <!-- Floating Calculator -->
+    <div id="calculator-trigger-btn" style="position: fixed; bottom: 20px; right: 20px; z-index: 999; background: var(--accent); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: all 0.3s;" title="Abrir Calculadora">
+        🧮
+    </div>
+
+    <div id="calculator-floating-widget" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1000; width: 300px; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); color: #fff; font-family: sans-serif; overflow: hidden; flex-direction: column;">
+        <div id="calc-header" style="background: rgba(30, 41, 59, 0.8); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; cursor: move; border-bottom: 1px solid rgba(255,255,255,0.05); user-select: none;">
+            <div style="font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+                🧮 <span style="font-family: inherit;">Calculadora</span>
+            </div>
+            <button id="close-calc-btn" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.25rem; line-height: 1; padding: 2px;">&times;</button>
+        </div>
+        <div style="padding: 15px 15px 5px 15px;">
+            <input type="text" id="calc-screen" readonly style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px; padding: 12px; color: #fff; text-align: right; font-size: 1.3rem; font-family: monospace; outline: none; margin-bottom: 5px;">
+            <div id="calc-result" style="width: 100%; text-align: right; color: var(--accent); font-size: 0.95rem; min-height: 1.25rem; font-family: monospace; padding-right: 5px; margin-bottom: 10px;"></div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 0 15px 15px 15px;">
+            <button class="calc-btn special" data-action="clear" style="grid-column: span 2; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">AC</button>
+            <button class="calc-btn special" data-action="backspace" style="background: rgba(30, 41, 59, 0.6); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; cursor: pointer;">⌫</button>
+            <button class="calc-btn operator" data-val="/" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 10px; border-radius: 6px; cursor: pointer;">/</button>
+            
+            <button class="calc-btn scientific" data-action="sqrt" style="background: rgba(30, 41, 59, 0.6); color: #93c5fd; border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; cursor: pointer;">√</button>
+            <button class="calc-btn scientific" data-action="pow" style="background: rgba(30, 41, 59, 0.6); color: #93c5fd; border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; cursor: pointer;">x²</button>
+            <button class="calc-btn" data-val="(" style="background: rgba(30, 41, 59, 0.6); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; cursor: pointer;">(</button>
+            <button class="calc-btn" data-val=")" style="background: rgba(30, 41, 59, 0.6); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; cursor: pointer;">)</button>
+            
+            <button class="calc-btn" data-val="7" style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">7</button>
+            <button class="calc-btn" data-val="8" style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">8</button>
+            <button class="calc-btn" data-val="9" style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">9</button>
+            <button class="calc-btn operator" data-val="*" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 12px; border-radius: 6px; cursor: pointer;">&times;</button>
+            
+            <button class="calc-btn" data-val="4" style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">4</button>
+            <button class="calc-btn" data-val="5" style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">5</button>
+            <button class="calc-btn" data-val="6" style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">6</button>
+            <button class="calc-btn operator" data-val="-" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 12px; border-radius: 6px; cursor: pointer;">-</button>
+            
+            <button class="calc-btn" data-val="1" style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">1</button>
+            <button class="calc-btn" data-val="2" style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">2</button>
+            <button class="calc-btn" data-val="3" style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">3</button>
+            <button class="calc-btn operator" data-val="+" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 12px; border-radius: 6px; cursor: pointer;">+</button>
+            
+            <button class="calc-btn" data-val="0" style="grid-column: span 2; background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">0</button>
+            <button class="calc-btn" data-val="." style="background: rgba(30, 41, 59, 0.4); color: #fff; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; cursor: pointer;">.</button>
+            <button class="calc-btn equal" data-action="evaluate" style="background: var(--accent); color: #fff; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">=</button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -687,6 +734,160 @@
                 alert("Error al procesar tu respuesta.");
                 location.reload();
             }
+        }
+    }
+
+    // --- Floating Calculator Logic ---
+    const calcTrigger = document.getElementById('calculator-trigger-btn');
+    const calcWidget = document.getElementById('calculator-floating-widget');
+    const closeCalc = document.getElementById('close-calc-btn');
+    const calcHeader = document.getElementById('calc-header');
+    const calcScreen = document.getElementById('calc-screen');
+    const calcResult = document.getElementById('calc-result');
+
+    calcTrigger.addEventListener('click', () => {
+        calcWidget.style.display = 'flex';
+        calcTrigger.style.display = 'none';
+    });
+
+    closeCalc.addEventListener('click', () => {
+        calcWidget.style.display = 'none';
+        calcTrigger.style.display = 'flex';
+    });
+
+    function safeEval(expr) {
+        // Sanitize mathematical expression safely
+        const sanitized = expr.replace(/[^0-9+\-*/().\s]/g, '');
+        try {
+            const fn = new Function('return ' + sanitized);
+            const res = fn();
+            if (res === undefined || isNaN(res) || !isFinite(res)) {
+                return "Error";
+            }
+            return res;
+        } catch (e) {
+            return "Error";
+        }
+    }
+
+    function updateLiveResult() {
+        const expr = calcScreen.value;
+        if (!expr) {
+            calcResult.innerText = '';
+            return;
+        }
+        const result = safeEval(expr);
+        if (result !== 'Error') {
+            calcResult.innerText = '= ' + result;
+        } else {
+            calcResult.innerText = '';
+        }
+    }
+
+    document.querySelectorAll('.calc-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const val = btn.getAttribute('data-val');
+            const action = btn.getAttribute('data-action');
+            
+            if (val) {
+                calcScreen.value += val;
+                updateLiveResult();
+            } else if (action) {
+                if (action === 'clear') {
+                    calcScreen.value = '';
+                    calcResult.innerText = '';
+                } else if (action === 'backspace') {
+                    calcScreen.value = calcScreen.value.slice(0, -1);
+                    updateLiveResult();
+                } else if (action === 'sqrt') {
+                    const currentVal = safeEval(calcScreen.value);
+                    if (currentVal !== 'Error') {
+                        const result = Math.sqrt(Number(currentVal));
+                        calcScreen.value = isNaN(result) ? 'Error' : result;
+                        calcResult.innerText = '';
+                    } else {
+                        calcScreen.value = 'Error';
+                    }
+                } else if (action === 'pow') {
+                    const currentVal = safeEval(calcScreen.value);
+                    if (currentVal !== 'Error') {
+                        const result = Math.pow(Number(currentVal), 2);
+                        calcScreen.value = result;
+                        calcResult.innerText = '';
+                    } else {
+                        calcScreen.value = 'Error';
+                    }
+                } else if (action === 'evaluate') {
+                    const result = safeEval(calcScreen.value);
+                    if (result !== 'Error') {
+                        calcScreen.value = result;
+                        calcResult.innerText = '';
+                    }
+                }
+            }
+        });
+    });
+
+    // Make floating calculator draggable
+    makeDraggable(calcWidget, calcHeader);
+
+    function makeDraggable(element, header) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        header.onmousedown = dragMouseDown;
+        header.ontouchstart = dragTouchStart;
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + "px";
+            element.style.left = (element.offsetLeft - pos1) + "px";
+            element.style.bottom = "auto";
+            element.style.right = "auto";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+
+        function dragTouchStart(e) {
+            if (e.touches.length === 1) {
+                pos3 = e.touches[0].clientX;
+                pos4 = e.touches[0].clientY;
+                document.ontouchend = closeDragTouch;
+                document.ontouchmove = elementTouchDrag;
+            }
+        }
+
+        function elementTouchDrag(e) {
+            if (e.touches.length === 1) {
+                pos1 = pos3 - e.touches[0].clientX;
+                pos2 = pos4 - e.touches[0].clientY;
+                pos3 = e.touches[0].clientX;
+                pos4 = e.touches[0].clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+                element.style.bottom = "auto";
+                element.style.right = "auto";
+            }
+        }
+
+        function closeDragTouch() {
+            document.ontouchend = null;
+            document.ontouchmove = null;
         }
     }
 </script>

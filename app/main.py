@@ -1,3 +1,7 @@
+# Copyright (c) 2026 David Saber 11
+# Todos los derechos reservados.
+# Licenciado bajo la Licencia MIT. Ver archivo LICENSE para más detalles.
+
 from fastapi import FastAPI, Request, Form, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
