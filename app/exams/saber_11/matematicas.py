@@ -41,7 +41,8 @@ class MatematicasArea(BaseArea):
 
     CATEGORÍA 1 - GRÁFICA CIRCULAR (TORTA):
     - Contexto: distribución de presupuestos, preferencias, ventas.
-    - SVG obligatorio: Círculo dividido en sectores con colores vivos (#38bdf8, #f43f5e, #10b981, #fbbf24). Las etiquetas con los nombres de categorías y porcentajes deben colocarse en una leyenda lateral bien organizada a la derecha (ej. a partir de X=260) o bien espaciadas para evitar que el texto se traslape.
+    - SVG obligatorio: Círculo dividido en sectores con colores vivos (#38bdf8, #f43f5e, #10b981, #fbbf24). Las etiquetas con los nombres de categorías y porcentajes deben colocarse en una leyenda lateral bien organizada a la derecha (ej. a partir de X=260).
+    - **REGLA DE PROPORCIONALIDAD VISUAL CRÍTICA:** Los sectores del gráfico de pastel **deben ser visualmente proporcionales a sus porcentajes reales**. Si un sector representa el 20%, su arco debe medir 72 grados, y si representa el 30%, su arco debe medir 108 grados. **NO dibujes sectores iguales de 90 grados (cuadrantes idénticos)** si los porcentajes son diferentes. Realiza cálculos trigonométricos precisos para estimar las coordenadas `x` e `y` iniciales y finales en el path del arco `(cx + r*cos(a), cy + r*sin(a))` para reflejar visualmente las diferencias reales entre porcentajes (ej: un sector de 30% debe ser visiblemente más grande que uno de 20%).
 
     CATEGORÍA 2 - GRÁFICA DE BARRAS / HISTOGRAMA:
     - Contexto: análisis de frecuencias o estadísticas (ej. porciones de fruta consumidas, libros leídos, calificaciones, producción diaria).
