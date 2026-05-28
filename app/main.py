@@ -17,6 +17,8 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 import google.generativeai as genai
+import warnings
+warnings.filterwarnings("ignore", module="google.generativeai")
 import os
 import re
 import base64

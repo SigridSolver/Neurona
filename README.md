@@ -12,15 +12,19 @@ David Saber 11 is a comprehensive, full-stack educational web platform designed 
 
 ## Architecture
 - **Backend**: Python 3.13 + FastAPI
-- **Database**: SQLite (via standard Python `sqlite3`)
+- **Database**: PostgreSQL (via `psycopg2`)
 - **Frontend**: Jinja2 Templates + HTML5 + CSS3 + Vanilla JavaScript
 - **PDF Extraction**: PyPDF2
+- **AI Integration**: Google Generative AI (Gemini)
 
 ### Database Schema
-1. **users**: id, email, password_hash, name
+1. **users**: id, email, password_hash, name, streak, badges
 2. **diagnostic_results**: user_id, scores for all 5 areas
 3. **knowledge_base**: area, text content extracted from PDFs, source_pdf
 4. **practice_sessions**: tracking of quiz scores by area and difficulty
+5. **questions**: generated AI questions
+6. **tutor_chats**: AI tutor chat logs
+7. **tutor_duels**: competitive student vs student questions
 
 ## Setup Instructions
 
@@ -32,18 +36,21 @@ David Saber 11 is a comprehensive, full-stack educational web platform designed 
    ```
 3. **Install Dependencies**:
    ```powershell
-   pip install fastapi uvicorn pypdf2 pyjwt passlib[bcrypt] python-multipart jinja2
+   pip install -r requirements.txt
    ```
-4. **Initialize Database**:
+4. **Environment Variables**:
+   Copy `.env.example` to `.env` and fill in your keys (including `GEMINI_API_KEY` and `DATABASE_URL`).
+5. **Initialize Database**:
+   Ensure you have PostgreSQL running and the `DATABASE_URL` matches your local DB.
    ```powershell
    python app/database.py
    ```
-5. **Ingest PDF Knowledge Base**:
+6. **Ingest PDF Knowledge Base**:
    Ensure your Saber 11 PDFs are in the `/docs` folder, then run:
    ```powershell
    python scripts/ingest.py
    ```
-6. **Run the Application**:
+7. **Run the Application**:
    ```powershell
    python app/main.py
    ```
