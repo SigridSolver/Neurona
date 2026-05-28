@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-pypdf2
+PyPDF2
 pyjwt
 passlib[bcrypt]
 python-multipart
@@ -9,7 +9,6 @@ authlib
 httpx
 python-dotenv
 google-generativeai
-
 psycopg2-binary
 Pillow
 itsdangerous
