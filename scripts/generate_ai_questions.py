@@ -63,56 +63,15 @@ def generate_bank_questions():
                 
             try:
                 response = model.generate_content(prompt)
-                text_response = response.text.strip()
-                # Clean markdown JSON wrapping if present
-                text_response = re.sub(r'^```json\s*|\s*```$', '', text_response, flags=re.MULTILINE)
+                q_list = parse_llm_response(response.text)
                 
-                q_list = json.loads(text_response)
-                if isinstance(q_list, dict):
-                    q_list = [q_list]
+                inserted_count = save_questions_to_db(q_list, area, "saber_11")
+                generated_in_area += inserted_count
+                needed -= inserted_count
                 
-                conn = get_db_connection()
-                cursor = conn
-                inserted_in_batch = 0
+                print(f"    Lote procesado. Se insertaron {inserted_count} nuevas preguntas.")
                 
-                for q_data in q_list:
-                    # Check duplicate text in DB
-                    exists = cursor.execute("SELECT id FROM questions WHERE exam_type = %s AND text = %s", ("saber_11", q_data["text"])).fetchone()
-                    if exists:
-                        continue
-                        
-                    graphic_val = q_data.get("graphic")
-                    if graphic_val and "base64," not in graphic_val and "<svg" in graphic_val:
-                        try:
-                            import base64
-                            graphic_val = ensure_svg_xmlns(graphic_val)
-                            graphic_val = "data:image/svg+xml;base64," + base64.b64encode(graphic_val.encode('utf-8')).decode('utf-8')
-                        except Exception as e:
-                            print(f"    Error al codificar SVG generado: {e}")
-                            
-                    cursor.execute('''
-                        INSERT INTO questions (area, text, options, correct_answer, explanation, difficulty, graphic, exam_type)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ''', (
-                        area,
-                        q_data["text"],
-                        json.dumps(q_data["options"], ensure_ascii=False),
-                        q_data["correct_answer"],
-                        q_data["explanation"],
-                        q_data.get("difficulty", "Intermedio"),
-                        graphic_val,
-                        "saber_11"
-                    ))
-                    inserted_in_batch += 1
-                    generated_in_area += 1
-                    needed -= 1
-                    
-                conn.commit()
-                conn.close()
-                
-                print(f"    Lote procesado. Se insertaron {inserted_in_batch} nuevas preguntas.")
-                
-                if inserted_in_batch == 0:
+                if inserted_count == 0:
                     print("    [ADVERTENCIA] No se insertó ninguna pregunta del lote. Reintentando...")
                     
             except Exception as e:
